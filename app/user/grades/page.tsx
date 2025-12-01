@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Select, Table, Tag } from "antd";
-import { TrophyOutlined, BookOutlined, CalendarOutlined } from "@ant-design/icons";
+import { Table, Tag, Card } from "antd";
+import { TrophyOutlined, BookOutlined } from "@ant-design/icons";
 import GradeStatCard from "@/app/components/user_components/GradeStatCard";
-
-const { Option } = Select;
+import UserGradesHeader from "@/app/components/user_grades_components/UserGradesHeader";
 
 const gradesData = {
   student: {
@@ -138,8 +137,7 @@ export default function UserGrades() {
   const [selectedYear, setSelectedYear] = useState("2024-2025");
   const [selectedSemester, setSelectedSemester] = useState("Học kỳ 1");
 
-  const totalAverage =
-    gradesData.subjects.reduce((sum, s) => sum + s.average, 0) / gradesData.subjects.length;
+  const totalAverage = gradesData.subjects.reduce((sum, s) => sum + s.average, 0) / gradesData.subjects.length;
   const averageTag = getAverageTag(totalAverage);
 
   const columns = [
@@ -218,36 +216,15 @@ export default function UserGrades() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">Bảng điểm</h1>
-        <div className="flex items-center gap-3">
-          <Select
-            value={selectedYear}
-            onChange={setSelectedYear}
-            style={{ width: 140 }}
-            suffixIcon={<CalendarOutlined />}
-          >
-            {gradesData.years.map((year) => (
-              <Option key={year} value={year}>
-                {year}
-              </Option>
-            ))}
-          </Select>
-          <Select
-            value={selectedSemester}
-            onChange={setSelectedSemester}
-            style={{ width: 130 }}
-            suffixIcon={<BookOutlined />}
-          >
-            {gradesData.semesters.map((sem) => (
-              <Option key={sem} value={sem}>
-                {sem}
-              </Option>
-            ))}
-          </Select>
-        </div>
-      </div>
+    <div className="space-y-3">
+      <UserGradesHeader
+        selectedYear={selectedYear}
+        selectedSemester={selectedSemester}
+        onYearChange={setSelectedYear}
+        onSemesterChange={setSelectedSemester}
+        years={gradesData.years}
+        semesters={gradesData.semesters}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <GradeStatCard
@@ -286,10 +263,17 @@ export default function UserGrades() {
         />
       </div>
 
-      <div>
+      <Card
+        className="border border-gray-200 hover:shadow-lg transition-all duration-300"
+        styles={{
+          body: { padding: "20px" },
+        }}
+      >
         <div className="flex items-center gap-2 mb-4">
           <BookOutlined className="text-blue-500" />
-          <span className="text-lg font-semibold text-gray-800">Chi tiết điểm số - {selectedSemester} ({selectedYear})</span>
+          <span className="text-lg font-semibold text-gray-800">
+            Chi tiết điểm số - {selectedSemester} ({selectedYear})
+          </span>
         </div>
         <Table
           columns={columns}
@@ -297,6 +281,7 @@ export default function UserGrades() {
           pagination={false}
           scroll={{ x: 700 }}
           size="middle"
+          className="grades-table"
           rowClassName={(_, index) => (index % 2 === 0 ? "bg-gray-50" : "")}
           summary={() => (
             <Table.Summary fixed>
@@ -304,43 +289,63 @@ export default function UserGrades() {
                 <Table.Summary.Cell index={0}>
                   <span className="font-bold text-blue-700">Điểm TB</span>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={1} align="center">-</Table.Summary.Cell>
-                <Table.Summary.Cell index={2} align="center">-</Table.Summary.Cell>
-                <Table.Summary.Cell index={3} align="center">-</Table.Summary.Cell>
-                <Table.Summary.Cell index={4} align="center">-</Table.Summary.Cell>
-                <Table.Summary.Cell index={5} align="center">-</Table.Summary.Cell>
+                <Table.Summary.Cell index={1} align="center">
+                  -
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={2} align="center">
+                  -
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={3} align="center">
+                  -
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={4} align="center">
+                  -
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={5} align="center">
+                  -
+                </Table.Summary.Cell>
                 <Table.Summary.Cell index={6} align="center">
                   <span className="text-lg font-bold text-blue-700">{totalAverage.toFixed(1)}</span>
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={7} align="center">
-                  <Tag color={averageTag.color} className="font-bold">{averageTag.text}</Tag>
+                  <Tag color={averageTag.color} className="font-bold">
+                    {averageTag.text}
+                  </Tag>
                 </Table.Summary.Cell>
               </Table.Summary.Row>
             </Table.Summary>
           )}
         />
-      </div>
+      </Card>
 
-      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 bg-white p-4 rounded-lg">
-        <span className="font-medium">Chú thích:</span>
-        <div className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-          <span>Giỏi (≥8.5)</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-          <span>Khá (6.5-8.4)</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
-          <span>TB (5.0-6.4)</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-red-500 rounded-full"></span>
-          <span>Yếu (&lt;5.0)</span>
-        </div>
+      <div className="mt-3">
+        <Card
+          className="border border-gray-200 hover:shadow-lg transition-all duration-300"
+          styles={{
+            body: { padding: "16px" },
+          }}
+        >
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+            <span className="font-medium">Chú thích:</span>
+            <div className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+              <span>Giỏi (≥8.5)</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+              <span>Khá (6.5-8.4)</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
+              <span>TB (5.0-6.4)</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+              <span>Yếu (&lt;5.0)</span>
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );
 }
-

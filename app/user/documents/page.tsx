@@ -1,13 +1,11 @@
 "use client";
 
-import { Input, Select } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CardDocument from "@/app/components/card_components/Card_document";
 import DocumentPreviewModal from "@/app/components/modal_components/DocumentPreviewModal";
-
-const { Search } = Input;
-const { Option } = Select;
+import DocumentSearchModal, { DocumentItem } from "@/app/components/modal_components/DocumentSearchModal";
+import DocumentsHeader from "@/app/components/documents_components/DocumentsHeader";
+import CustomCard from "@/app/components/ui_components/CustomCard";
 
 const buildOfficeViewer = (url: string) => `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
 
@@ -17,18 +15,6 @@ const viewerSources = {
   xls: buildOfficeViewer("https://files.catbox.moe/qdxjea.xls"),
   doc: buildOfficeViewer("https://files.catbox.moe/ewg30t.pdf"),
 };
-
-interface DocumentItem {
-  id: string;
-  title: string;
-  grade: string;
-  subject: string;
-  updateDate: string;
-  author: string;
-  downloads: number;
-  type: "word" | "checked" | "pdf";
-  viewerUrl: string;
-}
 
 const documents: DocumentItem[] = [
   {
@@ -75,63 +61,110 @@ const documents: DocumentItem[] = [
     type: "word",
     viewerUrl: viewerSources.doc,
   },
+  // Test documents với link thực tế
+  {
+    id: "test-1",
+    title: "Tài liệu Word Test",
+    grade: "Khối 10",
+    subject: "Toán học",
+    updateDate: "29/10/2025",
+    author: "Test Author",
+    downloads: 0,
+    type: "word",
+    viewerUrl: buildOfficeViewer("https://storage.googleapis.com/liveazotastoragept032025/document_bank/m10_2025/d29/106743489/ef1fe34e986cd85c8f614aea209d7d48.docx"),
+  },
+  {
+    id: "test-2",
+    title: "Tài liệu PDF Test",
+    grade: "Khối 10",
+    subject: "Vật lý",
+    updateDate: "25/10/2025",
+    author: "Test Author",
+    downloads: 0,
+    type: "pdf",
+    viewerUrl: buildOfficeViewer("https://storage.googleapis.com/liveazotastoragept032025/document_bank/m10_2025/d25/133224885/a3a240043e5db885c3b5fb142b6e35ce.pdf"),
+  },
+  {
+    id: "test-3",
+    title: "Tài liệu PowerPoint Test",
+    grade: "Khối 11",
+    subject: "Hóa học",
+    updateDate: "12/03/2025",
+    author: "Test Author",
+    downloads: 0,
+    type: "word",
+    viewerUrl: buildOfficeViewer("https://storage.googleapis.com/liveazotastoragept012025/document_bank/m03_2025/d12/14405157/4eceb70be23d8511fe6de04b8b4f858b.pptx"),
+  },
 ];
 
 export default function UserDocuments() {
-  const [searchText, setSearchText] = useState("");
-  const [selectedGrade, setSelectedGrade] = useState<string | undefined>();
-  const [selectedSubject, setSelectedSubject] = useState<string | undefined>();
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<DocumentItem | null>(null);
 
-  const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch = doc.title.toLowerCase().includes(searchText.toLowerCase());
-    const matchesGrade = !selectedGrade || doc.grade === selectedGrade;
-    const matchesSubject = !selectedSubject || doc.subject === selectedSubject;
-    return matchesSearch && matchesGrade && matchesSubject;
-  });
+  // Keyboard shortcut for search modal
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "k") {
+        event.preventDefault();
+        setIsSearchModalOpen(true);
+      }
+      if (event.key === "Escape" && isSearchModalOpen) {
+        setIsSearchModalOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSearchModalOpen]);
+
+  const handleDocumentClick = (doc: DocumentItem) => {
+    setPreviewDoc(doc);
+    setIsSearchModalOpen(false);
+  };
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Tài liệu</h1>
+      {/* Header */}
+      <DocumentsHeader onSearchClick={() => setIsSearchModalOpen(true)} />
 
-      <div className="flex flex-wrap gap-4 items-center">
-        <Search
-          placeholder="Tìm kiếm tài liệu..."
-          allowClear
-          enterButton={<SearchOutlined />}
-          style={{ maxWidth: 400 }}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-        />
-        <Select placeholder="Lọc theo khối" allowClear style={{ width: 150 }} value={selectedGrade} onChange={setSelectedGrade}>
-          <Option value="Khối 9">Khối 9</Option>
-          <Option value="Khối 10">Khối 10</Option>
-          <Option value="Khối 11">Khối 11</Option>
-          <Option value="Khối 12">Khối 12</Option>
-        </Select>
-        <Select placeholder="Lọc theo môn" allowClear style={{ width: 150 }} value={selectedSubject} onChange={setSelectedSubject}>
-          <Option value="Toán học">Toán học</Option>
-          <Option value="Ngữ văn">Ngữ văn</Option>
-          <Option value="Vật lý">Vật lý</Option>
-          <Option value="Hóa học">Hóa học</Option>
-        </Select>
-      </div>
+      {/* Results Count */}
+      {documents.length > 0 && (
+        <div className="text-sm text-gray-600">
+          Tổng cộng <span className="font-semibold text-blue-600">{documents.length}</span> tài liệu
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredDocuments.map((doc) => (
-          <CardDocument
-            key={doc.id}
-            title={doc.title}
-            grade={doc.grade}
-            subject={doc.subject}
-            updateDate={doc.updateDate}
-            author={doc.author}
-            downloads={doc.downloads}
-            type={doc.type}
-            onPreview={() => setPreviewDoc(doc)}
-          />
-        ))}
-      </div>
+      {/* Document Grid */}
+      {documents.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+          {documents.map((doc) => (
+            <CardDocument
+              key={doc.id}
+              title={doc.title}
+              grade={doc.grade}
+              subject={doc.subject}
+              updateDate={doc.updateDate}
+              author={doc.author}
+              downloads={doc.downloads}
+              type={doc.type}
+              onPreview={() => setPreviewDoc(doc)}
+            />
+          ))}
+        </div>
+      ) : (
+        <CustomCard padding="lg" className="text-center py-12">
+          <div className="text-gray-400 text-lg mb-2">📄</div>
+          <p className="text-gray-600 font-medium">Không có tài liệu nào</p>
+        </CustomCard>
+      )}
+
+      {/* Search Modal */}
+      <DocumentSearchModal
+        open={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        documents={documents}
+        onDocumentClick={handleDocumentClick}
+      />
 
       <DocumentPreviewModal
         open={Boolean(previewDoc)}

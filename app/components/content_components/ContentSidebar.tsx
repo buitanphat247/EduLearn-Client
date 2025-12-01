@@ -34,30 +34,41 @@ const subCategories: Category[] = [
 
 export default function ContentSidebar({ activeCategory, onCategoryChange }: ContentSidebarProps) {
   return (
-    <aside className="w-64 bg-white border-r border-gray-300 flex flex-col">
-      <div className="pr-4">
+    <aside className="w-64 border-r border-gray-200 flex flex-col bg-white">
+      <div className="p-2">
         {/* Contribute Button */}
-        <Button type="default" icon={<PlusOutlined />} className="w-full mb-4" size="large">
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          className="w-full mb-6 bg-linear-to-r from-blue-500 to-purple-500 border-0 hover:from-blue-600 hover:to-purple-600 shadow-lg hover:shadow-xl transition-all duration-300"
+          size="large"
+        >
           Đóng góp nội dung
         </Button>
 
         {/* Main Category - All Documents */}
         <button
           onClick={() => onCategoryChange("all")}
-          className={`w-full cursor-pointer rounded-lg p-3 mb-2 transition-colors ${
-            activeCategory === "all" ? "bg-blue-50" : "hover:bg-gray-50"
+          className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-300 group ${
+            activeCategory === "all"
+              ? "bg-linear-to-r from-purple-500 to-pink-500 text-white shadow-lg font-semibold"
+              : "text-gray-700 hover:bg-linear-to-r hover:from-purple-50 hover:to-pink-50 hover:shadow-md hover:text-purple-600"
           }`}
         >
-          <div className="flex items-center gap-3">
-            <HomeOutlined className={`text-lg ${activeCategory === "all" ? "text-blue-600" : "text-gray-600"}`} />
-            <span className={`text-sm font-medium ${activeCategory === "all" ? "text-blue-600" : "text-gray-700"}`}>
-              Tất cả tài liệu
-            </span>
-          </div>
+          <HomeOutlined
+            className={`text-lg transition-transform duration-300 group-hover:scale-110 ${
+              activeCategory === "all" ? "text-white" : "text-gray-700 group-hover:text-blue-600"
+            }`}
+          />
+          <span
+            className={`text-sm ${activeCategory === "all" ? "text-white font-semibold" : "text-gray-700 group-hover:text-blue-600 font-normal"}`}
+          >
+            Tất cả tài liệu
+          </span>
         </button>
 
         {/* Sub Categories */}
-        <div className="space-y-1">
+        <div className="space-y-1.5 mt-2">
           {subCategories.map((category) => {
             const Icon = category.icon;
             const isActive = activeCategory === category.key;
@@ -65,12 +76,14 @@ export default function ContentSidebar({ activeCategory, onCategoryChange }: Con
               <button
                 key={category.key}
                 onClick={() => onCategoryChange(category.key)}
-                className={`w-full cursor-pointer flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${
-                  isActive ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-700 hover:bg-gray-50"
+                className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-300 group ${
+                  isActive
+                    ? "bg-linear-to-r from-purple-500 to-pink-500 text-white shadow-lg font-semibold"
+                    : "text-gray-700 hover:bg-linear-to-r hover:from-purple-50 hover:to-pink-50 hover:shadow-md hover:text-purple-600"
                 }`}
               >
-                <Icon className="text-base" />
-                <span className="text-sm">{category.label}</span>
+                <Icon className={`text-base transition-transform duration-300 group-hover:scale-110 ${isActive ? "text-white" : "text-gray-600"}`} />
+                <span className={`text-sm ${isActive ? "font-semibold" : "font-normal"}`}>{category.label}</span>
               </button>
             );
           })}
@@ -79,4 +92,3 @@ export default function ContentSidebar({ activeCategory, onCategoryChange }: Con
     </aside>
   );
 }
-

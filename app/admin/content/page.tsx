@@ -82,6 +82,46 @@ const documents: DocumentItem[] = [
     type: "word",
     viewerUrl: viewerSources.xls,
   },
+  // Test documents với link thực tế
+  {
+    id: "test-1",
+    title: "Tài liệu Word Test",
+    grade: "Khối 10",
+    subject: "Toán học",
+    updateDate: "29/10/2025 10:00",
+    author: "Test Author",
+    downloads: 0,
+    type: "word",
+    viewerUrl: buildOfficeViewer(
+      "https://storage.googleapis.com/liveazotastoragept032025/document_bank/m10_2025/d29/106743489/ef1fe34e986cd85c8f614aea209d7d48.docx"
+    ),
+  },
+  {
+    id: "test-2",
+    title: "Tài liệu PDF Test",
+    grade: "Khối 10",
+    subject: "Vật lý",
+    updateDate: "25/10/2025 10:00",
+    author: "Test Author",
+    downloads: 0,
+    type: "pdf",
+    viewerUrl: buildOfficeViewer(
+      "https://storage.googleapis.com/liveazotastoragept032025/document_bank/m10_2025/d25/133224885/a3a240043e5db885c3b5fb142b6e35ce.pdf"
+    ),
+  },
+  {
+    id: "test-3",
+    title: "Tài liệu PowerPoint Test",
+    grade: "Khối 11",
+    subject: "Hóa học",
+    updateDate: "12/03/2025 10:00",
+    author: "Test Author",
+    downloads: 0,
+    type: "word",
+    viewerUrl: buildOfficeViewer(
+      "https://storage.googleapis.com/liveazotastoragept012025/document_bank/m03_2025/d12/14405157/4eceb70be23d8511fe6de04b8b4f858b.pptx"
+    ),
+  },
 ];
 
 export default function AdminContent() {
@@ -90,16 +130,12 @@ export default function AdminContent() {
   const [previewDoc, setPreviewDoc] = useState<DocumentItem | null>(null);
 
   return (
-    <div className="flex h-full bg-gray-50">
+    <div className="flex h-full bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 border border-gray-200 rounded-xl overflow-hidden">
       <ContentSidebar activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <ContentHeader
-          title="Tài liệu mới nhất"
-          activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
-        />
+        <ContentHeader title="Tài liệu mới nhất" activeFilter={activeFilter} onFilterChange={setActiveFilter} />
 
         <DocumentGrid documents={documents} onPreview={setPreviewDoc} />
       </div>
@@ -113,4 +149,3 @@ export default function AdminContent() {
     </div>
   );
 }
-

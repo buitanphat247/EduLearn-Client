@@ -18,7 +18,12 @@ const borderColorClasses = {
 
 export default function GradeStatCard({ title, value, borderColor, subtitle, tag }: GradeStatCardProps) {
   return (
-    <Card className={`border-l-4 ${borderColorClasses[borderColor]}`}>
+    <Card
+      className={`border border-gray-200 hover:shadow-lg transition-all duration-300 ${borderColorClasses[borderColor]} border-l-4`}
+      styles={{
+        body: { padding: "20px" },
+      }}
+    >
       <div className="text-sm text-gray-500 mb-1">{title}</div>
       <div className="flex items-center gap-2">
         {typeof value === "string" ? (

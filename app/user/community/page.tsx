@@ -1,14 +1,16 @@
 "use client";
 
-import { Input, Avatar, List, Tag, message } from "antd";
-import { SearchOutlined, FireOutlined, UserOutlined } from "@ant-design/icons";
-import { useState } from "react";
+import { Tag, message } from "antd";
+import { FireOutlined } from "@ant-design/icons";
+import { useState, useEffect } from "react";
 import PostCard from "@/app/components/community_components/PostCard";
 import CreatePostModal from "@/app/components/community_components/CreatePostModal";
 import CommentModal from "@/app/components/modal_components/CommentModal";
+import ShareModal from "@/app/components/modal_components/ShareModal";
+import CommunitySearchModal from "@/app/components/modal_components/CommunitySearchModal";
+import CommunityHeader from "@/app/components/community_components/CommunityHeader";
+import CustomCard from "@/app/components/ui_components/CustomCard";
 import type { Comment } from "@/app/types/types";
-
-const { Search } = Input;
 
 const posts = [
   {
@@ -188,7 +190,26 @@ export default function UserCommunity() {
   const [postContent, setPostContent] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<(typeof posts)[0] | null>(null);
+  const [selectedPostForShare, setSelectedPostForShare] = useState<(typeof posts)[0] | null>(null);
+
+  // Keyboard shortcut: Ctrl/Cmd + K to open search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setIsSearchModalOpen(true);
+      }
+      if (e.key === "Escape" && isSearchModalOpen) {
+        setIsSearchModalOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSearchModalOpen]);
 
   const filteredPosts = posts.filter(
     (post) =>
@@ -214,6 +235,11 @@ export default function UserCommunity() {
     setIsCommentModalOpen(true);
   };
 
+  const handleShareClick = (post: (typeof posts)[0]) => {
+    setSelectedPostForShare(post);
+    setIsShareModalOpen(true);
+  };
+
   const handleAddComment = (_postId: string | number, _content: string, parentId?: string | number) => {
     message.success(parentId ? "Đã phản hồi!" : "Đã bình luận!");
   };
@@ -226,97 +252,69 @@ export default function UserCommunity() {
     // In real app, this would update the post's likes
   };
 
-  return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Cộng đồng</h1>
+  const handleSearchPostClick = (post: (typeof posts)[0]) => {
+    setSearchText("");
+    // Scroll to post or highlight it
+    const element = document.getElementById(`post-${post.id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      element.classList.add("ring-2", "ring-blue-500");
+      setTimeout(() => {
+        element.classList.remove("ring-2", "ring-blue-500");
+      }, 2000);
+    }
+  };
 
-      <Search
-        placeholder="Tìm kiếm bài viết..."
-        allowClear
-        enterButton={<SearchOutlined />}
-        size="large"
-        value={searchText}
-        onChange={(e) => setSearchText(e.target.value)}
+  return (
+    <div className="space-y-3">
+      <CommunityHeader
+        onSearchClick={() => setIsSearchModalOpen(true)}
+        onCreatePostClick={() => setIsModalOpen(true)}
       />
 
       <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-4">
-            <Avatar size="large" icon={<UserOutlined />} className="bg-blue-500 shrink-0">
-              HS
-            </Avatar>
-            <Input
-              placeholder="Bạn đang nghĩ gì?"
-              size="large"
-              readOnly
-              onClick={() => setIsModalOpen(true)}
-              className="cursor-pointer hover:bg-gray-50 flex-1"
-            />
-          </div>
-
-          <CreatePostModal
-            open={isModalOpen}
-            postContent={postContent}
-            onContentChange={setPostContent}
-            onPost={handlePost}
-            onCancel={handleCancel}
-          />
-
-          <div>
+        <div className="flex-1 min-w-0 space-y-3">
+          {/* Posts List */}
+          <div className="space-y-3">
             {filteredPosts.length > 0 ? (
               filteredPosts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  id={post.id}
-                  author={post.author}
-                  avatar={post.avatar}
-                  time={post.time}
-                  content={post.content}
-                  tags={post.tags}
-                  likes={post.likes}
-                  comments={post.comments}
-                  onCommentClick={() => handleCommentClick(post)}
-                />
+                <div key={post.id} id={`post-${post.id}`}>
+                  <PostCard
+                    id={post.id}
+                    author={post.author}
+                    avatar={post.avatar}
+                    time={post.time}
+                    content={post.content}
+                    tags={post.tags}
+                    likes={post.likes}
+                    comments={post.comments}
+                    onCommentClick={() => handleCommentClick(post)}
+                    onShareClick={() => handleShareClick(post)}
+                  />
+                </div>
               ))
             ) : (
-              <div className="bg-white rounded-lg shadow-sm mb-6">
+              <CustomCard padding="lg">
                 <div className="text-center py-8 text-gray-500">Không tìm thấy bài viết nào</div>
-              </div>
+              </CustomCard>
             )}
           </div>
-
-          {selectedPost && (
-            <CommentModal
-              open={isCommentModalOpen}
-              postId={selectedPost.id}
-              author={selectedPost.author}
-              avatar={selectedPost.avatar}
-              time={selectedPost.time}
-              content={selectedPost.content}
-              likes={selectedPost.likes}
-              comments={selectedPost.commentsList || []}
-              onClose={() => setIsCommentModalOpen(false)}
-              onAddComment={handleAddComment}
-              onLikeComment={handleLikeComment}
-              onLikePost={handleLikePost}
-            />
-          )}
         </div>
 
-        <div className="w-full lg:w-80 shrink-0 space-y-6">
-          <div className="bg-white rounded-lg shadow-sm">
-            <div className="p-5 border-b border-gray-300 flex items-center justify-between">
+        <div className="w-full lg:w-80 shrink-0">
+          <CustomCard padding="none">
+            <div className="p-5 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800">Chủ đề phổ biến</h3>
               <FireOutlined className="text-orange-500" />
             </div>
             <div className="p-6">
-              <List
-                dataSource={topics}
-                renderItem={(topic) => {
+              <div className="space-y-0">
+                {topics.map((topic, index) => {
                   const IconComponent = topic.icon;
                   return (
-                    <List.Item
-                      className="cursor-pointer hover:bg-gray-50 rounded-lg px-3 py-3 transition-colors mb-2"
+                    <div
+                      key={index}
+                      className="cursor-pointer hover:bg-blue-50/50 rounded-lg px-3 py-3 transition-colors mb-2 border-gray-100 last:border-b-0 last:mb-0"
                       onClick={() => setSearchText(topic.name)}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -326,16 +324,61 @@ export default function UserCommunity() {
                           </span>
                           <span className="font-medium text-gray-800">{topic.name}</span>
                         </div>
-                        <Tag color="blue">{topic.count}</Tag>
+                        <Tag color="blue" className="px-2 py-0.5 rounded-md text-xs">{topic.count}</Tag>
                       </div>
-                    </List.Item>
+                    </div>
                   );
-                }}
-              />
+                })}
+              </div>
             </div>
-          </div>
+          </CustomCard>
         </div>
       </div>
+
+      <CreatePostModal
+        open={isModalOpen}
+        postContent={postContent}
+        onContentChange={setPostContent}
+        onPost={handlePost}
+        onCancel={handleCancel}
+      />
+
+      <CommunitySearchModal
+        open={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        posts={posts}
+        onPostClick={handleSearchPostClick}
+      />
+
+      {selectedPostForShare && (
+        <ShareModal
+          open={isShareModalOpen}
+          onClose={() => {
+            setIsShareModalOpen(false);
+            setSelectedPostForShare(null);
+          }}
+          postId={selectedPostForShare.id}
+          author={selectedPostForShare.author}
+          content={selectedPostForShare.content}
+        />
+      )}
+
+      {selectedPost && (
+        <CommentModal
+          open={isCommentModalOpen}
+          postId={selectedPost.id}
+          author={selectedPost.author}
+          avatar={selectedPost.avatar}
+          time={selectedPost.time}
+          content={selectedPost.content}
+          likes={selectedPost.likes}
+          comments={selectedPost.commentsList || []}
+          onClose={() => setIsCommentModalOpen(false)}
+          onAddComment={handleAddComment}
+          onLikeComment={handleLikeComment}
+          onLikePost={handleLikePost}
+        />
+      )}
     </div>
   );
 }

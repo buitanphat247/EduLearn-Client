@@ -1,6 +1,6 @@
 "use client";
 
-import { ConfigProvider } from "antd";
+import { ConfigProvider, App } from "antd";
 import { SidebarColorProvider } from "@/app/contexts/SidebarColorContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -17,7 +17,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       }}
     >
-      <SidebarColorProvider>{children}</SidebarColorProvider>
+      <App>
+        <SidebarColorProvider>{children}</SidebarColorProvider>
+      </App>
     </ConfigProvider>
   );
 }

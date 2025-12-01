@@ -8,10 +8,12 @@ import {
   HomeOutlined,
   FileTextOutlined,
   AppstoreOutlined,
-  TeamOutlined,
   SettingOutlined,
   ReadOutlined,
   BellOutlined,
+  UserOutlined,
+  MessageOutlined,
+  IdcardOutlined,
 } from "@ant-design/icons";
 import { useSidebarColor } from "@/app/contexts/SidebarColorContext";
 
@@ -20,7 +22,9 @@ const menuItems = [
   { path: "/admin/exercises", icon: FileTextOutlined, label: "Quản lý Bài tập" },
   { path: "/admin/news", icon: BellOutlined, label: "Quản lý Tin tức" },
   { path: "/admin/classes", icon: AppstoreOutlined, label: "Quản lý Lớp học" },
-  { path: "/admin/teachers", icon: TeamOutlined, label: "Quản lý Giáo viên" },
+  { path: "/admin/students", icon: UserOutlined, label: "Quản lý Học sinh" },
+  { path: "/admin/profile", icon: IdcardOutlined, label: "Hồ sơ học sinh" },
+  { path: "/admin/class-chat", icon: MessageOutlined, label: "Chat / Hỏi đáp" },
   { path: "/admin/content", icon: ReadOutlined, label: "Quản lý Nội dung" },
 ];
 

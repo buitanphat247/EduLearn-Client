@@ -23,20 +23,22 @@ const gradeFilters = [
 
 export default function ContentHeader({ title, activeFilter, onFilterChange }: ContentHeaderProps) {
   return (
-    <div className="bg-white shadow-sm border-b border-gray-300">
-      <div className="px-6 py-4">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">{title}</h1>
+    <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200">
+      <div className="px-6 py-5">
+        <h1 className="text-3xl font-bold bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-5">
+          {title}
+        </h1>
 
         {/* Filter Tabs */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2.5">
           {gradeFilters.map((filter) => (
             <button
               key={filter}
               onClick={() => onFilterChange(filter)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-5 py-2.5 rounded-md text-sm font-semibold transition-all duration-300 cursor-pointer ${
                 activeFilter === filter
-                  ? "bg-blue-100 text-blue-600"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-linear-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-200"
+                  : "bg-white text-gray-700 hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 hover:text-blue-600 border border-gray-200 hover:border-blue-300 hover:shadow-md"
               }`}
             >
               {filter}
