@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Modal, Input, message } from "antd";
 import ClassChatHeader from "@/app/components/class_chat_components/ClassChatHeader";
 import ClassChatTable from "@/app/components/class_chat_components/ClassChatTable";
 import ClassChatSearchModal from "@/app/components/modal_components/ClassChatSearchModal";
@@ -15,6 +16,8 @@ const data: ClassChatItem[] = [
 
 export default function AdminClassChat() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
 
   // Keyboard shortcut: Ctrl/Cmd + K to open search
   useEffect(() => {
@@ -32,13 +35,54 @@ export default function AdminClassChat() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isSearchModalOpen]);
 
+  const handleCreateGroup = () => {
+    if (!newGroupName.trim()) {
+      message.warning("Vui lòng nhập tên nhóm chat");
+      return;
+    }
+
+    // Mock tạo nhóm
+    message.success(`Đã tạo nhóm chat "${newGroupName.trim()}" (mock)`);
+    setNewGroupName("");
+    setIsCreateModalOpen(false);
+  };
+
   return (
     <div className="space-y-3">
-      <ClassChatHeader onSearchClick={() => setIsSearchModalOpen(true)} />
+      <ClassChatHeader
+        onSearchClick={() => setIsSearchModalOpen(true)}
+        onCreateGroupClick={() => setIsCreateModalOpen(true)}
+      />
 
       <ClassChatTable data={data} />
 
-      <ClassChatSearchModal open={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} data={data} />
+      <ClassChatSearchModal
+        open={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        data={data}
+      />
+
+      <Modal
+        title="Tạo nhóm chat mới"
+        open={isCreateModalOpen}
+        onOk={handleCreateGroup}
+        onCancel={() => {
+          setIsCreateModalOpen(false);
+          setNewGroupName("");
+        }}
+        okText="Tạo nhóm"
+        cancelText="Hủy"
+      >
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Tên nhóm chat</label>
+          <Input
+            placeholder="Nhập tên nhóm chat (ví dụ: Nhóm chat lớp 10A1)"
+            value={newGroupName}
+            onChange={(e) => setNewGroupName(e.target.value)}
+            className="cursor-text"
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

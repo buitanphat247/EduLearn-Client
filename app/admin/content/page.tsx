@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Modal, Upload, Button, message } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
 import DocumentPreviewModal from "@/app/components/modal_components/DocumentPreviewModal";
 import ContentSidebar from "@/app/components/content_components/ContentSidebar";
 import ContentHeader from "@/app/components/content_components/ContentHeader";
@@ -66,10 +68,27 @@ export default function AdminContent() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeFilter, setActiveFilter] = useState("Tất cả");
   const [previewDoc, setPreviewDoc] = useState<DocumentItem | null>(null);
+  const [isContributeModalOpen, setIsContributeModalOpen] = useState(false);
+
+  const uploadProps = {
+    multiple: true,
+    beforeUpload: () => false,
+    showUploadList: true,
+  };
+
+  const handleSubmitContribution = () => {
+    // Mock gửi nội dung
+    message.success("Đã gửi nội dung đóng góp (mock)");
+    setIsContributeModalOpen(false);
+  };
 
   return (
     <div className="flex h-full bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 border border-gray-200 rounded-xl overflow-hidden">
-      <ContentSidebar activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
+      <ContentSidebar
+        activeCategory={activeCategory}
+        onCategoryChange={setActiveCategory}
+        onContributeClick={() => setIsContributeModalOpen(true)}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -84,6 +103,29 @@ export default function AdminContent() {
         viewerUrl={previewDoc?.viewerUrl || ""}
         onClose={() => setPreviewDoc(null)}
       />
+
+      <Modal
+        title="Đóng góp nội dung"
+        open={isContributeModalOpen}
+        onOk={handleSubmitContribution}
+        onCancel={() => setIsContributeModalOpen(false)}
+        okText="Gửi nội dung"
+        cancelText="Hủy"
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            Chọn file tài liệu bạn muốn đóng góp vào kho nội dung. Quản trị viên sẽ kiểm duyệt trước khi hiển thị.
+          </p>
+          <Upload {...uploadProps}>
+            <Button icon={<UploadOutlined />} className="rounded-lg cursor-pointer">
+              Chọn file để upload
+            </Button>
+          </Upload>
+          <p className="text-xs text-gray-400 mt-3">
+            Hỗ trợ các định dạng: .pdf, .doc, .docx, .ppt, .pptx, .xlsx, .zip (tối đa 50MB).
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

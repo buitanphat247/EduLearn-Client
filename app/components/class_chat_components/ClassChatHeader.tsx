@@ -2,15 +2,13 @@
 
 import { Button } from "antd";
 import { SearchOutlined, MessageOutlined } from "@ant-design/icons";
-import { useRouter } from "next/navigation";
 
 interface ClassChatHeaderProps {
   onSearchClick: () => void;
+  onCreateGroupClick: () => void;
 }
 
-export default function ClassChatHeader({ onSearchClick }: ClassChatHeaderProps) {
-  const router = useRouter();
-
+export default function ClassChatHeader({ onSearchClick, onCreateGroupClick }: ClassChatHeaderProps) {
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 border border-gray-200">
       <div className="flex items-center justify-between mb-3">
@@ -21,8 +19,8 @@ export default function ClassChatHeader({ onSearchClick }: ClassChatHeaderProps)
           type="default"
           icon={<MessageOutlined />}
           size="middle"
-          className="bg-linear-to-r from-blue-500 to-purple-500 border-0 hover:from-blue-600 hover:to-purple-600 shadow-md hover:shadow-lg transition-all duration-300"
-          onClick={() => router.push("/admin/class-chat/handle/new")}
+          className="bg-linear-to-r from-blue-500 to-purple-500 border-0 hover:from-blue-600 hover:to-purple-600 shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
+          onClick={onCreateGroupClick}
         >
           Tạo nhóm chat
         </Button>
@@ -33,7 +31,7 @@ export default function ClassChatHeader({ onSearchClick }: ClassChatHeaderProps)
         <Button
           icon={<SearchOutlined />}
           size="middle"
-          className="w-full text-left justify-start bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700 transition-all"
+          className="w-full text-left justify-start bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700 transition-all cursor-pointer"
           onClick={onSearchClick}
         >
           <span className="text-gray-400">Tìm kiếm lớp chat... (Ctrl+K)</span>

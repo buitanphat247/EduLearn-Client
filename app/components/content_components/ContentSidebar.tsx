@@ -20,6 +20,7 @@ interface Category {
 interface ContentSidebarProps {
   activeCategory: string;
   onCategoryChange: (category: string) => void;
+  onContributeClick: () => void;
 }
 
 const subCategories: Category[] = [
@@ -32,7 +33,7 @@ const subCategories: Category[] = [
   { key: "my-content", label: "Nội dung của bạn", icon: UserOutlined },
 ];
 
-export default function ContentSidebar({ activeCategory, onCategoryChange }: ContentSidebarProps) {
+export default function ContentSidebar({ activeCategory, onCategoryChange, onContributeClick }: ContentSidebarProps) {
   return (
     <aside className="w-64 border-r border-gray-200 flex flex-col bg-white">
       <div className="p-2">
@@ -40,8 +41,9 @@ export default function ContentSidebar({ activeCategory, onCategoryChange }: Con
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          className="w-full mb-6 bg-linear-to-r from-blue-500 to-purple-500 border-0 hover:from-blue-600 hover:to-purple-600 shadow-lg hover:shadow-xl transition-all duration-300"
+          className="w-full mb-6 bg-linear-to-r from-blue-500 to-purple-500 border-0 hover:from-blue-600 hover:to-purple-600 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
           size="large"
+          onClick={onContributeClick}
         >
           Đóng góp nội dung
         </Button>
@@ -61,7 +63,9 @@ export default function ContentSidebar({ activeCategory, onCategoryChange }: Con
             }`}
           />
           <span
-            className={`text-sm ${activeCategory === "all" ? "text-white font-semibold" : "text-gray-700 group-hover:text-blue-600 font-normal"}`}
+            className={`text-sm ${
+              activeCategory === "all" ? "text-white font-semibold" : "text-gray-700 group-hover:text-blue-600 font-normal"
+            }`}
           >
             Tất cả tài liệu
           </span>
@@ -82,7 +86,11 @@ export default function ContentSidebar({ activeCategory, onCategoryChange }: Con
                     : "text-gray-700 hover:bg-linear-to-r hover:from-purple-50 hover:to-pink-50 hover:shadow-md hover:text-purple-600"
                 }`}
               >
-                <Icon className={`text-base transition-transform duration-300 group-hover:scale-110 ${isActive ? "text-white" : "text-gray-600"}`} />
+                <Icon
+                  className={`text-base transition-transform duration-300 group-hover:scale-110 ${
+                    isActive ? "text-white" : "text-gray-600"
+                  }`}
+                />
                 <span className={`text-sm ${isActive ? "font-semibold" : "font-normal"}`}>{category.label}</span>
               </button>
             );

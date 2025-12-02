@@ -50,12 +50,6 @@ const studentProfile = {
 export default function UserProfile() {
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Hồ sơ của tôi</h1>
-        <p className="text-gray-600">Xem và cập nhật thông tin cá nhân</p>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Profile Info */}
         <div className="lg:col-span-1 space-y-6">
@@ -72,9 +66,7 @@ export default function UserProfile() {
                 <span>{studentProfile.class}</span>
               </div>
               <div className="flex items-center justify-center gap-2">
-                <Tag color={studentProfile.status === "Đang học" ? "success" : "default"}>
-                  {studentProfile.status}
-                </Tag>
+                <Tag color={studentProfile.status === "Đang học" ? "success" : "default"}>{studentProfile.status}</Tag>
               </div>
             </div>
             <Divider />
