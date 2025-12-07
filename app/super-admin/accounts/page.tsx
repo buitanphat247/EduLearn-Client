@@ -5,7 +5,7 @@ import { SearchOutlined, EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnsType } from "antd/es/table";
-import { getUsers, type GetUsersResponse } from "@/lib/api/users";
+import { getUsers, createUser, type GetUsersResponse } from "@/lib/api/users";
 
 const { Option } = Select;
 
@@ -34,7 +34,7 @@ export default function SuperAdminAccounts() {
   const [form] = Form.useForm();
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 10,
+    pageSize: 20,
     total: 0,
   });
   const hasFetched = useRef(false);
@@ -74,7 +74,7 @@ export default function SuperAdminAccounts() {
 
       // Ensure minimum loading time of 1.5 seconds
       const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 1500;
+      const minLoadingTime = 250;
       const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
 
       await new Promise((resolve) => setTimeout(resolve, remainingTime));
@@ -112,7 +112,7 @@ export default function SuperAdminAccounts() {
     } catch (error: any) {
       // Ensure minimum loading time even on error
       const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 500;
+      const minLoadingTime = 250;
       const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
       await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
@@ -132,7 +132,7 @@ export default function SuperAdminAccounts() {
 
     searchTimeoutRef.current = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-    }, 1000);
+    }, 500);
 
     return () => {
       if (searchTimeoutRef.current) {
@@ -180,39 +180,46 @@ export default function SuperAdminAccounts() {
 
   const columns: ColumnsType<AccountType> = [
     {
-      title: "ID",
+      title: "STT",
       dataIndex: "user_id",
       key: "user_id",
       width: 80,
-      render: (id: number) => <span className="text-gray-600 font-mono text-sm bg-gray-50 px-2 py-1 rounded">{id}</span>,
+      render: (_: any, __: AccountType, index: number) => {
+        const currentPage = pagination.current;
+        const pageSize = pagination.pageSize;
+        const stt = (currentPage - 1) * pageSize + index + 1;
+        return <span className="text-gray-600 font-mono text-sm bg-gray-50 px-2 py-1 rounded line-clamp-1">{stt}</span>;
+      },
     },
     {
       title: "Username",
       dataIndex: "username",
       key: "username",
       width: 120,
-      render: (text: string) => <span className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors duration-200">{text}</span>,
+      render: (text: string) => (
+        <span className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors duration-200 line-clamp-1">{text}</span>
+      ),
     },
     {
       title: "Họ và tên",
       dataIndex: "fullname",
       key: "fullname",
       width: 150,
-      render: (text: string) => <span className="text-gray-600">{text}</span>,
+      render: (text: string) => <span className="text-gray-600 line-clamp-1">{text}</span>,
     },
     {
       title: "Email",
       dataIndex: "email",
       key: "email",
       width: 200,
-      render: (text: string) => <span className="text-gray-600">{text}</span>,
+      render: (text: string) => <span className="text-gray-600 line-clamp-1">{text}</span>,
     },
     {
       title: "Số điện thoại",
       dataIndex: "phone",
       key: "phone",
       width: 120,
-      render: (phone: string | null) => <span className="text-gray-600">{phone || "-"}</span>,
+      render: (phone: string | null) => <span className="text-gray-600 line-clamp-1">{phone || "-"}</span>,
     },
     {
       title: "Vai trò",
@@ -227,7 +234,7 @@ export default function SuperAdminAccounts() {
         };
         const roleInfo = roleMap[record.role_id] || { color: "default", text: roleName || "N/A" };
         return (
-          <Tag className="px-2 py-0.5 rounded-md font-semibold text-xs" color={roleInfo.color}>
+          <Tag className="px-2 py-0.5 rounded-md font-semibold text-xs line-clamp-1" color={roleInfo.color}>
             {roleInfo.text}
           </Tag>
         );
@@ -238,7 +245,7 @@ export default function SuperAdminAccounts() {
       dataIndex: "created_at",
       key: "created_at",
       width: 120,
-      render: (date: string) => <span className="text-gray-600">{formatDate(date)}</span>,
+      render: (date: string) => <span className="text-gray-600 line-clamp-1">{formatDate(date)}</span>,
     },
     {
       title: "Hành động",
@@ -396,8 +403,14 @@ function SingleAccountForm({ form, onSuccess }: { form: any; onSuccess: () => vo
   const handleSubmit = async (values: any) => {
     setSubmitting(true);
     try {
-      // TODO: Call API to create account
-      console.log("Creating account:", values);
+      await createUser({
+        username: values.username,
+        fullname: values.fullname,
+        email: values.email,
+        phone: values.phone,
+        password: values.password,
+        role_id: values.role_id,
+      });
       message.success("Tạo tài khoản thành công!");
       onSuccess();
     } catch (error: any) {

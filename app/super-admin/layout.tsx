@@ -4,20 +4,42 @@ import SuperAdminSidebar from "../components/layout/SuperAdminSidebar";
 import DashboardFooter from "../components/layout/DashboardFooter";
 import ProtectedRoute from "@/app/components/auth/ProtectedRoute";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { BellOutlined, RobotOutlined } from "@ant-design/icons";
 import NotificationPanel from "../components/layout/NotificationPanel";
 import AIChatPanel from "../components/layout/AIChatPanel";
 
+const pageTitles: Record<string, string> = {
+  "/super-admin": "Dashboard",
+  "/super-admin/documents-crawl": "Quản lý tài liệu Crawl",
+  "/super-admin/documents-user": "Quản lý tài liệu User",
+  "/super-admin/accounts": "Quản lý tài khoản",
+  "/super-admin/news": "Quản lý toàn bộ tin tức",
+  "/super-admin/posts": "Quản lý toàn bộ bài viết",
+  "/super-admin/events": "Quản lý toàn bộ sự kiện",
+  "/super-admin/all": "Quản lý toàn bộ",
+};
+
 function SuperAdminHeader() {
   const router = useRouter();
+  const pathname = usePathname();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+
+  const currentPageTitle = pageTitles[pathname || ""];
 
   return (
     <>
       <header className="bg-white h-16 flex items-center justify-between px-6 shadow-sm border-b border-gray-200">
-        <h1 className="text-xl font-semibold text-gray-800">Hệ thống quản lý Super Admin</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-gray-800">Hệ thống quản lý Super Admin</h1>
+          {currentPageTitle && (
+            <>
+              <span className="text-gray-500">-</span>
+              <span className="text-lg font-semibold text-gray-800">{currentPageTitle}</span>
+            </>
+          )}
+        </div>
 
         <div className="flex items-center gap-4">
           <button

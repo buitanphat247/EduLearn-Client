@@ -46,7 +46,7 @@ interface BackupInfo {
 }
 
 export default function SuperAdminAll() {
-  const { modal } = App.useApp();
+  const { modal, message } = App.useApp();
   const [form] = Form.useForm();
   const [healthCheck, setHealthCheck] = useState<HealthCheckResult>({
     status: "idle",
@@ -83,6 +83,7 @@ export default function SuperAdminAll() {
         headers: {
           "Content-Type": "application/json",
         },
+        timeout: 30000, // 30 seconds timeout
       };
 
       switch (method) {
@@ -107,25 +108,48 @@ export default function SuperAdminAll() {
 
       const responseTime = Date.now() - startTime;
 
+      // Ensure minimum loading time of 1.5 seconds
+      const minLoadingTime = 1500;
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+      if (remainingTime > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remainingTime));
+      }
+
+      const finalResponseTime = Date.now() - startTime;
       setHealthCheck({
         status: "success",
-        responseTime,
+        responseTime: finalResponseTime,
         statusCode: response.status,
         message: response.data?.message || "Request thành công",
         data: response.data?.data,
       });
+      message.success(response.data?.message || `Request thành công (${finalResponseTime}ms)`);
     } catch (error: any) {
       const responseTime = Date.now() - startTime;
-      const statusCode = error?.response?.status || 503;
-      const errorMessage = error?.response?.data?.message || error?.message || "Không thể kết nối đến server";
 
+      // Ensure minimum loading time of 1.5 seconds even on error
+      const minLoadingTime = 1500;
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+      if (remainingTime > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remainingTime));
+      }
+
+      const statusCode = error?.response?.status || error?.code === "ECONNABORTED" ? 408 : 503;
+      const errorMessage = error?.code === "ECONNABORTED" 
+        ? "Request timeout - Vượt quá thời gian chờ"
+        : error?.response?.data?.message || error?.message || "Không thể kết nối đến server";
+
+      const finalResponseTime = Date.now() - startTime;
       setHealthCheck({
         status: "error",
-        responseTime,
+        responseTime: finalResponseTime,
         statusCode,
         message: errorMessage,
         data: error?.response?.data?.data,
       });
+      message.error(errorMessage);
     }
   };
 
@@ -296,33 +320,6 @@ export default function SuperAdminAll() {
             </Form.Item>
           </Form>
 
-           {/* Results */}
-           {healthCheck.status === "loading" && (
-             <div className="mt-6 flex items-center justify-center">
-               <Progress percent={50} size="small" status="active" />
-             </div>
-           )}
-
-           {healthCheck.status !== "idle" && healthCheck.status !== "loading" && (
-             <div className="mt-6 flex items-center gap-3">
-               {healthCheck.status === "success" ? (
-                 <Tag color="success" className="px-4 py-2 text-base font-semibold">
-                   <CheckCircleOutlined className="mr-2" />
-                   Success
-                 </Tag>
-               ) : (
-                 <Tag color="error" className="px-4 py-2 text-base font-semibold">
-                   <CloseCircleOutlined className="mr-2" />
-                   Error
-                 </Tag>
-               )}
-               {healthCheck.message && (
-                 <span className={`text-sm ${healthCheck.status === "success" ? "text-green-600" : "text-red-600"}`}>
-                   {healthCheck.message}
-                 </span>
-               )}
-             </div>
-           )}
           </div>
         </Card>
 

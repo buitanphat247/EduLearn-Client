@@ -1,7 +1,7 @@
 "use client";
 
 import { Table, Tag, Button, Space, Select, App } from "antd";
-import { SearchOutlined, EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import { SearchOutlined, EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnsType } from "antd/es/table";
@@ -16,6 +16,7 @@ interface DocumentType {
   author: string;
   status: string;
   createdAt: string;
+  type: "document-crawl" | "document-user";
 }
 
 const mockDocuments: DocumentType[] = [
@@ -27,15 +28,7 @@ const mockDocuments: DocumentType[] = [
     author: "Nguyễn Văn A",
     status: "active",
     createdAt: "15/01/2024",
-  },
-  {
-    key: "2",
-    id: "DOC002",
-    title: "Tài liệu Vật lý lớp 11",
-    category: "Vật lý",
-    author: "Trần Thị B",
-    status: "active",
-    createdAt: "16/01/2024",
+    type: "document-user",
   },
   {
     key: "3",
@@ -45,10 +38,21 @@ const mockDocuments: DocumentType[] = [
     author: "Lê Văn C",
     status: "inactive",
     createdAt: "17/01/2024",
+    type: "document-user",
+  },
+  {
+    key: "5",
+    id: "DOC005",
+    title: "Tài liệu Địa lý lớp 8",
+    category: "Địa lý",
+    author: "Phạm Văn D",
+    status: "active",
+    createdAt: "19/01/2024",
+    type: "document-user",
   },
 ];
 
-export default function SuperAdminDocuments() {
+export default function SuperAdminDocumentsUser() {
   const router = useRouter();
   const { modal, message } = App.useApp();
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -193,7 +197,7 @@ export default function SuperAdminDocuments() {
       <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 border border-gray-200">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-2xl font-bold bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-            Quản lý nguồn tài liệu
+            Quản lý tài liệu User
           </h1>
           <Button
             type="default"
@@ -228,6 +232,7 @@ export default function SuperAdminDocuments() {
             <Option value="Vật lý">Vật lý</Option>
             <Option value="Hóa học">Hóa học</Option>
             <Option value="Ngữ văn">Ngữ văn</Option>
+            <Option value="Địa lý">Địa lý</Option>
           </Select>
 
           <Select

@@ -11,10 +11,12 @@ import {
   FileTextOutlined,
   DatabaseOutlined,
   CalendarOutlined,
+  CloudDownloadOutlined,
 } from "@ant-design/icons";
 const menuItems = [
   { path: "/super-admin", icon: HomeOutlined, label: "Trang chủ" },
-  { path: "/super-admin/documents", icon: ReadOutlined, label: "Quản lý nguồn tài liệu" },
+  { path: "/super-admin/documents-crawl", icon: CloudDownloadOutlined, label: "Tài liệu Crawl" },
+  { path: "/super-admin/documents-user", icon: ReadOutlined, label: "Tài liệu User" },
   { path: "/super-admin/accounts", icon: UserOutlined, label: "Quản lý tài khoản" },
   { path: "/super-admin/news", icon: BellOutlined, label: "Quản lý toàn bộ tin tức" },
   { path: "/super-admin/posts", icon: FileTextOutlined, label: "Quản lý toàn bộ bài viết" },
