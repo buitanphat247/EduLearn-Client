@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button, Dropdown, Avatar } from "antd";
 import type { MenuProps } from "antd";
-import { UserOutlined } from "@ant-design/icons";
+import { UserOutlined, SettingOutlined } from "@ant-design/icons";
 import SignIn from "../auth/SignIn";
 import SignUp from "../auth/SignUp";
 import { getCurrentUser } from "@/lib/api/users";
@@ -221,7 +221,9 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
             {user ? (
               <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
                 <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-                  <Avatar src={user.avatar} icon={<UserOutlined />} size="large" className="bg-white text-blue-600" />
+                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors">
+                    <SettingOutlined className="text-xl" />
+                  </div>
                   {/* <span className="font-medium text-white">{user.fullname || user.username}</span> */}
                 </div>
               </Dropdown>

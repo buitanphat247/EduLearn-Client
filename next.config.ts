@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Rewrites để proxy API requests và tránh CORS
   async rewrites() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611/api";
     
@@ -11,6 +10,21 @@ const nextConfig: NextConfig = {
         destination: `${apiUrl}/:path*`,
       },
     ];
+  },
+  
+  
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production" ? {
+      exclude: ["error", "warn"],
+    } : false,
+  },
+  
+  experimental: {
+    optimizePackageImports: [
+      "@ant-design/icons",
+      "antd",
+      "react-quill-new",
+    ],
   },
 };
 

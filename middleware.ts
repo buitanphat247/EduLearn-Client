@@ -4,28 +4,63 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Lấy token từ cookie
   const token = request.cookies.get("accessToken")?.value;
+  const userCookie = request.cookies.get("user")?.value;
 
-  // Routes cần bảo vệ
-  const protectedRoutes = ["/admin", "/user", "/profile"];
+  const protectedRoutes = ["/admin", "/user", "/profile", "/super-admin"];
   const authRoute = "/auth";
   
-  // Kiểm tra nếu đang truy cập route được bảo vệ
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   
-  // Nếu truy cập route được bảo vệ mà chưa có token
   if (isProtectedRoute && !token) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth";
     return NextResponse.redirect(url);
   }
-  
-  // Nếu đã có token và đang truy cập trang auth, redirect về trang chủ
+
   if (pathname.startsWith(authRoute) && token) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
+  }
+
+  if (token && userCookie) {
+    try {
+      const user = JSON.parse(userCookie);
+      const roleId = user?.role?.role_id;
+      const roleName = user?.role?.role_name?.toLowerCase();
+
+      if (pathname.startsWith("/admin")) {
+        if (roleId === 1) {
+          const url = request.nextUrl.clone();
+          url.pathname = "/super-admin";
+          return NextResponse.redirect(url);
+        }
+        if (roleId !== 2) {
+          const url = request.nextUrl.clone();
+          url.pathname = "/";
+          return NextResponse.redirect(url);
+        }
+      }
+
+      if (pathname.startsWith("/user")) {
+        if (roleId !== 3) {
+          const url = request.nextUrl.clone();
+          url.pathname = "/";
+          return NextResponse.redirect(url);
+        }
+      }
+
+      if (pathname.startsWith("/super-admin")) {
+        if (roleId !== 1) {
+          const url = request.nextUrl.clone();
+          url.pathname = "/";
+          return NextResponse.redirect(url);
+        }
+      }
+    } catch (error) {
+      console.error("Error parsing user cookie in middleware:", error);
+    }
   }
   
   return NextResponse.next();

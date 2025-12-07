@@ -107,6 +107,15 @@ apiClient.interceptors.response.use(
 
       switch (status) {
         case 401:
+          const isAuthRequest = originalRequest?.url?.includes("/auth/signin") || originalRequest?.url?.includes("/auth/signup");
+          
+          if (isAuthRequest) {
+            return Promise.reject({
+              ...error,
+              message: errorMessage || "Đăng nhập thất bại",
+            });
+          }
+
           if (originalRequest && !originalRequest._retry) {
             originalRequest._retry = true;
 
@@ -185,9 +194,13 @@ apiClient.interceptors.response.use(
               return Promise.reject(refreshError);
             }
           } else {
-            clearTokens();
-            if (typeof window !== "undefined") {
-              window.location.href = "/auth";
+            const isAuthRequest = originalRequest?.url?.includes("/auth/signin") || originalRequest?.url?.includes("/auth/signup");
+            
+            if (!isAuthRequest) {
+              clearTokens();
+              if (typeof window !== "undefined") {
+                window.location.href = "/auth";
+              }
             }
             return Promise.reject(error);
           }

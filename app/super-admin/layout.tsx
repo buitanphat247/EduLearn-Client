@@ -1,6 +1,6 @@
 "use client";
 
-import AdminSidebar from "../components/layout/AdminSidebar";
+import SuperAdminSidebar from "../components/layout/SuperAdminSidebar";
 import DashboardFooter from "../components/layout/DashboardFooter";
 import ProtectedRoute from "@/app/components/auth/ProtectedRoute";
 import { useState } from "react";
@@ -9,7 +9,7 @@ import { BellOutlined, RobotOutlined } from "@ant-design/icons";
 import NotificationPanel from "../components/layout/NotificationPanel";
 import AIChatPanel from "../components/layout/AIChatPanel";
 
-function AdminHeader() {
+function SuperAdminHeader() {
   const router = useRouter();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
@@ -17,7 +17,7 @@ function AdminHeader() {
   return (
     <>
       <header className="bg-white h-16 flex items-center justify-between px-6 shadow-sm border-b border-gray-200">
-        <h1 className="text-xl font-semibold text-gray-800">Hệ thống quản lý</h1>
+        <h1 className="text-xl font-semibold text-gray-800">Hệ thống quản lý Super Admin</h1>
 
         <div className="flex items-center gap-4">
           <button
@@ -39,11 +39,11 @@ function AdminHeader() {
             className="flex items-center gap-3 pl-4 border-l border-gray-300 cursor-pointer hover:opacity-80 transition-opacity"
           >
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-              BP
+              SA
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-gray-800">Admin Teacher</span>
-              <span className="text-xs text-gray-600">Giáo viên</span>
+              <span className="text-sm font-semibold text-gray-800">Super Admin</span>
+              <span className="text-xs text-gray-600">Quản trị viên</span>
             </div>
           </div>
         </div>
@@ -54,7 +54,7 @@ function AdminHeader() {
   );
 }
 
-export default function AdminLayout({
+export default function SuperAdminLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -62,9 +62,9 @@ export default function AdminLayout({
   return (
     <ProtectedRoute>
       <div className="flex h-screen bg-gray-100 overflow-hidden">
-        <AdminSidebar />
+        <SuperAdminSidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <AdminHeader />
+          <SuperAdminHeader />
           <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
             {children}
           </main>
