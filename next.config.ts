@@ -12,6 +12,15 @@ const nextConfig: NextConfig = {
     ];
   },
   
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "autobot-161.s3.amazonaws.com",
+        pathname: "/**",
+      },
+    ],
+  },
   
   compiler: {
     removeConsole: process.env.NODE_ENV === "production" ? {
