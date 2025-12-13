@@ -6,9 +6,10 @@ import ClassesHeader from "@/app/components/classes/ClassesHeader";
 import ClassesTable from "@/app/components/classes/ClassesTable";
 import CreateClassModal from "@/app/components/classes/CreateClassModal";
 import UpdateClassModal from "@/app/components/classes/UpdateClassModal";
-import { getClasses, deleteClass, getClassById, type ClassResponse, type ClassDetailResponse } from "@/lib/api/classes";
+import { getClassesByUser, deleteClass, getClassById, type ClassResponse, type ClassDetailResponse } from "@/lib/api/classes";
 import type { ClassItem } from "@/interface/classes";
 import { ensureMinLoadingTime, CLASS_STATUS_MAP } from "@/lib/utils/classUtils";
+import { getUserIdFromCookie } from "@/lib/utils/cookies";
 
 export default function AdminClasses() {
   const { message, modal } = App.useApp();
@@ -53,7 +54,17 @@ export default function AdminClasses() {
     const startTime = Date.now();
     try {
       setLoading(true);
-      const result = await getClasses({
+      
+      // Get current user ID from cookie
+      const userId = getUserIdFromCookie();
+      if (!userId) {
+        message.error("Không tìm thấy thông tin người dùng");
+        setLoading(false);
+        return;
+      }
+
+      const result = await getClassesByUser({
+        userId: userId,
         page: pagination.current,
         limit: pagination.pageSize,
         name: debouncedSearchQuery || undefined,

@@ -52,6 +52,81 @@ export interface GetClassesApiResponse {
   timestamp: string;
 }
 
+// Get classes by user ID
+export interface GetClassesByUserParams {
+  userId: number | string;
+  page?: number;
+  limit?: number;
+  name?: string;
+}
+
+export interface GetClassesByUserApiResponse {
+  status: boolean;
+  message: string;
+  data: {
+    data: ClassResponse[];
+    total: number;
+    page: number;
+    limit: number;
+  };
+  statusCode: number;
+  timestamp: string;
+}
+
+export const getClassesByUser = async (params: GetClassesByUserParams): Promise<GetClassesResult> => {
+  try {
+    const userId = typeof params.userId === "string" ? Number(params.userId) : params.userId;
+    const requestParams: Record<string, any> = {
+      page: params?.page || 1,
+      limit: params?.limit || 10,
+    };
+
+    if (params?.name && params.name.trim()) {
+      requestParams.name = params.name.trim();
+    }
+
+    const response = await apiClient.get<GetClassesByUserApiResponse>(
+      `/classes/by-user/${userId}`,
+      {
+        params: requestParams,
+      }
+    );
+
+    const apiResponse = response.data;
+
+    // Handle API response with nested data structure
+    // Response format: { status: true, message: "Success", data: { data: [...], total: 1, page: 1, limit: 10 } }
+    if (apiResponse.status && apiResponse.data) {
+      const responseData = apiResponse.data;
+      
+      // Check if data is nested (data.data)
+      if (typeof responseData === "object" && "data" in responseData && Array.isArray(responseData.data)) {
+        return {
+          classes: responseData.data,
+          total: responseData.total || responseData.data.length,
+          page: responseData.page || params?.page || 1,
+          limit: responseData.limit || params?.limit || 10,
+        };
+      }
+      
+      // If data is directly an array
+      if (Array.isArray(responseData)) {
+        return {
+          classes: responseData,
+          total: responseData.length,
+          page: params?.page || 1,
+          limit: params?.limit || 10,
+        };
+      }
+    }
+
+    throw new Error(apiResponse.message || "Không thể lấy danh sách lớp học");
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách lớp học";
+    throw new Error(errorMessage);
+  }
+};
+
 export const getClasses = async (params?: GetClassesParams): Promise<GetClassesResult> => {
   try {
     const requestParams: Record<string, any> = {
