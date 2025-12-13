@@ -8,7 +8,7 @@ import type { ColumnsType } from "antd/es/table";
 
 const { Option } = Select;
 
-interface PostType {
+interface NewsType {
   key: string;
   id: string;
   title: string;
@@ -19,7 +19,7 @@ interface PostType {
   createdAt: string;
 }
 
-const mockPosts: PostType[] = [
+const mockNews: NewsType[] = [
   {
     key: "1",
     id: "1",
@@ -52,7 +52,7 @@ const mockPosts: PostType[] = [
   },
 ];
 
-export default function SuperAdminPosts() {
+export default function SuperAdminNews() {
   const router = useRouter();
   const { modal, message } = App.useApp();
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -74,13 +74,13 @@ export default function SuperAdminPosts() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isSearchModalOpen]);
 
-  const filteredData = mockPosts.filter((item) => {
+  const filteredData = mockNews.filter((item) => {
     const matchesCategory = !selectedCategory || item.category === selectedCategory;
     const matchesStatus = !selectedStatus || item.status === selectedStatus;
     return matchesCategory && matchesStatus;
   });
 
-  const columns: ColumnsType<PostType> = [
+  const columns: ColumnsType<NewsType> = [
     {
       title: "ID",
       dataIndex: "id",
@@ -135,7 +135,7 @@ export default function SuperAdminPosts() {
     {
       title: "Hành động",
       key: "action",
-      render: (_: any, record: PostType) => {
+      render: (_: any, record: NewsType) => {
         const handleEdit = (e: React.MouseEvent) => {
           e.stopPropagation();
           message.warning("Tính năng sửa đang được phát triển");
@@ -145,7 +145,7 @@ export default function SuperAdminPosts() {
           e.stopPropagation();
           modal.confirm({
             title: "Xác nhận xóa",
-            content: `Bạn có chắc chắn muốn xóa bài viết "${record.title}"?`,
+            content: `Bạn có chắc chắn muốn xóa tin tức "${record.title}"?`,
             okText: "Xóa",
             okType: "danger",
             cancelText: "Hủy",
@@ -201,7 +201,7 @@ export default function SuperAdminPosts() {
             className="flex-1 min-w-[200px] text-left justify-start bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700 transition-all"
             onClick={() => setIsSearchModalOpen(true)}
           >
-            <span className="text-gray-400">Tìm kiếm bài viết... (Ctrl+K)</span>
+            <span className="text-gray-400">Tìm kiếm tin tức... (Ctrl+K)</span>
           </Button>
 
           <Select
@@ -237,7 +237,7 @@ export default function SuperAdminPosts() {
           className="bg-linear-to-r from-blue-500 to-purple-500 border-0 hover:from-blue-600 hover:to-purple-600 shadow-md hover:shadow-lg transition-all duration-300"
           onClick={() => message.info("Tính năng đang được phát triển")}
         >
-          Thêm bài viết
+          Thêm tin tức
         </Button>
       </div>
 
@@ -247,7 +247,7 @@ export default function SuperAdminPosts() {
         pagination={{
           position: ["bottomRight"],
           showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} bài viết`,
+          showTotal: (total) => `Tổng ${total} tin tức`,
           pageSizeOptions: ["10", "20", "50"],
           className: "px-4 py-3",
           size: "small",

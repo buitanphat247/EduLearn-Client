@@ -19,7 +19,6 @@ export default function ClassHeader({ className, onEdit, onDelete }: ClassHeader
         <Button icon={<ArrowLeftOutlined />} onClick={() => router.push("/admin/classes")} className="cursor-pointer">
           Quay lại
         </Button>
-        <h1 className="text-2xl font-bold text-gray-800">{className}</h1>
       </div>
       <Space>
         <Button icon={<EditOutlined />} onClick={onEdit} className="cursor-pointer">

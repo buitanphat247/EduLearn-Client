@@ -8,9 +8,17 @@ import type { ClassItem } from "@/interface/classes";
 
 interface ClassesTableProps {
   data: ClassItem[];
+  pagination?: {
+    current: number;
+    pageSize: number;
+    total: number;
+    onChange: (page: number, pageSize: number) => void;
+  };
+  onEdit?: (classItem: ClassItem) => void;
+  onDelete?: (classItem: ClassItem) => void;
 }
 
-export default function ClassesTable({ data }: ClassesTableProps) {
+export default function ClassesTable({ data, pagination, onEdit, onDelete }: ClassesTableProps) {
   const router = useRouter();
   const { modal, message } = App.useApp();
 
@@ -67,21 +75,29 @@ export default function ClassesTable({ data }: ClassesTableProps) {
       render: (_: any, record: ClassItem) => {
         const handleEdit = (e: React.MouseEvent) => {
           e.stopPropagation();
-          message.warning("Tính năng sửa đang được phát triển");
+          if (onEdit) {
+            onEdit(record);
+          } else {
+            message.warning("Tính năng sửa đang được phát triển");
+          }
         };
 
         const handleDelete = (e: React.MouseEvent) => {
           e.stopPropagation();
-          modal.confirm({
-            title: "Xác nhận xóa",
-            content: `Bạn có chắc chắn muốn xóa lớp học "${record.name}"?`,
-            okText: "Xóa",
-            okType: "danger",
-            cancelText: "Hủy",
-            onOk() {
-              message.warning("Tính năng xóa đang được phát triển");
-            },
-          });
+          if (onDelete) {
+            onDelete(record);
+          } else {
+            modal.confirm({
+              title: "Xác nhận xóa",
+              content: `Bạn có chắc chắn muốn xóa lớp học "${record.name}"?`,
+              okText: "Xóa",
+              okType: "danger",
+              cancelText: "Hủy",
+              onOk() {
+                message.warning("Tính năng xóa đang được phát triển");
+              },
+            });
+          }
         };
 
         return (
@@ -124,14 +140,29 @@ export default function ClassesTable({ data }: ClassesTableProps) {
     <Table
       columns={columns}
       dataSource={data}
-      pagination={{
-        position: ["bottomRight"],
-        showSizeChanger: true,
-        showTotal: (total) => `Tổng ${total} lớp học`,
-        pageSizeOptions: ["10", "20", "50"],
-        className: "px-4 py-3",
-        size: "small",
-      }}
+      pagination={
+        pagination
+          ? {
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              position: ["bottomRight"],
+              showSizeChanger: true,
+              showTotal: (total) => `Tổng ${total} lớp học`,
+              pageSizeOptions: ["10", "20", "50"],
+              className: "px-4 py-3",
+              size: "small",
+              onChange: pagination.onChange,
+            }
+          : {
+              position: ["bottomRight"],
+              showSizeChanger: true,
+              showTotal: (total) => `Tổng ${total} lớp học`,
+              pageSizeOptions: ["10", "20", "50"],
+              className: "px-4 py-3",
+              size: "small",
+            }
+      }
       className="news-table"
       rowClassName="group hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 cursor-pointer border-b border-gray-100"
       size="small"

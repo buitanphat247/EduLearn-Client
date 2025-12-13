@@ -1,42 +1,38 @@
 "use client";
 
-import { Button } from "antd";
+import { Button, Input } from "antd";
 import { SearchOutlined, PlusOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 
 interface NewsHeaderProps {
-  onSearchClick: () => void;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
 }
 
-export default function NewsHeader({ onSearchClick }: NewsHeaderProps) {
+export default function NewsHeader({ searchValue, onSearchChange }: NewsHeaderProps) {
   const router = useRouter();
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 border border-gray-200">
-      <div className="flex items-center justify-between mb-3">
-        <h1 className="text-2xl font-bold bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-          Quản lý Tin tức
-        </h1>
+    <div className="space-y-4">
+      {/* Search and Add Button */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <Input
+          prefix={<SearchOutlined className="text-gray-400" />}
+          placeholder="Tìm kiếm tin tức... (Ctrl+K)"
+          size="middle"
+          className="flex-1 min-w-[200px]"
+          value={searchValue}
+          onChange={(e) => onSearchChange?.(e.target.value)}
+          allowClear
+        />
         <Button
           type="default"
           icon={<PlusOutlined />}
           size="middle"
-          className="bg-linear-to-r  from-blue-500 to-purple-500 border-0 hover:from-blue-600 hover:to-purple-600 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
+          className="bg-white border-gray-300 hover:bg-gray-50 shadow-sm"
           onClick={() => router.push("/admin/news/handle")}
         >
           Thêm tin tức
-        </Button>
-      </div>
-
-      {/* Search Trigger Button */}
-      <div>
-        <Button
-          icon={<SearchOutlined />}
-          size="middle"
-          className="w-full text-left justify-start bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700 transition-all"
-          onClick={onSearchClick}
-        >
-          <span className="text-gray-400">Tìm kiếm tin tức... (Ctrl+K)</span>
         </Button>
       </div>
     </div>

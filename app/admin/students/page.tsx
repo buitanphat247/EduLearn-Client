@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import StudentsHeader from "@/app/components/students/StudentsHeader";
 import StudentsTable from "@/app/components/students/StudentsTable";
-import StudentsSearchModal from "@/app/components/students/StudentsSearchModal";
 import StudentDetailModal from "@/app/components/students/StudentDetailModal";
 import type { StudentItem } from "@/interface/students";
 
@@ -15,25 +14,21 @@ const data: StudentItem[] = [
 ];
 
 export default function AdminStudents() {
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<StudentItem | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
-  // Keyboard shortcut: Ctrl/Cmd + K to open search
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setIsSearchModalOpen(true);
-      }
-      if (e.key === "Escape" && isSearchModalOpen) {
-        setIsSearchModalOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isSearchModalOpen]);
+  // Filter data based on search query
+  const filteredData = data.filter((item) => {
+    const matchesSearch = !searchQuery || 
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.class.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.status.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
 
   const handleViewStudent = (student: StudentItem) => {
     setSelectedStudent(student);
@@ -42,11 +37,12 @@ export default function AdminStudents() {
 
   return (
     <div className="space-y-3">
-      <StudentsHeader onSearchClick={() => setIsSearchModalOpen(true)} />
+      <StudentsHeader 
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
 
-      <StudentsTable data={data} onViewStudent={handleViewStudent} />
-
-      <StudentsSearchModal open={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} data={data} />
+      <StudentsTable data={filteredData} onViewStudent={handleViewStudent} />
 
       {/* Modal xem chi tiết học sinh */}
       <StudentDetailModal

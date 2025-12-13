@@ -1,117 +1,109 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { App } from "antd";
+import { App, Spin } from "antd";
 import StudentDetailModal from "@/app/components/students/StudentDetailModal";
 import ClassHeader from "@/app/components/classes/ClassHeader";
 import ClassInfoCard from "@/app/components/classes/ClassInfoCard";
 import ClassStudentsTable from "@/app/components/classes/ClassStudentsTable";
+import UpdateClassModal from "@/app/components/classes/UpdateClassModal";
+import AddSingleStudentModal from "@/app/components/classes/AddSingleStudentModal";
+import { getClassById, removeStudentFromClass, deleteClass, type ClassDetailResponse, type ClassStudent } from "@/lib/api/classes";
+import { type StudentResponse } from "@/lib/api/users";
 import type { StudentItem } from "@/interface/students";
-
-// Mock data - trong thực tế sẽ fetch từ API
-const mockClassData = {
-  "1": {
-    id: "1",
-    name: "Lớp 10A1",
-    code: "10A1",
-    students: 35,
-    status: "Đang hoạt động",
-  },
-  "2": {
-    id: "2",
-    name: "Lớp 10A2",
-    code: "10A2",
-    students: 32,
-    status: "Đang hoạt động",
-  },
-  "3": {
-    id: "3",
-    name: "Lớp 11B1",
-    code: "11B1",
-    students: 30,
-    status: "Tạm dừng",
-  },
-};
-
-// Mock danh sách 50 học sinh
-const mockStudents = [
-  { key: "1", studentId: "HS001", name: "Nguyễn Văn A", email: "hs001@example.com", phone: "0987001001", status: "Đang học" },
-  { key: "2", studentId: "HS002", name: "Trần Thị B", email: "hs002@example.com", phone: "0987001002", status: "Đang học" },
-  { key: "3", studentId: "HS003", name: "Lê Văn C", email: "hs003@example.com", phone: "0987001003", status: "Tạm nghỉ" },
-  { key: "4", studentId: "HS004", name: "Phạm Thị D", email: "hs004@example.com", phone: "0987001004", status: "Đang học" },
-  { key: "5", studentId: "HS005", name: "Bùi Văn E", email: "hs005@example.com", phone: "0987001005", status: "Đang học" },
-  { key: "6", studentId: "HS006", name: "Đỗ Thị F", email: "hs006@example.com", phone: "0987001006", status: "Bảo lưu" },
-  { key: "7", studentId: "HS007", name: "Võ Văn G", email: "hs007@example.com", phone: "0987001007", status: "Đang học" },
-  { key: "8", studentId: "HS008", name: "Hồ Thị H", email: "hs008@example.com", phone: "0987001008", status: "Đang học" },
-  { key: "9", studentId: "HS009", name: "Đặng Văn I", email: "hs009@example.com", phone: "0987001009", status: "Tạm nghỉ" },
-  { key: "10", studentId: "HS010", name: "Ngô Thị K", email: "hs010@example.com", phone: "0987001010", status: "Đang học" },
-  { key: "11", studentId: "HS011", name: "Nguyễn Văn L", email: "hs011@example.com", phone: "0987001011", status: "Đang học" },
-  { key: "12", studentId: "HS012", name: "Trần Thị M", email: "hs012@example.com", phone: "0987001012", status: "Bảo lưu" },
-  { key: "13", studentId: "HS013", name: "Lê Văn N", email: "hs013@example.com", phone: "0987001013", status: "Đang học" },
-  { key: "14", studentId: "HS014", name: "Phạm Thị O", email: "hs014@example.com", phone: "0987001014", status: "Đang học" },
-  { key: "15", studentId: "HS015", name: "Bùi Văn P", email: "hs015@example.com", phone: "0987001015", status: "Tạm nghỉ" },
-  { key: "16", studentId: "HS016", name: "Đỗ Thị Q", email: "hs016@example.com", phone: "0987001016", status: "Đang học" },
-  { key: "17", studentId: "HS017", name: "Võ Văn R", email: "hs017@example.com", phone: "0987001017", status: "Đang học" },
-  { key: "18", studentId: "HS018", name: "Hồ Thị S", email: "hs018@example.com", phone: "0987001018", status: "Bảo lưu" },
-  { key: "19", studentId: "HS019", name: "Đặng Văn T", email: "hs019@example.com", phone: "0987001019", status: "Đang học" },
-  { key: "20", studentId: "HS020", name: "Ngô Thị U", email: "hs020@example.com", phone: "0987001020", status: "Đang học" },
-  { key: "21", studentId: "HS021", name: "Nguyễn Văn V", email: "hs021@example.com", phone: "0987001021", status: "Tạm nghỉ" },
-  { key: "22", studentId: "HS022", name: "Trần Thị X", email: "hs022@example.com", phone: "0987001022", status: "Đang học" },
-  { key: "23", studentId: "HS023", name: "Lê Văn Y", email: "hs023@example.com", phone: "0987001023", status: "Đang học" },
-  { key: "24", studentId: "HS024", name: "Phạm Thị Z", email: "hs024@example.com", phone: "0987001024", status: "Bảo lưu" },
-  { key: "25", studentId: "HS025", name: "Bùi Văn AA", email: "hs025@example.com", phone: "0987001025", status: "Đang học" },
-  { key: "26", studentId: "HS026", name: "Đỗ Thị AB", email: "hs026@example.com", phone: "0987001026", status: "Tạm nghỉ" },
-  { key: "27", studentId: "HS027", name: "Võ Văn AC", email: "hs027@example.com", phone: "0987001027", status: "Đang học" },
-  { key: "28", studentId: "HS028", name: "Hồ Thị AD", email: "hs028@example.com", phone: "0987001028", status: "Đang học" },
-  { key: "29", studentId: "HS029", name: "Đặng Văn AE", email: "hs029@example.com", phone: "0987001029", status: "Bảo lưu" },
-  { key: "30", studentId: "HS030", name: "Ngô Thị AF", email: "hs030@example.com", phone: "0987001030", status: "Đang học" },
-  { key: "31", studentId: "HS031", name: "Nguyễn Văn AG", email: "hs031@example.com", phone: "0987001031", status: "Đang học" },
-  { key: "32", studentId: "HS032", name: "Trần Thị AH", email: "hs032@example.com", phone: "0987001032", status: "Tạm nghỉ" },
-  { key: "33", studentId: "HS033", name: "Lê Văn AI", email: "hs033@example.com", phone: "0987001033", status: "Đang học" },
-  { key: "34", studentId: "HS034", name: "Phạm Thị AJ", email: "hs034@example.com", phone: "0987001034", status: "Đang học" },
-  { key: "35", studentId: "HS035", name: "Bùi Văn AK", email: "hs035@example.com", phone: "0987001035", status: "Tạm nghỉ" },
-  { key: "36", studentId: "HS036", name: "Đỗ Thị AL", email: "hs036@example.com", phone: "0987001036", status: "Đang học" },
-  { key: "37", studentId: "HS037", name: "Võ Văn AM", email: "hs037@example.com", phone: "0987001037", status: "Đang học" },
-  { key: "38", studentId: "HS038", name: "Hồ Thị AN", email: "hs038@example.com", phone: "0987001038", status: "Bảo lưu" },
-  { key: "39", studentId: "HS039", name: "Đặng Văn AO", email: "hs039@example.com", phone: "0987001039", status: "Đang học" },
-  { key: "40", studentId: "HS040", name: "Ngô Thị AP", email: "hs040@example.com", phone: "0987001040", status: "Đang học" },
-  { key: "41", studentId: "HS041", name: "Nguyễn Văn AQ", email: "hs041@example.com", phone: "0987001041", status: "Tạm nghỉ" },
-  { key: "42", studentId: "HS042", name: "Trần Thị AR", email: "hs042@example.com", phone: "0987001042", status: "Đang học" },
-  { key: "43", studentId: "HS043", name: "Lê Văn AS", email: "hs043@example.com", phone: "0987001043", status: "Đang học" },
-  { key: "44", studentId: "HS044", name: "Phạm Thị AT", email: "hs044@example.com", phone: "0987001044", status: "Bảo lưu" },
-  { key: "45", studentId: "HS045", name: "Bùi Văn AU", email: "hs045@example.com", phone: "0987001045", status: "Đang học" },
-  { key: "46", studentId: "HS046", name: "Đỗ Thị AV", email: "hs046@example.com", phone: "0987001046", status: "Đang học" },
-  { key: "47", studentId: "HS047", name: "Võ Văn AW", email: "hs047@example.com", phone: "0987001047", status: "Tạm nghỉ" },
-  { key: "48", studentId: "HS048", name: "Hồ Thị AX", email: "hs048@example.com", phone: "0987001048", status: "Đang học" },
-  { key: "49", studentId: "HS049", name: "Đặng Văn AY", email: "hs049@example.com", phone: "0987001049", status: "Đang học" },
-  { key: "50", studentId: "HS050", name: "Ngô Thị AZ", email: "hs050@example.com", phone: "0987001050", status: "Tạm nghỉ" },
-];
 
 export default function ClassDetail() {
   const router = useRouter();
   const params = useParams();
   const { modal, message } = App.useApp();
   const classId = params?.id as string;
-  const classData = mockClassData[classId as keyof typeof mockClassData];
   
-  // Map students với class data và convert status
-  const studentsWithClass: StudentItem[] = mockStudents.map((student) => {
-    let status: "Đang học" | "Tạm nghỉ" | "Đã tốt nghiệp" = "Đang học";
-    if (student.status === "Tạm nghỉ") status = "Tạm nghỉ";
-    else if (student.status === "Đã tốt nghiệp") status = "Đã tốt nghiệp";
-    else if (student.status === "Bảo lưu") status = "Tạm nghỉ"; // Map "Bảo lưu" to "Tạm nghỉ"
-    
-    return {
-      ...student,
-      class: classData?.name || "N/A",
-      status,
-    };
-  });
-
-  const [students, setStudents] = useState<StudentItem[]>(studentsWithClass);
+  const [classData, setClassData] = useState<{
+    id: string;
+    name: string;
+    code: string;
+    students: number;
+    status: "Đang hoạt động" | "Tạm dừng";
+  } | null>(null);
+  const [students, setStudents] = useState<StudentItem[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<StudentItem | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isAddSingleModalOpen, setIsAddSingleModalOpen] = useState(false);
+  const [isAddMultipleModalOpen, setIsAddMultipleModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [originalClassData, setOriginalClassData] = useState<ClassDetailResponse | null>(null);
+
+  // Map API student to StudentItem
+  const mapStudentToItem = (student: ClassStudent, className: string, _index: number): StudentItem => {
+    return {
+      key: String(student.user_id),
+      studentId: student.username || `HS${String(student.user_id).padStart(3, "0")}`,
+      name: student.fullname,
+      email: student.email,
+      phone: "", // API không có phone, để trống
+      class: className,
+      status: "Đang học" as const, // Mặc định "Đang học" vì API không có status
+    };
+  };
+
+  // Fetch class detail
+  const fetchClassDetail = useCallback(async () => {
+    if (!classId) return;
+
+    const startTime = Date.now();
+    try {
+      const data = await getClassById(classId);
+
+      // Map class data
+      const mappedClassData = {
+        id: String(data.class_id),
+        name: data.name,
+        code: data.code,
+        students: data.student_count,
+        status: data.status === "active" ? "Đang hoạt động" as const : "Tạm dừng" as const,
+      };
+
+      // Map students
+      const mappedStudents: StudentItem[] = (data.students || []).map((student: ClassStudent, index: number) =>
+        mapStudentToItem(student, data.name, index)
+      );
+
+      // Ensure minimum loading time
+      const elapsedTime = Date.now() - startTime;
+      const minLoadingTime = 250;
+      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+      await new Promise((resolve) => setTimeout(resolve, remainingTime));
+
+      setClassData(mappedClassData);
+      setStudents(mappedStudents);
+      setOriginalClassData(data); // Lưu original data để dùng cho update
+    } catch (error: any) {
+      // Ensure minimum loading time even on error
+      const elapsedTime = Date.now() - startTime;
+      const minLoadingTime = 250;
+      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+      await new Promise((resolve) => setTimeout(resolve, remainingTime));
+
+      message.error(error?.message || "Không thể tải thông tin lớp học");
+      setClassData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [classId, message]);
+
+  useEffect(() => {
+    fetchClassDetail();
+  }, [fetchClassDetail]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Spin size="large" tip="Đang tải thông tin lớp học..." />
+      </div>
+    );
+  }
 
   if (!classData) {
     return (
@@ -130,7 +122,7 @@ export default function ClassDetail() {
   }
 
   const handleEdit = () => {
-    message.info("Tính năng chỉnh sửa đang được phát triển");
+    setIsEditModalOpen(true);
   };
 
   const handleDelete = () => {
@@ -140,8 +132,15 @@ export default function ClassDetail() {
       okText: "Xóa",
       okType: "danger",
       cancelText: "Hủy",
-      onOk() {
-        message.warning("Tính năng xóa đang được phát triển");
+      onOk: async () => {
+        try {
+          await deleteClass(classId);
+          message.success(`Đã xóa lớp học "${classData.name}" thành công`);
+          // Redirect về trang danh sách lớp học
+          router.push("/admin/classes");
+        } catch (error: any) {
+          message.error(error?.message || "Không thể xóa lớp học");
+        }
       },
     });
   };
@@ -158,12 +157,67 @@ export default function ClassDetail() {
       okText: "Xóa",
       okType: "danger",
       cancelText: "Hủy",
-      onOk() {
-        setStudents((prev) => prev.filter((s) => s.key !== student.key));
-        message.success(`Đã xóa học sinh "${student.name}" ra khỏi lớp`);
+      onOk: async () => {
+        try {
+          await removeStudentFromClass({
+            classId: classId,
+            userId: student.key,
+          });
+
+          // Cập nhật state trực tiếp
+          setStudents((prev) => prev.filter((s) => s.key !== student.key));
+          setClassData((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              students: prev.students - 1,
+            };
+          });
+
+          message.success(`Đã xóa học sinh "${student.name}" ra khỏi lớp`);
+        } catch (error: any) {
+          message.error(error?.message || "Không thể xóa học sinh khỏi lớp");
+        }
       },
     });
   };
+
+  const handleAddSingle = () => {
+    setIsAddSingleModalOpen(true);
+  };
+
+  const handleAddMultiple = () => {
+    setIsAddMultipleModalOpen(true);
+  };
+
+  const handleAddStudentSuccess = (student: StudentResponse) => {
+    // Map API student to StudentItem format
+    const newStudent: StudentItem = {
+      key: String(student.user_id),
+      studentId: student.username || `HS${String(student.user_id).padStart(3, "0")}`,
+      name: student.fullname,
+      email: student.email,
+      phone: student.phone || "",
+      class: classData?.name || "",
+      status: "Đang học" as const,
+    };
+
+    // Cập nhật state trực tiếp
+    setStudents((prev) => [...prev, newStudent]);
+    setClassData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        students: prev.students + 1,
+      };
+    });
+    
+    // Không đóng modal để có thể thêm tiếp
+    message.success(`Đã thêm học sinh "${student.fullname}" vào lớp`);
+  };
+
+  // Get existing student IDs for filtering
+  const existingStudentIds = students.map((s) => s.key);
 
   return (
     <div className="space-y-6">
@@ -181,7 +235,56 @@ export default function ClassDetail() {
       />
 
       {/* Danh sách học sinh */}
-      <ClassStudentsTable students={students} onViewStudent={handleViewStudent} onRemoveStudent={handleRemoveStudent} />
+      <ClassStudentsTable 
+        students={students} 
+        onViewStudent={handleViewStudent} 
+        onRemoveStudent={handleRemoveStudent}
+        onAddSingle={handleAddSingle}
+        onAddMultiple={handleAddMultiple}
+      />
+
+      {/* Modal chỉnh sửa lớp học */}
+      {originalClassData && (
+        <UpdateClassModal
+          open={isEditModalOpen}
+          classId={classId}
+          currentName={classData.name}
+          currentCode={classData.code}
+          currentStudentCount={classData.students}
+          currentStatus={originalClassData.status}
+          onCancel={() => setIsEditModalOpen(false)}
+          onSuccess={(updatedName) => {
+            setIsEditModalOpen(false);
+            // Cập nhật state trực tiếp thay vì gọi lại API
+            setClassData((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                name: updatedName,
+              };
+            });
+            // Cập nhật originalClassData để đồng bộ
+            setOriginalClassData((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                name: updatedName,
+              };
+            });
+          }}
+        />
+      )}
+
+      {/* Modal thêm học sinh single */}
+      {classData && (
+        <AddSingleStudentModal
+          open={isAddSingleModalOpen}
+          classId={classId}
+          existingStudentIds={existingStudentIds}
+          onCancel={() => setIsAddSingleModalOpen(false)}
+          onSuccess={handleAddStudentSuccess}
+        />
+      )}
 
       {/* Modal xem chi tiết học sinh */}
       <StudentDetailModal

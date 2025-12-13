@@ -14,8 +14,8 @@ const pageTitles: Record<string, string> = {
   "/super-admin/documents-crawl": "Quản lý tài liệu Crawl",
   "/super-admin/documents-user": "Quản lý tài liệu User",
   "/super-admin/accounts": "Quản lý tài khoản",
-  "/super-admin/news": "Quản lý toàn bộ tin tức",
-  "/super-admin/posts": "Quản lý toàn bộ bài viết",
+  "/super-admin/notification": "Quản lý thông báo",
+  "/super-admin/posts": "Quản lý tin tức",
   "/super-admin/events": "Quản lý toàn bộ sự kiện",
   "/super-admin/all": "Quản lý toàn bộ",
 };

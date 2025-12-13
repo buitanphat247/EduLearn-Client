@@ -1,23 +1,21 @@
 "use client";
 
-import { Card, Button, Space, App, Progress, Tag, Divider, Modal, Input, message, Select, Form } from "antd";
+import { Card, Button, Space, App, Divider, Input, message, Select, Form, Tag } from "antd";
 import {
   ApiOutlined,
-  DatabaseOutlined,
-  CloudDownloadOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   LoadingOutlined,
-  ReloadOutlined,
   PlayCircleOutlined,
-  SaveOutlined,
   ClockCircleOutlined,
   GlobalOutlined,
+  InfoCircleOutlined,
+  DatabaseOutlined,
+  CloudServerOutlined,
+  MonitorOutlined,
 } from "@ant-design/icons";
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import axios from "axios";
-import { createBackup, getBackups, type BackupResponse } from "@/lib/api/backup";
-import { getCurrentUser } from "@/lib/api/users";
 
 const { Option } = Select;
 
@@ -38,21 +36,6 @@ interface HealthCheckResult {
   };
 }
 
-interface BackupInfo {
-  id: string;
-  name: string;
-  date: string;
-  size: string;
-  status: "completed" | "failed" | "in-progress";
-  file_path?: string;
-  creator?: {
-    user_id: string;
-    username: string;
-    fullname: string;
-    email: string;
-    avatar: string;
-  };
-}
 
 export default function SuperAdminAll() {
   const { modal, message } = App.useApp();
@@ -63,74 +46,6 @@ export default function SuperAdminAll() {
   const [baseUrl, setBaseUrl] = useState("http://localhost:1611/api");
   const [endpoint, setEndpoint] = useState("/health");
   const [method, setMethod] = useState<"GET" | "POST" | "PUT" | "DELETE" | "PATCH">("GET");
-
-  const [backups, setBackups] = useState<BackupInfo[]>([]);
-  const [loadingBackups, setLoadingBackups] = useState(true);
-  const [creatingBackup, setCreatingBackup] = useState(false);
-
-  // Format file size từ bytes sang readable format
-  const formatFileSize = (bytes: string | number): string => {
-    const size = typeof bytes === "string" ? parseInt(bytes, 10) : bytes;
-    if (size < 1024) return `${size} B`;
-    if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`;
-    if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MB`;
-    return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-  };
-
-  // Format date từ ISO string sang định dạng Việt Nam
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleString("vi-VN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // Tạo tên backup tự động theo định dạng "Backup đầy đủ - YYYY-MM-DD HH:MM:SS"
-  const generateBackupName = (): string => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    const seconds = String(now.getSeconds()).padStart(2, "0");
-    return `Backup đầy đủ - ${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-  };
-
-  // Fetch backups từ API (chỉ lấy 2 backups mới nhất)
-  const fetchBackups = useCallback(async () => {
-    try {
-      setLoadingBackups(true);
-      const result = await getBackups({ page: 1, limit: 2 });
-      
-      // Xử lý cả trường hợp có pagination và không có pagination
-      const backupsData = Array.isArray(result) ? result : result.data;
-      
-      const formattedBackups: BackupInfo[] = backupsData.map((backup) => ({
-        id: backup.backup_id,
-        name: backup.name,
-        date: formatDate(backup.created_at),
-        size: formatFileSize(backup.file_size),
-        status: "completed" as const,
-        file_path: backup.file_path,
-        creator: backup.creator,
-      }));
-      setBackups(formattedBackups);
-    } catch (error: any) {
-      message.error(error?.message || "Không thể tải danh sách backup");
-    } finally {
-      setLoadingBackups(false);
-    }
-  }, [message]);
-
-  // Load backups khi component mount
-  useEffect(() => {
-    fetchBackups();
-  }, [fetchBackups]);
 
   const handleHealthCheck = async () => {
     if (!baseUrl.trim() || !endpoint.trim()) {
@@ -221,49 +136,6 @@ export default function SuperAdminAll() {
     }
   };
 
-  const handleCreateBackup = async () => {
-    const user = getCurrentUser();
-    if (!user || !user.user_id) {
-      message.error("Không thể lấy thông tin người dùng. Vui lòng đăng nhập lại!");
-      return;
-    }
-
-    setCreatingBackup(true);
-    try {
-      const backupName = generateBackupName();
-      await createBackup({
-        name: backupName,
-        created_by: Number(user.user_id),
-      });
-      message.success("Tạo backup thành công!");
-      // Refresh danh sách backups
-      await fetchBackups();
-    } catch (error: any) {
-      message.error(error?.message || "Không thể tạo backup");
-    } finally {
-      setCreatingBackup(false);
-    }
-  };
-
-  const handleDownloadBackup = (backup: BackupInfo) => {
-    if (!backup.file_path) {
-      message.warning("Không có đường dẫn file để tải xuống");
-      return;
-    }
-
-    // Cloudflare R2 base URL
-    const CLOUDFLARE_R2_BASE_URL = "https://pub-3aaf3c9cd7694383ab5e47980be6dc67.r2.dev";
-    const fullUrl = `${CLOUDFLARE_R2_BASE_URL}${backup.file_path}`;
-    
-    // Tạo link download
-    const link = document.createElement("a");
-    link.href = fullUrl;
-    link.download = backup.name || "backup.json";
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
 
   const getStatusIcon = (status: HealthCheckResult["status"]) => {
@@ -288,31 +160,6 @@ export default function SuperAdminAll() {
     return `${minutes} phút`;
   };
 
-  const getBackupStatusColor = (status: BackupInfo["status"]) => {
-    switch (status) {
-      case "completed":
-        return "green";
-      case "failed":
-        return "red";
-      case "in-progress":
-        return "blue";
-      default:
-        return "default";
-    }
-  };
-
-  const getBackupStatusText = (status: BackupInfo["status"]) => {
-    switch (status) {
-      case "completed":
-        return "Hoàn thành";
-      case "failed":
-        return "Thất bại";
-      case "in-progress":
-        return "Đang xử lý...";
-      default:
-        return status;
-    }
-  };
 
   return (
     <div className="space-y-6 p-0">
@@ -365,7 +212,7 @@ export default function SuperAdminAll() {
                     { value: "PATCH", label: "PATCH" },
                   ]}
                   disabled
-                  />
+                />
               </Form.Item>
 
               <Form.Item label="Endpoint" required className="col-span-2">
@@ -376,7 +223,7 @@ export default function SuperAdminAll() {
                   onChange={(e) => setEndpoint(e.target.value)}
                   className="h-10"
                   disabled
-                  />
+                />
               </Form.Item>
             </div>
 
@@ -393,12 +240,56 @@ export default function SuperAdminAll() {
                 {healthCheck.status === "loading" ? "Đang kiểm tra..." : "Gửi Request"}
               </Button>
             </Form.Item>
+
+            {/* Health Check Result */}
+            {healthCheck.status !== "idle" && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-semibold text-gray-700">Kết quả kiểm tra:</span>
+                  {getStatusIcon(healthCheck.status)}
+                </div>
+                {healthCheck.statusCode && (
+                  <div className="text-sm text-gray-600 mb-2">
+                    Status Code: <Tag color={healthCheck.statusCode >= 200 && healthCheck.statusCode < 300 ? "green" : "red"}>{healthCheck.statusCode}</Tag>
+                  </div>
+                )}
+                {healthCheck.responseTime && (
+                  <div className="text-sm text-gray-600 mb-2">
+                    Response Time: <span className="font-semibold">{healthCheck.responseTime}ms</span>
+                  </div>
+                )}
+                {healthCheck.message && (
+                  <div className="text-sm text-gray-600">
+                    {healthCheck.message}
+                  </div>
+                )}
+                {healthCheck.data && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    {healthCheck.data.uptime && (
+                      <div className="text-sm text-gray-600 mb-2">
+                        <ClockCircleOutlined className="mr-2" />
+                        Uptime: <span className="font-semibold">{formatUptime(healthCheck.data.uptime)}</span>
+                      </div>
+                    )}
+                    {healthCheck.data.database && (
+                      <div className="text-sm text-gray-600">
+                        <DatabaseOutlined className="mr-2" />
+                        Database: <Tag color={healthCheck.data.database.status === "connected" ? "green" : "red"}>{healthCheck.data.database.status}</Tag>
+                        {healthCheck.data.database.responseTime && (
+                          <span className="ml-2">({healthCheck.data.database.responseTime}ms)</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </Form>
 
           </div>
         </Card>
 
-        {/* Backup System Section */}
+        {/* System Information Section */}
         <Card
           hoverable
           className="group cursor-default border border-gray-200 hover:shadow-lg transition-shadow duration-300 overflow-hidden"
@@ -406,97 +297,70 @@ export default function SuperAdminAll() {
             body: { padding: 0 },
           }}
         >
-          <div className="bg-linear-to-br from-green-500 to-green-600 p-6 text-white relative overflow-hidden">
+          <div className="bg-linear-to-br from-purple-500 to-purple-600 p-6 text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-12 -mb-12"></div>
-            <div className="relative z-10 flex items-center justify-between">
-              <div>
-                <div className="bg-green-100 w-16 h-16 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+            <div className="relative z-10">
+              <div className="bg-purple-100 w-16 h-16 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                   <span className="text-black">
-                    <DatabaseOutlined className="text-3xl text-green-600" />
+                  <InfoCircleOutlined className="text-3xl text-purple-600" />
                   </span>
-                </div>
-                <h3 className="text-xl font-bold mb-2">Backup hệ thống</h3>
-                <p className="text-blue-100 text-sm">Quản lý sao lưu và khôi phục dữ liệu</p>
               </div>
-              <Button
-                type="default"
-                icon={<SaveOutlined />}
-                onClick={handleCreateBackup}
-                loading={creatingBackup}
-                disabled={creatingBackup}
-                className="bg-white text-green-600 hover:bg-green-50 border-0"
-              >
-                {creatingBackup ? "Đang tạo..." : "Tạo backup"}
-              </Button>
+              <h3 className="text-xl font-bold mb-2">Thông tin hệ thống</h3>
+              <p className="text-purple-100 text-sm">Xem thống kê và trạng thái hệ thống</p>
             </div>
           </div>
           <div className="p-6 bg-white">
-            {loadingBackups ? (
-              <div className="text-center py-8">
-                <LoadingOutlined spin className="text-2xl text-green-500" />
-                <p className="mt-2 text-gray-600">Đang tải danh sách backup...</p>
-              </div>
-            ) : backups.length === 0 ? (
-              <div className="text-center py-8">
-                <DatabaseOutlined className="text-4xl text-gray-400 mb-2" />
-                <p className="text-gray-600">Chưa có backup nào</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-            {backups.map((backup) => (
-              <div key={backup.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-green-300 transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex-1">
-                    <div className="font-semibold text-gray-800 mb-1">{backup.name}</div>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <ClockCircleOutlined />
-                        {backup.date}
-                      </span>
-                      <span>{backup.size}</span>
+            <div className="space-y-4">
+              {/* System Metrics */}
+              <div className="grid grid-cols-1 gap-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-center mb-2">
+                    <CloudServerOutlined className="text-2xl text-blue-600 mr-2" />
+                    <div className="text-2xl font-bold text-blue-600">99.9%</div>
+                  </div>
+                  <div className="text-sm text-gray-600">Uptime</div>
                     </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center justify-center mb-2">
+                    <DatabaseOutlined className="text-2xl text-green-600 mr-2" />
+                    <div className="text-2xl font-bold text-green-600">2.5 TB</div>
                   </div>
-                  <Tag color={getBackupStatusColor(backup.status)}>{getBackupStatusText(backup.status)}</Tag>
+                  <div className="text-sm text-gray-600">Dung lượng đã sử dụng</div>
                 </div>
-                {backup.status === "in-progress" && <Progress percent={75} size="small" status="active" className="mt-2" />}
-                {backup.status === "completed" && (
-                  <div className="flex gap-2 mt-3">
-                    <Button
-                      type="default"
-                      icon={<CloudDownloadOutlined />}
-                      size="small"
-                      onClick={() => handleDownloadBackup(backup)}
-                    >
-                      Tải xuống
-                    </Button>
+                <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <div className="flex items-center justify-center mb-2">
+                    <MonitorOutlined className="text-2xl text-purple-600 mr-2" />
+                    <div className="text-2xl font-bold text-purple-600">1,234</div>
                   </div>
-                )}
+                  <div className="text-sm text-gray-600">Tổng requests hôm nay</div>
+                </div>
               </div>
-            ))}
+
+              {/* Additional System Info */}
+              {healthCheck.data && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="font-semibold text-gray-700 mb-3">Thông tin từ API Health Check:</h4>
+                  <div className="space-y-2 text-sm">
+                    {healthCheck.data.timestamp && (
+                      <div className="flex items-center text-gray-600">
+                        <ClockCircleOutlined className="mr-2" />
+                        <span>Timestamp: {new Date(healthCheck.data.timestamp).toLocaleString("vi-VN")}</span>
+                      </div>
+                    )}
+                    {healthCheck.data.status && (
+                      <div className="flex items-center text-gray-600">
+                        <CheckCircleOutlined className="mr-2 text-green-500" />
+                        <span>Status: <Tag color="green">{healthCheck.data.status}</Tag></span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            )}
           </div>
         </Card>
       </div>
-
-      {/* System Status */}
-      <Divider className="my-6" />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="text-center p-6 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="text-3xl font-bold text-blue-600 mb-2">99.9%</div>
-          <div className="text-gray-600">Uptime</div>
-        </div>
-        <div className="text-center p-6 bg-green-50 rounded-lg border border-green-200">
-          <div className="text-3xl font-bold text-green-600 mb-2">2.5 TB</div>
-          <div className="text-gray-600">Dung lượng đã sử dụng</div>
-        </div>
-        <div className="text-center p-6 bg-purple-50 rounded-lg border border-purple-200">
-          <div className="text-3xl font-bold text-purple-600 mb-2">1,234</div>
-          <div className="text-gray-600">Tổng requests hôm nay</div>
-        </div>
-      </div>
-
     </div>
   );
 }

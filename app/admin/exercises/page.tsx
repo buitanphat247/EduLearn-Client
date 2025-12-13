@@ -15,14 +15,19 @@ const data: ExerciseItem[] = [
 
 export default function AdminExercises() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedClass, setSelectedClass] = useState<string | undefined>();
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
 
-  // Filter data based on selected filters
+  // Filter data based on selected filters and search query
   const filteredData = data.filter((item) => {
     const matchesClass = !selectedClass || item.class === selectedClass;
     const matchesStatus = !selectedStatus || item.status === selectedStatus;
-    return matchesClass && matchesStatus;
+    const matchesSearch = !searchQuery || 
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.class.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.subject.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesClass && matchesStatus && matchesSearch;
   });
 
   // Keyboard shortcut: Ctrl/Cmd + K to open search
@@ -44,7 +49,8 @@ export default function AdminExercises() {
   return (
     <div className="space-y-3">
       <ExercisesHeader
-        onSearchClick={() => setIsSearchModalOpen(true)}
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
         selectedClass={selectedClass}
         selectedStatus={selectedStatus}
         onClassChange={setSelectedClass}

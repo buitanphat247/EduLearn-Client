@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import NewsHeader from "@/app/components/news/NewsHeader";
 import NewsTable from "@/app/components/news/NewsTable";
-import NewsSearchModal from "@/app/components/news/NewsSearchModal";
 import type { NewsItem } from "@/interface/news";
 
 const data: NewsItem[] = [
@@ -13,31 +12,25 @@ const data: NewsItem[] = [
 ];
 
 export default function AdminNews() {
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Keyboard shortcut: Ctrl/Cmd + K to open search
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setIsSearchModalOpen(true);
-      }
-      if (e.key === "Escape" && isSearchModalOpen) {
-        setIsSearchModalOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isSearchModalOpen]);
+  // Filter data based on search query
+  const filteredData = data.filter((item) => {
+    const matchesSearch = !searchQuery || 
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.status.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
 
   return (
     <div className="space-y-3">
-      <NewsHeader onSearchClick={() => setIsSearchModalOpen(true)} />
+      <NewsHeader 
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
 
-      <NewsTable data={data} />
-
-      <NewsSearchModal open={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} data={data} />
+      <NewsTable data={filteredData} />
     </div>
   );
 }

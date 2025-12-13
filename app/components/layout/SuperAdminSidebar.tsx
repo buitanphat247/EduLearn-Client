@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   HomeOutlined,
   SettingOutlined,
@@ -13,20 +13,29 @@ import {
   CalendarOutlined,
   CloudDownloadOutlined,
 } from "@ant-design/icons";
+
 const menuItems = [
   { path: "/super-admin", icon: HomeOutlined, label: "Trang chủ" },
   { path: "/super-admin/documents-crawl", icon: CloudDownloadOutlined, label: "Tài liệu Crawl" },
   { path: "/super-admin/documents-user", icon: ReadOutlined, label: "Tài liệu User" },
   { path: "/super-admin/accounts", icon: UserOutlined, label: "Quản lý tài khoản" },
-  { path: "/super-admin/news", icon: BellOutlined, label: "Quản lý toàn bộ tin tức" },
-  { path: "/super-admin/posts", icon: FileTextOutlined, label: "Quản lý toàn bộ bài viết" },
+  { path: "/super-admin/notification", icon: BellOutlined, label: "Quản lý thông báo" },
+  { path: "/super-admin/posts", icon: FileTextOutlined, label: "Quản lý tin tức" },
   { path: "/super-admin/events", icon: CalendarOutlined, label: "Quản lý toàn bộ sự kiện" },
   { path: "/super-admin/all", icon: DatabaseOutlined, label: "Quản lý toàn bộ" },
 ];
 
 export default function SuperAdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const sidebarColor = "#2f3542";
+
+  const handleNavigation = (path: string) => {
+    // Scroll to top khi navigate
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   return (
     <aside
@@ -53,9 +62,11 @@ export default function SuperAdminSidebar() {
             <Link
               key={item.path}
               href={item.path}
+              onClick={() => handleNavigation(item.path)}
               className={`flex items-center justify-center py-3 px-2 rounded-l-2xl transition-all group relative ${isActive ? "admin-sidebar-active" : ""}`}
               style={{ backgroundColor: "transparent" }}
               title={item.label}
+              prefetch={true}
             >
               <Icon className="text-2xl" style={{ color: "#ffffff", position: "relative", zIndex: 2 }} />
             </Link>

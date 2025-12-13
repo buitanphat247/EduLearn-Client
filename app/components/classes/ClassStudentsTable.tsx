@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Space, Tag, Table } from "antd";
-import { DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EyeOutlined, UserAddOutlined, UsergroupAddOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import CustomCard from "@/app/components/common/CustomCard";
 import type { StudentItem } from "@/interface/students";
@@ -10,9 +10,11 @@ interface ClassStudentsTableProps {
   students: StudentItem[];
   onViewStudent: (student: StudentItem) => void;
   onRemoveStudent: (student: StudentItem) => void;
+  onAddSingle?: () => void;
+  onAddMultiple?: () => void;
 }
 
-export default function ClassStudentsTable({ students, onViewStudent, onRemoveStudent }: ClassStudentsTableProps) {
+export default function ClassStudentsTable({ students, onViewStudent, onRemoveStudent, onAddSingle, onAddMultiple }: ClassStudentsTableProps) {
 
   const studentColumns: ColumnsType<StudentItem> = [
     {
@@ -31,11 +33,6 @@ export default function ClassStudentsTable({ students, onViewStudent, onRemoveSt
       title: "Email",
       dataIndex: "email",
       key: "email",
-    },
-    {
-      title: "Số điện thoại",
-      dataIndex: "phone",
-      key: "phone",
     },
     {
       title: "Trạng thái",
@@ -63,7 +60,32 @@ export default function ClassStudentsTable({ students, onViewStudent, onRemoveSt
   ];
 
   return (
-    <CustomCard title="Danh sách học sinh" bodyClassName="py-6">
+    <CustomCard 
+      title="Danh sách học sinh" 
+      bodyClassName="py-6"
+      extra={
+        <Space>
+          <Button
+            type="default"
+            icon={<UserAddOutlined />}
+            size="middle"
+            className="bg-white border-gray-300 hover:bg-gray-50 shadow-sm"
+            onClick={onAddSingle}
+          >
+            Thêm single
+          </Button>
+          <Button
+            type="default"
+            icon={<UsergroupAddOutlined />}
+            size="middle"
+            className="bg-white border-gray-300 hover:bg-gray-50 shadow-sm"
+            onClick={onAddMultiple}
+          >
+            Thêm multiple
+          </Button>
+        </Space>
+      }
+    >
       <Table columns={studentColumns} dataSource={students} pagination={false} rowClassName="hover:bg-gray-50 transition-colors" />
     </CustomCard>
   );

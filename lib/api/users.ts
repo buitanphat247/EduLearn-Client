@@ -263,3 +263,82 @@ export const updateUserStatus = async (
   }
 };
 
+export interface StudentResponse {
+  user_id: number | string;
+  username: string;
+  fullname: string;
+  email: string;
+  phone: string | null;
+  avatar: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  role: {
+    role_id: number;
+    role_name: string;
+    created_at: string;
+    updated_at: string;
+  };
+}
+
+export interface GetStudentsParams {
+  classId: number | string; // Required: ID của lớp học
+  page?: number;
+  limit?: number;
+  search?: string; // Tìm kiếm theo tên hoặc email
+}
+
+export interface GetStudentsResult {
+  students: StudentResponse[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface GetStudentsApiResponse {
+  status: boolean;
+  message: string;
+  data: {
+    data: StudentResponse[];
+    total: number;
+    page: number;
+    limit: number;
+  };
+  statusCode: number;
+  timestamp: string;
+}
+
+export const getStudents = async (params: GetStudentsParams): Promise<GetStudentsResult> => {
+  try {
+    const requestParams: Record<string, any> = {
+      classId: params.classId,
+      page: params.page || 1,
+      limit: params.limit || 10,
+    };
+
+    // Thêm search parameter nếu có
+    if (params.search && params.search.trim()) {
+      requestParams.search = params.search.trim();
+    }
+
+    const response = await apiClient.get<GetStudentsApiResponse>("/users/students", {
+      params: requestParams,
+    });
+
+    if (response.data.status && response.data.data) {
+      const data = response.data.data;
+      return {
+        students: data.data || [],
+        total: data.total || 0,
+        page: data.page || params.page || 1,
+        limit: data.limit || params.limit || 10,
+      };
+    }
+
+    throw new Error(response.data.message || "Không thể lấy danh sách học sinh");
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách học sinh";
+    throw new Error(errorMessage);
+  }
+};
+
