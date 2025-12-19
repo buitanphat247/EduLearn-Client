@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Button, Card, Tag } from "antd";
+import { Button } from "antd";
+import { useState } from "react";
+import NewsCard from "@/app/components/news/NewsCard";
+import EventDetailModal, { EventDetail } from "@/app/components/events/EventDetailModal";
 
-const events = [
+const events: EventDetail[] = [
   {
     id: 1,
     title: "Hội thảo: Công nghệ trong Giáo dục",
@@ -12,6 +15,9 @@ const events = [
     location: "Trực tuyến",
     status: "Sắp diễn ra",
     color: "blue",
+    description: "Hội thảo sẽ tập trung vào các công nghệ mới nhất trong giáo dục, bao gồm AI, VR/AR, và các nền tảng học tập trực tuyến.",
+    organizer: "Ban Giáo dục",
+    participants: "100+ người tham gia",
   },
   {
     id: 2,
@@ -21,6 +27,9 @@ const events = [
     location: "Phòng A101",
     status: "Đang diễn ra",
     color: "green",
+    description: "Workshop thực hành về kỹ năng thuyết trình, giúp bạn tự tin hơn khi trình bày ý tưởng trước đám đông.",
+    organizer: "Trung tâm Đào tạo",
+    participants: "50 người tham gia",
   },
   {
     id: 3,
@@ -30,96 +39,74 @@ const events = [
     location: "Hội trường lớn",
     status: "Đã kết thúc",
     color: "gray",
+    description: "Cuộc thi dành cho các dự án sáng tạo về công nghệ số, khuyến khích tinh thần đổi mới và sáng tạo.",
+    organizer: "Ban Tổ chức",
+    participants: "200+ thí sinh",
   },
 ];
 
 export default function Events() {
+  const [selectedEvent, setSelectedEvent] = useState<EventDetail | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleEventClick = (event: EventDetail) => {
+    setSelectedEvent(event);
+    setIsModalOpen(true);
+  };
+
   return (
-    <section className="py-16 ">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-800 mb-4">Sự kiện sắp tới</h2>
-          <p className="text-gray-600 text-lg">Tham gia các sự kiện và hoạt động thú vị</p>
-        </div>
+    <section className="py-24 bg-[#0f172a] relative overflow-hidden">
+      <EventDetailModal 
+        open={isModalOpen} 
+        event={selectedEvent} 
+        onCancel={() => setIsModalOpen(false)} 
+      />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {events.map((event) => (
-            <Link key={event.id} href={`/events/${event.id}`} className="block h-full">
-              <Card
-                hoverable
-                className="h-full shadow-md"
-                styles={{
-                  body: { padding: "24px" },
-                }}
-              >
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Tag color={event.color === "blue" ? "blue" : event.color === "green" ? "green" : "gray"}>{event.status}</Tag>
-                    <svg className="w-8 h-8 text-[#1c91e3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-800">{event.title}</h3>
-                  <div className="space-y-2 text-gray-600">
-                    <div className="flex items-center space-x-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                      <span>{event.date}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>{event.time}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                        />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span>{event.location}</span>
-                    </div>
-                  </div>
-                  <div className="pt-4 border-t">
-                    <span className="text-blue-600 font-medium inline-flex items-center">
-                      Chi tiết
-                      <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </span>
-                  </div>
-                </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
+      {/* Decorative Blob */}
+      <div className="absolute top-0 right-0 -translate-x-1/2 translate-x-1/2 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[100px] pointer-events-none"></div>
 
-        <div className="text-center mt-8">
-          <Link href="/events">
-            <Button
-              type="primary"
-              size="large"
-              className="bg-linear-to-r from-blue-600 to-blue-800 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
-            >
-              Xem tất cả sự kiện
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+          <div className="text-center md:text-left">
+            <div className="inline-block px-3 py-1 mb-4 text-xs font-semibold tracking-wider text-purple-400 uppercase bg-purple-500/10 rounded-full">
+              Kết nối & Chia sẻ
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Sự kiện sắp diễn ra</h2>
+            <p className="text-slate-400 text-lg">Đừng bỏ lỡ các hoạt động thú vị từ cộng đồng.</p>
+          </div>
+          
+          <Link href="/events" className="hidden md:block">
+            <Button type="text" className="text-blue-400 hover:text-blue-300 flex items-center gap-2 group">
+              Xem tất cả <span className="group-hover:translate-x-1 transition-transform">→</span>
             </Button>
           </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {events.map((event) => (
+             <NewsCard
+                key={event.id}
+                id={event.id}
+                title={event.title}
+                date={event.date}
+                category={event.status}
+                type="event"
+                time={event.time}
+                location={event.location}
+                accentColor={
+                  event.color === 'blue' ? 'border-blue-500' :
+                  event.color === 'green' ? 'border-emerald-500' : 
+                  'border-slate-600'
+                }
+                onClick={() => handleEventClick(event)}
+             />
+          ))}
+        </div>
+        
+        <div className="mt-8 text-center md:hidden">
+            <Link href="/events">
+               <Button className="bg-[#1e293b] text-white border-slate-700 w-full h-12 rounded-xl">Xem tất cả sự kiện</Button>
+            </Link>
         </div>
       </div>
     </section>

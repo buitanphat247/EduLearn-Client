@@ -1,8 +1,9 @@
 "use client";
 
-import { Pagination, Input, Select } from "antd";
+import { Pagination, Input, Select, ConfigProvider, theme } from "antd";
 import { useState, useMemo } from "react";
 import NewsCard from "@/app/components/news/NewsCard";
+import { SearchOutlined } from "@ant-design/icons";
 
 const { Search } = Input;
 
@@ -90,72 +91,102 @@ export default function News() {
   };
 
   return (
-    <main className="container mx-auto px-4 py-8">
-       <div className="text-center mb-6">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">Tin tức & Sự kiện</h1>
-        <p className="text-gray-600 text-lg">Cập nhật những thông tin mới nhất từ thư viện số</p>
-      </div>
-      <div className="mb-8">
-        <div className="flex flex-col md:flex-row gap-4 items-center">
-          <div className="flex-1 w-full md:w-auto">
-            <Search
-              placeholder="Tìm kiếm tin tức..."
-              allowClear
-              onSearch={handleSearch}
-              onChange={(e) => handleSearch(e.target.value)}
-              size="large"
-              className="w-full"
-            />
-          </div>
-          <div className="w-full md:w-64">
-            <Select
-              placeholder="Chọn danh mục"
-              allowClear
-              size="large"
-              className="w-full"
-              onChange={handleCategoryChange}
-              options={categories.map((cat) => ({ label: cat, value: cat }))}
-            />
-          </div>
+    <main className="min-h-screen bg-[#0f172a] pb-20">
+      <div className="container mx-auto px-4 py-12">
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-white mb-4">Tin tức & Sự kiện</h1>
+          <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+            Khám phá những xu hướng giáo dục mới nhất, các bài viết chuyên sâu và thông tin về các hoạt động cộng đồng sôi nổi.
+          </p>
+          <div className="w-24 h-1.5 bg-blue-600 mx-auto rounded-full mt-6"></div>
         </div>
-      </div>
 
-      {currentNews.length > 0 ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {currentNews.map((item) => (
-              <NewsCard
-                key={item.id}
-                id={item.id}
-                title={item.title}
-                excerpt={item.excerpt}
-                image={item.image}
-                date={item.date}
-                category={item.category}
-              />
-            ))}
-          </div>
-
-          {total > pageSize && (
-            <div className="flex justify-center mt-12">
-              <Pagination
-                current={currentPage}
-                total={total}
-                pageSize={pageSize}
-                onChange={(page) => setCurrentPage(page)}
-                showSizeChanger={false}
-                showQuickJumper
-                showTotal={(total, range) => `${range[0]}-${range[1]} của ${total} tin tức`}
-              />
+        {/* Search & Filter Section */}
+        <div className="mb-12 max-w-4xl mx-auto">
+          <ConfigProvider
+            theme={{
+              algorithm: theme.darkAlgorithm,
+              token: {
+                colorBgContainer: '#1e293b',
+                colorBorder: '#334155',
+                colorPrimary: '#3b82f6',
+                borderRadius: 12,
+                controlHeight: 50,
+                fontSize: 16,
+              },
+              components: {
+                Input: {
+                  activeBorderColor: '#60a5fa',
+                  hoverBorderColor: '#60a5fa',
+                  paddingInline: 20,
+                },
+                Select: {
+                  optionSelectedBg: '#334155',
+                }
+              }
+            }}
+          >
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+              <div className="flex-1 w-full">
+                <Input
+                  prefix={<SearchOutlined className="text-slate-400 text-xl mr-2" />}
+                  placeholder="Tìm kiếm tin tức..."
+                  allowClear
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="w-full shadow-lg shadow-black/20"
+                />
+              </div>
+              <div className="w-full md:w-64">
+                <Select
+                  placeholder="Chọn danh mục"
+                  allowClear
+                  className="w-full shadow-lg shadow-black/20"
+                  onChange={handleCategoryChange}
+                  options={categories.map((cat) => ({ label: cat, value: cat }))}
+                />
+              </div>
             </div>
-          )}
-        </>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">Không tìm thấy tin tức nào</p>
+          </ConfigProvider>
         </div>
-      )}
+
+        {currentNews.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {currentNews.map((item) => (
+                <NewsCard
+                  key={item.id}
+                  id={item.id}
+                  title={item.title}
+                  excerpt={item.excerpt}
+                  image={item.image}
+                  date={item.date}
+                  category={item.category}
+                />
+              ))}
+            </div>
+
+            {total > pageSize && (
+              <div className="flex justify-center mt-12">
+                <div className="bg-white px-4 py-2 rounded-xl shadow-lg">
+                  <Pagination
+                    current={currentPage}
+                    total={total}
+                    pageSize={pageSize}
+                    onChange={(page) => setCurrentPage(page)}
+                    showSizeChanger={false}
+                    showQuickJumper
+                    showTotal={(total, range) => `${range[0]}-${range[1]} của ${total} tin tức`}
+                  />
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-20 bg-[#1e293b] rounded-3xl border border-slate-700">
+            <p className="text-slate-400 text-lg">Không tìm thấy tin tức nào</p>
+          </div>
+        )}
+      </div>
     </main>
   );
 }
-

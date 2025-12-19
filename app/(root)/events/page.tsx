@@ -1,30 +1,18 @@
 "use client";
 
-import { Pagination, Input, Select, Modal, Tag, Card } from "antd";
+import { Pagination, Input, Select, ConfigProvider, theme } from "antd";
 import { useState, useMemo } from "react";
 import {
   CalendarOutlined,
   ClockCircleOutlined,
   EnvironmentOutlined,
-  UserOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
+import EventDetailModal, { EventDetail } from "@/app/components/events/EventDetailModal";
 
 const { Search } = Input;
 
-interface EventDetail {
-  id: number;
-  title: string;
-  date: string;
-  time: string;
-  location: string;
-  status: string;
-  color: string;
-  description: string;
-  organizer: string;
-  participants: string;
-}
-
-const events = [
+const events: EventDetail[] = [
   {
     id: 1,
     title: "Hội thảo: Công nghệ trong Giáo dục",
@@ -99,61 +87,6 @@ const events = [
   },
 ];
 
-interface EventDetailModalProps {
-  open: boolean;
-  event: EventDetail | null;
-  onCancel: () => void;
-}
-
-function EventDetailModal({ open, event, onCancel }: EventDetailModalProps) {
-  return (
-    <Modal
-      title={event?.title}
-      open={open}
-      onCancel={onCancel}
-      footer={null}
-      width={600}
-      centered
-    >
-      {event && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Tag color={event.color === "blue" ? "blue" : event.color === "green" ? "green" : "default"}>
-              {event.status}
-            </Tag>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-gray-600">
-              <CalendarOutlined />
-              <span>{event.date}</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <ClockCircleOutlined />
-              <span>{event.time}</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <EnvironmentOutlined />
-              <span>{event.location}</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <UserOutlined />
-              <span>{event.organizer}</span>
-            </div>
-          </div>
-          <div className="pt-4 border-t">
-            <h3 className="font-semibold text-gray-800 mb-2">Mô tả</h3>
-            <p className="text-gray-600 leading-relaxed">{event.description}</p>
-          </div>
-          <div className="pt-4 border-t">
-            <p className="text-sm text-gray-500">
-              Số lượng tham gia: <span className="font-medium text-gray-700">{event.participants}</span>
-            </p>
-          </div>
-        </div>
-      )}
-    </Modal>
-  );
-}
 
 interface CardEventProps {
   id: number;
@@ -167,73 +100,63 @@ interface CardEventProps {
 }
 
 function CardEvent({ id, title, date, time, location, status, color, onDetailClick }: CardEventProps) {
+  // Determine color classes based on event color
+  const accentColor = color === 'blue' ? 'border-l-blue-500' : (color === 'green' ? 'border-l-emerald-500' : 'border-l-slate-500');
+  const badgeClass = color === 'blue' 
+    ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+    : (color === 'green' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-700 text-slate-200 border-slate-600');
+
   return (
-    <Card
-      hoverable
-      className="h-full shadow-md"
-      styles={{
-        body: { padding: "24px" },
-      }}
+    <div
+      onClick={onDetailClick}
+      className={`group h-full bg-[#1e293b] rounded-2xl shadow-lg shadow-black/20 hover:shadow-2xl hover:shadow-black/40 hover:-translate-y-1 transition-all duration-300 border border-slate-700 overflow-hidden cursor-pointer relative border-l-4 ${accentColor}`}
     >
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Tag color={color === "blue" ? "blue" : color === "green" ? "green" : "default"}>
+      <div className="p-6 flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <span className={`px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wide ${badgeClass}`}>
             {status}
-          </Tag>
-          <svg className="w-8 h-8 text-[#1c91e3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
+          </span>
+          <div className="w-8 h-8 rounded-full bg-slate-700/50 flex items-center justify-center text-slate-400 group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-colors duration-300">
+             <CalendarOutlined />
+          </div>
+        </div>
+
+        {/* Title */}
+        <h3 className="text-xl font-bold text-white mb-4 line-clamp-2 group-hover:text-blue-400 transition-colors">
+          {title}
+        </h3>
+
+        {/* Details - Compact & Clean */}
+        <div className="space-y-3 mb-6 flex-1">
+          <div className="flex items-center gap-3 text-sm text-slate-400">
+            <span className="w-8 flex justify-center"><CalendarOutlined className="text-blue-400"/></span>
+            <span className="font-semibold text-slate-300">{date}</span>
+          </div>
+          <div className="flex items-center gap-3 text-sm text-slate-400">
+             <span className="w-8 flex justify-center"><ClockCircleOutlined className="text-orange-400"/></span>
+            <span className="text-slate-300">{time}</span>
+          </div>
+          <div className="flex items-center gap-3 text-sm text-slate-400">
+             <span className="w-8 flex justify-center"><EnvironmentOutlined className="text-green-400"/></span>
+            <span className="line-clamp-1 text-slate-300">{location}</span>
+          </div>
+        </div>
+
+        {/* Footer Action */}
+        <div className="pt-4 border-t border-slate-700 flex items-center justify-between text-sm font-semibold text-white mt-auto">
+          <span className="group-hover:text-blue-400 transition-colors">Xem chi tiết</span>
+          <svg 
+            className="w-5 h-5 text-slate-600 group-hover:text-blue-400 group-hover:translate-x-1 transition-all duration-300" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
           </svg>
         </div>
-        <h3 className="text-xl font-semibold text-gray-800">{title}</h3>
-        <div className="space-y-2 text-gray-600">
-          <div className="flex items-center space-x-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <span>{date}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{time}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-              />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <span>{location}</span>
-          </div>
-        </div>
-        <div className="pt-4 border-t">
-          <button
-            onClick={onDetailClick}
-            className="text-blue-600 font-medium inline-flex items-center hover:text-blue-700 transition-colors cursor-pointer"
-          >
-            Chi tiết
-            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -282,76 +205,109 @@ export default function Events() {
   };
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      <EventDetailModal open={isModalOpen} event={selectedEvent} onCancel={handleModalClose} />
+    <main className="min-h-screen bg-[#0f172a] pb-20">
+      <div className="container mx-auto px-4 py-12">
+        <EventDetailModal open={isModalOpen} event={selectedEvent} onCancel={handleModalClose} />
 
-      <div className="text-center mb-6">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">Sự kiện</h1>
-        <p className="text-gray-600 text-lg">Tham gia các sự kiện và hoạt động thú vị</p>
-      </div>
-
-      <div className="mb-8">
-        <div className="flex flex-col md:flex-row gap-4 items-center">
-          <div className="flex-1 w-full md:w-auto">
-            <Search
-              placeholder="Tìm kiếm sự kiện..."
-              allowClear
-              onSearch={handleSearch}
-              onChange={(e) => handleSearch(e.target.value)}
-              size="large"
-              className="w-full"
-            />
-          </div>
-          <div className="w-full md:w-64">
-            <Select
-              placeholder="Chọn trạng thái"
-              allowClear
-              size="large"
-              className="w-full"
-              onChange={handleStatusChange}
-              options={statuses.map((status) => ({ label: status, value: status }))}
-            />
-          </div>
+        {/* Header Section */}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-white mb-4">Sự kiện</h1>
+          <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+            Tham gia các sự kiện và hoạt động thú vị, mở rộng kiến thức và kết nối cộng đồng.
+          </p>
+          <div className="w-24 h-1.5 bg-blue-600 mx-auto rounded-full mt-6"></div>
         </div>
-      </div>
 
-      {currentEvents.length > 0 ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {currentEvents.map((event) => (
-              <CardEvent
-                key={event.id}
-                id={event.id}
-                title={event.title}
-                date={event.date}
-                time={event.time}
-                location={event.location}
-                status={event.status}
-                color={event.color}
-                onDetailClick={() => handleEventClick(event)}
-              />
-            ))}
-          </div>
-
-          {total > pageSize && (
-            <div className="flex justify-center mt-12">
-              <Pagination
-                current={currentPage}
-                total={total}
-                pageSize={pageSize}
-                onChange={(page) => setCurrentPage(page)}
-                showSizeChanger={false}
-                showQuickJumper
-                showTotal={(total, range) => `${range[0]}-${range[1]} của ${total} sự kiện`}
-              />
+        {/* Search & Filter Section */}
+        {/* Search & Filter Section */}
+        <div className="mb-12 max-w-4xl mx-auto">
+          <ConfigProvider
+            theme={{
+              algorithm: theme.darkAlgorithm,
+              token: {
+                colorBgContainer: '#1e293b',
+                colorBorder: '#334155',
+                colorPrimary: '#3b82f6',
+                borderRadius: 12,
+                controlHeight: 50,
+                fontSize: 16,
+              },
+              components: {
+                Input: {
+                  activeBorderColor: '#60a5fa',
+                  hoverBorderColor: '#60a5fa',
+                  paddingInline: 20,
+                },
+                Select: {
+                  optionSelectedBg: '#334155',
+                }
+              }
+            }}
+          >
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+              <div className="flex-1 w-full">
+                <Input
+                  prefix={<SearchOutlined className="text-slate-400 text-xl mr-2" />}
+                  placeholder="Tìm kiếm sự kiện..."
+                  allowClear
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="w-full shadow-lg shadow-black/20"
+                />
+              </div>
+              <div className="w-full md:w-64">
+                <Select
+                  placeholder="Chọn trạng thái"
+                  allowClear
+                  className="w-full shadow-lg shadow-black/20"
+                  onChange={handleStatusChange}
+                  options={statuses.map((status) => ({ label: status, value: status }))}
+                />
+              </div>
             </div>
-          )}
-        </>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">Không tìm thấy sự kiện nào</p>
+          </ConfigProvider>
         </div>
-      )}
+
+        {currentEvents.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {currentEvents.map((event) => (
+                <CardEvent
+                  key={event.id}
+                  id={event.id}
+                  title={event.title}
+                  date={event.date}
+                  time={event.time}
+                  location={event.location}
+                  status={event.status}
+                  color={event.color}
+                  onDetailClick={() => handleEventClick(event)}
+                />
+              ))}
+            </div>
+
+            {total > pageSize && (
+              <div className="flex justify-center mt-12">
+                <div className="bg-white px-4 py-2 rounded-xl shadow-lg">
+                  <Pagination
+                    current={currentPage}
+                    total={total}
+                    pageSize={pageSize}
+                    onChange={(page) => setCurrentPage(page)}
+                    showSizeChanger={false}
+                    showQuickJumper
+                    showTotal={(total, range) => `${range[0]}-${range[1]} của ${total} sự kiện`}
+                  />
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-20 bg-[#1e293b] rounded-3xl border border-slate-700">
+            <div className="text-6xl mb-4">📅</div>
+            <p className="text-slate-400 text-lg">Không tìm thấy sự kiện nào phù hợp</p>
+          </div>
+        )}
+      </div>
     </main>
   );
 }

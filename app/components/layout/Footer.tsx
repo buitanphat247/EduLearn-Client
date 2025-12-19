@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="bg-[#1c91e3] text-white">
+    <footer className="bg-[#001529] text-white">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2">
@@ -14,7 +14,7 @@ export default function Footer() {
               </div>
               <span className="text-2xl font-bold text-white">Thư viện số</span>
             </Link>
-            <p className="text-blue-50 mb-4 max-w-md">
+            <p className="text-slate-400 mb-4 max-w-md">
               Thư viện số - Nền tảng học tập và tài liệu trực tuyến, mang đến cho bạn kho tài liệu phong phú và các khóa học chất lượng cao.
             </p>
             <div className="flex space-x-4">
@@ -45,17 +45,17 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Liên kết nhanh</h3>
             <ul className="space-y-2 text-white">
               <li>
-                <Link href="/teachers" className="text-white hover:text-blue-100 transition-colors">
+                <Link href="/teachers" className="text-white hover:text-white transition-colors">
                   <span className="text-white">Giảng viên</span>
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="text-white hover:text-blue-100 transition-colors">
+                <Link href="/about" className="text-white hover:text-white transition-colors">
                   <span className="text-white">Về chúng tôi</span>
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-white hover:text-blue-100 transition-colors">
+                <Link href="/contact" className="text-white hover:text-white transition-colors">
                   <span className="text-white">Liên hệ</span>
                 </Link>
               </li>
@@ -65,7 +65,7 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-semibold mb-4">Liên hệ</h3>
             <ul className="space-y-2">
-              <li className="flex items-start space-x-2 text-blue-50">
+              <li className="flex items-start space-x-2 text-slate-400">
                 <svg className="w-5 h-5 mt-0.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -76,7 +76,7 @@ export default function Footer() {
                 </svg>
                 <span>info@edulearning.com</span>
               </li>
-              <li className="flex items-start space-x-2 text-blue-50">
+              <li className="flex items-start space-x-2 text-slate-400">
                 <svg className="w-5 h-5 mt-0.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -87,7 +87,7 @@ export default function Footer() {
                 </svg>
                 <span>+84 123 456 789</span>
               </li>
-              <li className="flex items-start space-x-2 text-blue-50">
+              <li className="flex items-start space-x-2 text-slate-400">
                 <svg className="w-5 h-5 mt-0.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -103,7 +103,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-white/20 mt-8 pt-8 text-center text-sm text-blue-50">
+        <div className="border-t border-white/5 mt-8 pt-8 text-center text-sm text-slate-400">
           <p>&copy; {new Date().getFullYear()} Thư viện số. Tất cả quyền được bảo lưu.</p>
         </div>
       </div>

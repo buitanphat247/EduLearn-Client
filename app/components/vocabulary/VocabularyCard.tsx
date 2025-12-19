@@ -15,31 +15,44 @@ export default function VocabularyCard({
   href = "#",
 }: VocabularyCardProps) {
   return (
-    <Link href={href} className="block h-full">
-      <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer border border-gray-200 h-full flex flex-col">
-        {/* Header - Light gray background */}
-        <div className="bg-gray-50 px-6 py-6 border-b border-gray-200 flex-1">
-          {/* Icon */}
-          <div className="mb-3">
-            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-              <BookOutlined className="text-lg text-gray-600" />
-            </div>
-          </div>
-          
-          {/* Title */}
-          <h3 className="text-lg font-semibold text-gray-800 line-clamp-2">
-            {folderName}
-          </h3>
-        </div>
+    <Link href={href} className="block h-full group">
+      <div className="bg-[#1e293b] rounded-2xl overflow-hidden shadow-lg border border-slate-700/50 h-full flex flex-col transition-all duration-300 group-hover:shadow-blue-500/20 group-hover:-translate-y-1 relative group-hover:border-blue-500/30">
         
-        {/* Footer - White background */}
-        <div className="px-6 py-4 flex items-center justify-between bg-white flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 text-xs">ID: {folderId}</span>
-            <span className="text-gray-400">•</span>
-            <span className="text-gray-600 text-sm">Truy cập ngay</span>
-          </div>
-          <ArrowRightOutlined className="text-gray-400" />
+        {/* Top Accent Line */}
+        <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 absolute top-0 left-0 right-0 z-10"></div>
+        
+        {/* Content */}
+        <div className="p-6 flex-1 relative flex flex-col">
+           
+           {/* Header: Icon & Badge */}
+           <div className="flex justify-between items-start mb-5">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform duration-300">
+                  <BookOutlined className="text-2xl" />
+              </div>
+              
+              <div className="px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider backdrop-blur-sm">
+                  #{folderId}
+              </div>
+           </div>
+
+           {/* Title */}
+           <h3 className="text-xl font-bold text-white mb-3 line-clamp-2 leading-tight group-hover:text-blue-400 transition-colors">
+              {folderName}
+           </h3>
+           
+           {/* Subtext */}
+           <p className="text-sm text-slate-500 line-clamp-2 mb-6 leading-relaxed">
+              Học và ôn tập bộ từ vựng chủ đề <span className="text-slate-400 font-medium">{folderName}</span> cùng các bài tập trắc nghiệm.
+           </p>
+
+           {/* Button */}
+           <div className="mt-auto">
+               <div className="w-full py-3 rounded-xl bg-slate-800/50 border border-slate-700/50 text-slate-300 font-semibold text-sm flex items-center justify-center gap-2 group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all duration-300">
+                    <span>Bắt đầu học</span>
+                    <ArrowRightOutlined className="group-hover:translate-x-1 transition-transform" />
+               </div>
+           </div>
+
         </div>
       </div>
     </Link>

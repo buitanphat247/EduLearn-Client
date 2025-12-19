@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { App, Spin, Button } from "antd";
+import { App, Spin, Button, ConfigProvider, theme } from "antd";
 import { SoundOutlined, FileTextOutlined, CheckCircleOutlined, EditOutlined, BookOutlined } from "@ant-design/icons";
 import { getVocabulariesByFolder, type VocabularyResponse } from "@/lib/api/vocabulary";
 import Image from "next/image";
 
 export default function VocabularyDetail() {
   const { message } = App.useApp();
+  const router = useRouter();
   const params = useParams();
   const folderId = params?.folderId ? parseInt(params.folderId as string, 10) : null;
   const [vocabularies, setVocabularies] = useState<VocabularyResponse[]>([]);
@@ -137,185 +138,227 @@ export default function VocabularyDetail() {
   }
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      <div className="mb-4">
-        <div className="mb-5 text-sm text-gray-600">
-          <Link href="/" className="hover:text-[#1c91e3] transition-colors">
-            Trang chủ
-          </Link>
-          <span className="mx-2">/</span>
-          <Link href="/features/vocabulary" className="hover:text-[#1c91e3] transition-colors">
-            Học từ vựng
-          </Link>
-          {folderName && (
-            <>
-              <span className="mx-2">/</span>
-              <span className="text-gray-800">{folderName}</span>
-            </>
-          )}
-        </div>
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            {folderName || "Từ vựng"}
-          </h1>
-          <p className="text-gray-600 text-lg">
-            {vocabularies.length > 0 ? `${vocabularies.length} từ vựng` : "Đang tải..."}
-          </p>
-        </div>
-      </div>
-
-      {/* Chế độ luyện tập */}
-      {!loading && vocabularies.length > 0 && (
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-            <BookOutlined />
-            Chế độ luyện tập
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {practiceModes.map((mode, index) => {
-              const IconComponent = mode.icon;
-              return (
-                <div
-                  key={index}
-                  onClick={() => message.info("Tính năng này đang được phát triển")}
-                  className={`bg-linear-to-br ${mode.bgGradient} rounded-lg p-6 text-white hover:shadow-lg transition-all cursor-pointer`}
-                >
-                  <div className={`text-black w-12 h-12 ${mode.iconBg} rounded-lg flex items-center justify-center mb-4`}>
-                    <IconComponent className={`text-2xl ${mode.iconColor}`} />
-                  </div>
-                  <h3 className="text-xl font-bold mb-2">{mode.title}</h3>
-                  <p className="text-sm text-white/90">{mode.description}</p>
-                </div>
-              );
-            })}
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        components: {
+          Button: {
+            colorPrimary: '#3b82f6',
+            algorithm: true,
+          }
+        }
+      }}
+    >
+      <main className="min-h-screen bg-[#0f172a] py-12">
+        <div className="container mx-auto px-4">
+          <div className="mb-10">
+            <div className="mb-8 bg-[#1e293b] border border-slate-700 rounded-xl px-6 py-4 shadow-sm text-sm font-medium flex items-center flex-wrap gap-2">
+              <Link href="/" className="text-blue-600 hover:text-blue-500 transition-colors">
+                Trang chủ
+              </Link>
+              <span className="text-slate-600">/</span>
+              <Link href="/features/vocabulary" className="text-blue-600 hover:text-blue-500 transition-colors">
+                Học từ vựng
+              </Link>
+              {folderName && (
+                <>
+                  <span className="text-slate-600">/</span>
+                  <span className="text-slate-300 line-clamp-1">{folderName}</span>
+                </>
+              )}
+            </div>
+            <div className="text-center max-w-3xl mx-auto">
+              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
+                {folderName || "Từ vựng"}
+              </h1>
+              <div className="w-24 h-1.5 bg-blue-600 mx-auto rounded-full mb-6"></div>
+              <p className="text-slate-400 text-lg">
+                {vocabularies.length > 0 ? `${vocabularies.length} từ vựng trong bộ này` : "Đang tải dữ liệu..."}
+              </p>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Danh sách từ vựng */}
-      {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <Spin size="large" />
-        </div>
-      ) : vocabularies.length > 0 ? (
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Danh sách từ vựng</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {vocabularies.map((vocab) => {
-              const example = parseExample(vocab.example);
-              const variations = parseVariations(vocab.variations);
-              const primaryAudio = vocab.audioUrl?.[0]?.url;
+          {/* Chế độ luyện tập */}
+          {!loading && vocabularies.length > 0 && (
+            <div className="mb-16">
+              <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
+                <span className="w-2 h-8 bg-blue-500 rounded-full"></span>
+                Chế độ luyện tập
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {practiceModes.map((mode, index) => {
+                  const IconComponent = mode.icon;
+                  const handleClick = () => {
+                    if (mode.title === "Flashcard") {
+                      router.push(`/features/vocabulary/flashcard/${folderId}`);
+                    } else {
+                      message.info("Tính năng này đang được phát triển");
+                    }
+                  };
 
-              return (
-                <div
-                  key={vocab.sourceWordId}
-                  className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow"
-                >
-                  {/* Header with image and audio */}
-                  <div className="flex items-start gap-4 mb-4">
-                    {vocab.avatarUrl && (
-                      <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0">
-                        <Image
-                          src={vocab.avatarUrl}
-                          alt={vocab.content}
-                          width={80}
-                          height={80}
-                          className="w-full h-full object-cover"
-                        />
+                  // Map customized styles based on color prop
+                  const colorStyles: Record<string, string> = {
+                     green: "bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20",
+                     blue: "bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20",
+                     purple: "bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20",
+                     orange: "bg-orange-500/10 text-orange-400 group-hover:bg-orange-500/20",
+                  };
+                  
+                  return (
+                    <div
+                      key={index}
+                      onClick={handleClick}
+                      className="bg-[#1e293b] border border-slate-700/50 rounded-2xl p-6 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 transition-all cursor-pointer group relative overflow-hidden"
+                    >
+
+                      
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-colors ${colorStyles[mode.color]}`}>
+                        <IconComponent className="text-2xl" />
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-xl font-bold text-gray-800">
-                          {vocab.content}
-                        </h3>
-                        {primaryAudio && (
-                          <Button
-                            type="text"
-                            icon={<SoundOutlined />}
-                            size="small"
-                            onClick={() => playAudio(primaryAudio)}
-                            className="shrink-0"
-                          />
+                      <h3 className="text-xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">{mode.title}</h3>
+                      <p className="text-sm text-slate-400 leading-relaxed">{mode.description}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Danh sách từ vựng */}
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <Spin size="large" />
+            </div>
+          ) : vocabularies.length > 0 ? (
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
+                 <span className="w-2 h-8 bg-indigo-500 rounded-full"></span>
+                 Danh sách từ vựng
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {vocabularies.map((vocab) => {
+                  const example = parseExample(vocab.example);
+                  const variations = parseVariations(vocab.variations);
+                  const primaryAudio = vocab.audioUrl?.[0]?.url;
+
+                  return (
+                    <div
+                      key={vocab.sourceWordId}
+                      className="bg-[#1e293b] rounded-2xl border border-slate-700 p-6 hover:border-slate-600 transition-all hover:shadow-xl"
+                    >
+                      {/* Header with image and audio */}
+                      <div className="flex items-start gap-4 mb-5">
+                        {vocab.avatarUrl ? (
+                          <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-slate-700/50">
+                            <Image
+                              src={vocab.avatarUrl}
+                              alt={vocab.content}
+                              width={80}
+                              height={80}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                           <div className="w-20 h-20 rounded-xl bg-slate-800 flex items-center justify-center text-slate-600 border border-slate-700/50">
+                              <span className="text-2xl font-bold">{vocab.content.charAt(0)}</span>
+                           </div>
                         )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-xl font-bold text-white truncate">
+                              {vocab.content}
+                            </h3>
+                            {primaryAudio && (
+                              <Button
+                                type="text"
+                                icon={<SoundOutlined />}
+                                size="small"
+                                onClick={() => playAudio(primaryAudio)}
+                                className="shrink-0 text-slate-400 hover:text-blue-400"
+                              />
+                            )}
+                          </div>
+                          <p className="text-slate-500 text-sm mb-2 font-mono">
+                            {vocab.pronunciation}
+                          </p>
+                          <p className="text-blue-400 font-semibold text-lg mb-2">
+                            {vocab.translation}
+                          </p>
+                          {vocab.pos && (
+                            <span className="inline-block px-2.5 py-1 bg-slate-800 text-slate-300 text-xs font-medium rounded-lg border border-slate-700">
+                              {vocab.pos}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-gray-500 text-sm mb-1">
-                        {vocab.pronunciation}
-                      </p>
-                      <p className="text-gray-700 font-medium">
-                        {vocab.translation}
-                      </p>
-                      {vocab.pos && (
-                        <span className="inline-block mt-1 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                          {vocab.pos}
-                        </span>
+
+                      {/* Example */}
+                      {example && (
+                        <div className="mb-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700/30">
+                          <div
+                            className="text-sm text-slate-300 mb-2 italic"
+                            dangerouslySetInnerHTML={{ __html: example.content }}
+                          />
+                          <div
+                            className="text-sm text-slate-500"
+                            dangerouslySetInnerHTML={{ __html: example.translation }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Variations */}
+                      {variations.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Biến thể</p>
+                          <div className="flex flex-wrap gap-2">
+                            {variations.slice(0, 5).map((variation: any, idx: number) => (
+                              <span
+                                key={idx}
+                                className="px-2 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs rounded-lg"
+                              >
+                                {variation.variationWordContent || variation}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Family */}
+                      {vocab.family && vocab.family.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Họ từ</p>
+                          <div className="space-y-2">
+                            {vocab.family.map((item, idx) => (
+                              <div key={idx} className="text-sm text-slate-400 flex items-baseline gap-2">
+                                <span className="font-semibold text-slate-300">{item.word}</span>
+                                <span className="text-xs opacity-75">({item.pos})</span>
+                                <span className="text-slate-500">- {item.meaning}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Synonyms */}
+                      {vocab.synonyms && (
+                        <div className="pt-4 border-t border-slate-700/50 mt-4">
+                          <p className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Đồng nghĩa</p>
+                          <p className="text-sm text-slate-400">{vocab.synonyms}</p>
+                        </div>
                       )}
                     </div>
-                  </div>
-
-                  {/* Example */}
-                  {example && (
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                      <div
-                        className="text-sm text-gray-700 mb-2"
-                        dangerouslySetInnerHTML={{ __html: example.content }}
-                      />
-                      <div
-                        className="text-sm text-gray-500"
-                        dangerouslySetInnerHTML={{ __html: example.translation }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Variations */}
-                  {variations.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-xs text-gray-500 mb-2">Biến thể:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {variations.slice(0, 5).map((variation: any, idx: number) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded"
-                          >
-                            {variation.variationWordContent || variation}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Family */}
-                  {vocab.family && vocab.family.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-xs text-gray-500 mb-2">Họ từ:</p>
-                      <div className="space-y-1">
-                        {vocab.family.map((item, idx) => (
-                          <div key={idx} className="text-sm text-gray-600">
-                            <span className="font-medium">{item.word}</span> ({item.pos}) - {item.meaning}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Synonyms */}
-                  {vocab.synonyms && (
-                    <div className="pt-4 border-t border-gray-200">
-                      <p className="text-xs text-gray-500 mb-1">Từ đồng nghĩa:</p>
-                      <p className="text-sm text-gray-600">{vocab.synonyms}</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-20 bg-[#1e293b] rounded-3xl border border-slate-700">
+              <p className="text-slate-400 text-lg">Chưa có từ vựng nào trong bộ này</p>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-gray-500">Chưa có từ vựng nào</p>
-        </div>
-      )}
-    </main>
+      </main>
+    </ConfigProvider>
   );
 }
 
