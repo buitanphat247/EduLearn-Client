@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { App, Button, Upload } from "antd";
 import CustomCard from "@/app/components/common/CustomCard";
-import RichTextEditor, { type Editor } from "@/app/components/common/RichTextEditor";
 import FileUploadSection from "@/app/components/exams/FileUploadSection";
 import InfoBox from "@/app/components/exams/InfoBox";
 import TemplatesSection from "@/app/components/exams/TemplatesSection";
@@ -19,7 +18,6 @@ export default function ExaminatePage() {
   const classId = params?.id as string;
 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const editorRef = useRef<Editor | null>(null);
 
   const handleUpload: UploadProps["onChange"] = (info) => {
     let newFileList = [...info.fileList];
@@ -73,7 +71,7 @@ export default function ExaminatePage() {
   ];
 
   return (
-    <div className="bg-gray-50/50 min-h-screen space-y-6">
+    <div className="bg-gray-50/50 space-y-6">
       <div className="flex items-center justify-start">
         <Button
           icon={<ArrowLeftOutlined />}
@@ -89,18 +87,6 @@ export default function ExaminatePage() {
         <div className="lg:col-span-1 space-y-6">
           <CustomCard padding="lg">
             <div className="space-y-6">
-              {/* Editor Section */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Mô tả chi tiết đề thi</label>
-                <RichTextEditor
-                  placeholder="Nhập nội dung mô tả đề thi tại đây..."
-                  minHeight="300px"
-                  onEditorReady={(editor) => {
-                    editorRef.current = editor;
-                  }}
-                />
-              </div>
-
               {/* Upload Section */}
               <FileUploadSection fileList={fileList} onUpload={handleUpload} onRemove={handleRemoveFile} beforeUpload={beforeUpload} />
 

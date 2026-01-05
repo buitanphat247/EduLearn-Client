@@ -3,14 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HomeOutlined, AppstoreOutlined, SettingOutlined } from "@ant-design/icons";
-import { FaRegComment } from "react-icons/fa";
 import { RiContactsBookLine } from "react-icons/ri";
 
 const menuItems = [
   { path: "/user", icon: HomeOutlined, label: "Trang chủ" },
   { path: "/user/classes", icon: AppstoreOutlined, label: "Lớp học" },
-  { path: "/user/chat", icon: FaRegComment, label: "Tin nhắn" },
-  { path: "/user/contacts", icon: RiContactsBookLine, label: "Danh bạ" },
 ];
 
 export default function UserSidebar() {

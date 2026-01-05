@@ -3,6 +3,22 @@ import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const method = request.method;
+  
+  // Skip middleware for API proxy routes to avoid body size limit
+  if (pathname.startsWith("/api-proxy")) {
+    return NextResponse.next();
+  }
+  
+  // Skip middleware for POST/PUT/PATCH requests to page routes
+  // These should be handled by client-side JavaScript, not server-side page routes
+  // Page routes in Next.js App Router don't handle POST requests unless using Server Actions
+  if (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
+    // Only skip if it's a page route (not API route)
+    if (!pathname.startsWith("/api")) {
+      return NextResponse.next();
+    }
+  }
   
   const token = request.cookies.get("accessToken")?.value;
   const userCookie = request.cookies.get("user")?.value;
@@ -71,12 +87,13 @@ export const config = {
     /*
      * Match all request paths except for the ones starting with:
      * - api (API routes)
+     * - api-proxy (API proxy routes for large file uploads)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api|api-proxy|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
 

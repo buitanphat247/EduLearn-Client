@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, memo } from "react";
+import { useState, useEffect, useCallback, useMemo, memo, useRef } from "react";
 import { App, Spin, Input, Button, Tag, Dropdown, Pagination, Modal, Empty } from "antd";
 import type { MenuProps } from "antd";
 import { SearchOutlined, PlusOutlined, MoreOutlined, CalendarOutlined } from "@ant-design/icons";
-import { deleteNotification, getNotificationsByScopeId, type NotificationResponse } from "@/lib/api/notifications";
+import { deleteNotification, getNotificationsByScopeId, getNotificationById, type NotificationResponse } from "@/lib/api/notifications";
 import CreateClassNotificationModal from "./CreateClassNotificationModal";
 import EditClassNotificationModal from "./EditClassNotificationModal";
 import type { ClassNotificationsTabProps, Notification } from "./types";
@@ -17,8 +17,17 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
   pageSize,
   onPageChange,
   onNotificationCreated,
+  readOnly = false,
 }: ClassNotificationsTabProps) {
   const { message, modal } = App.useApp();
+  const messageRef = useRef(message);
+  const modalRef = useRef(modal);
+
+  // Update refs when they change
+  useEffect(() => {
+    messageRef.current = message;
+    modalRef.current = modal;
+  }, [message, modal]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -28,16 +37,22 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [loadingEdit, setLoadingEdit] = useState(false);
 
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
+      const prevSearch = debouncedSearchQuery;
       setDebouncedSearchQuery(searchQuery);
-      onPageChange(1);
+      // Reset to page 1 when search actually changes
+      if (searchQuery !== prevSearch && currentPage !== 1) {
+        onPageChange(1);
+      }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, onPageChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]); // Only depend on searchQuery to prevent rerender loop
 
   // Fetch notifications - optimized with numeric classId
   const fetchNotifications = useCallback(async () => {
@@ -45,9 +60,10 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
       setLoading(true);
       const numericClassId = typeof classId === "string" ? Number(classId) : classId;
       if (isNaN(numericClassId)) {
-        message.error("ID lớp học không hợp lệ");
+        messageRef.current.error("ID lớp học không hợp lệ");
         setNotifications([]);
         setTotal(0);
+        setLoading(false);
         return;
       }
 
@@ -57,16 +73,23 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
         search: debouncedSearchQuery.trim() || undefined,
       });
 
+      // Update data first, then remove loading to prevent flicker
       setNotifications(result.data);
       setTotal(result.total);
+
+      // Use requestAnimationFrame to ensure smooth transition without delay
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setLoading(false);
+        });
+      });
     } catch (error: any) {
-      message.error(error?.message || "Không thể tải danh sách thông báo");
+      messageRef.current.error(error?.message || "Không thể tải danh sách thông báo");
       setNotifications([]);
       setTotal(0);
-    } finally {
       setLoading(false);
     }
-  }, [classId, currentPage, pageSize, debouncedSearchQuery, message]);
+  }, [classId, currentPage, pageSize, debouncedSearchQuery]); // Removed message from dependencies to prevent rerender
 
   // Fetch on mount and when dependencies change
   useEffect(() => {
@@ -101,6 +124,7 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
   }, []);
 
   const displayNotifications = useMemo(() => {
+    if (!notifications || notifications.length === 0) return [];
     return notifications.map(mapNotificationToDisplay);
   }, [notifications, mapNotificationToDisplay]);
 
@@ -122,26 +146,56 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
     fetchNotifications(); // Refresh list after editing
   };
 
+  const handleEditNotification = useCallback(async (notification: Notification) => {
+    try {
+      setLoadingEdit(true);
+      const notificationId = typeof notification.id === "string" ? Number(notification.id) : notification.id;
+
+      if (isNaN(notificationId)) {
+        messageRef.current.error("ID thông báo không hợp lệ");
+        return;
+      }
+
+      const notificationDetail = await getNotificationById(notificationId);
+      setEditNotification(notificationDetail);
+      setIsEditModalOpen(true);
+    } catch (error: any) {
+      messageRef.current.error(error?.message || "Không thể tải thông tin thông báo");
+    } finally {
+      setLoadingEdit(false);
+    }
+  }, []);
+
   const getMenuItems = useCallback(
-    (notification: Notification): MenuProps["items"] => [
-      {
-        key: "view",
-        label: "Xem chi tiết",
-      },
-      {
-        key: "edit",
-        label: "Chỉnh sửa",
-      },
-      {
-        type: "divider",
-      },
-      {
-        key: "delete",
-        label: "Xóa",
-        danger: true,
-      },
-    ],
-    []
+    (notification: Notification): MenuProps["items"] => {
+      const items: MenuProps["items"] = [
+        {
+          key: "view",
+          label: "Xem chi tiết",
+        },
+      ];
+
+      // Only show edit/delete actions if not readOnly
+      if (!readOnly) {
+        items.push(
+          {
+            key: "edit",
+            label: "Chỉnh sửa",
+          },
+          {
+            type: "divider",
+          },
+          {
+            key: "delete",
+            label: "Xóa",
+            danger: true,
+          }
+        );
+      }
+
+      return items;
+    },
+    [readOnly]
   );
 
   const handleMenuClick = (key: string, notification: Notification) => {
@@ -155,18 +209,13 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
         }
         break;
       case "edit":
-        // Find the full notification data from API response
-        const fullNotificationForEdit = notifications.find((n) => String(n.notification_id) === notification.id);
-        if (fullNotificationForEdit) {
-          setEditNotification(fullNotificationForEdit);
-          setIsEditModalOpen(true);
-        }
+        handleEditNotification(notification);
         break;
       case "delete":
         // Find the full notification data from API response
         const fullNotificationForDelete = notifications.find((n) => String(n.notification_id) === notification.id);
         if (fullNotificationForDelete) {
-          modal.confirm({
+          modalRef.current.confirm({
             title: "Xác nhận xóa thông báo",
             content: `Bạn có chắc chắn muốn xóa thông báo "${notification.title}"? Hành động này không thể hoàn tác.`,
             okText: "Xóa",
@@ -180,15 +229,15 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
                     : fullNotificationForDelete.notification_id;
 
                 if (isNaN(notificationId)) {
-                  message.error("ID thông báo không hợp lệ");
+                  messageRef.current.error("ID thông báo không hợp lệ");
                   return;
                 }
 
                 await deleteNotification(notificationId);
-                message.success("Đã xóa thông báo thành công");
+                messageRef.current.success("Đã xóa thông báo thành công");
                 fetchNotifications(); // Refresh list after deleting
               } catch (error: any) {
-                message.error(error?.message || "Không thể xóa thông báo");
+                messageRef.current.error(error?.message || "Không thể xóa thông báo");
               }
             },
           });
@@ -232,53 +281,67 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
           className="flex-1"
           allowClear
         />
-        <Button size="middle" icon={<PlusOutlined />} onClick={handleCreateNotification} className="bg-blue-600 hover:bg-blue-700">
-          Tạo thông báo mới
-        </Button>
+        {!readOnly && (
+          <Button size="middle" icon={<PlusOutlined />} onClick={handleCreateNotification} className="bg-blue-600 hover:bg-blue-700">
+            Tạo thông báo mới
+          </Button>
+        )}
       </div>
 
-      <Spin spinning={loading}>
+      <div className="relative min-h-[200px]">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {displayNotifications.length > 0 ? (
-            displayNotifications.map((notification) => (
-              <div
-                key={notification.id}
-                className="bg-white rounded-lg border-l-4 border-blue-500 border-t border-r border-b p-6 hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-col h-full">
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm text-gray-500">
-                        {notification.time ? `${notification.time} - ${notification.date}` : notification.date}
-                      </span>
-                      <Tag color="orange" className="text-xs">
-                        {notification.scope}
-                      </Tag>
-                    </div>
-                    <Dropdown
-                      menu={{
-                        items: getMenuItems(notification),
-                        onClick: ({ key }) => handleMenuClick(key, notification),
-                      }}
-                      trigger={["click"]}
-                    >
-                      <Button type="text" icon={<MoreOutlined />} className="shrink-0" />
-                    </Dropdown>
+          {displayNotifications.map((notification) => (
+            <div
+              key={notification.id}
+              className="bg-white rounded-lg border-l-4 border-blue-500 border-t border-r border-b p-6 hover:shadow-md transition-shadow duration-200"
+            >
+              <div className="flex flex-col h-full">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-gray-500">
+                      {notification.time ? `${notification.time} - ${notification.date}` : notification.date}
+                    </span>
+                    <Tag color="orange" className="text-xs">
+                      {notification.scope}
+                    </Tag>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800 text-lg mb-2 line-clamp-2">{notification.title}</h3>
-                    <span className="text-xs text-gray-500">{notification.author}</span>
-                  </div>
+                  {(() => {
+                    const menuItems = getMenuItems(notification) || [];
+                    return menuItems.length > 1 ? (
+                      <Dropdown
+                        menu={{
+                          items: menuItems,
+                          onClick: ({ key }) => handleMenuClick(key, notification),
+                        }}
+                        trigger={["click"]}
+                      >
+                        <Button type="text" icon={<MoreOutlined />} className="shrink-0" />
+                      </Dropdown>
+                    ) : (
+                      <Button
+                        type="text"
+                        icon={<MoreOutlined />}
+                        className="shrink-0"
+                        onClick={() => {
+                          const fullNotification = notifications.find((n) => String(n.notification_id) === notification.id);
+                          if (fullNotification) {
+                            setSelectedNotification(fullNotification);
+                            setIsDetailModalOpen(true);
+                          }
+                        }}
+                      />
+                    );
+                  })()}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-800 text-lg line-clamp-2">{notification.title}</h3>
+                  <span className="text-xs text-gray-500">{notification.author}</span>
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="col-span-full">
-              <Empty description={searchQuery ? "Không tìm thấy thông báo nào" : "Chưa có thông báo nào"} image={Empty.PRESENTED_IMAGE_SIMPLE} />
             </div>
-          )}
+          ))}
         </div>
-      </Spin>
+      </div>
 
       {total > pageSize && (
         <div className="flex items-center justify-between pt-4">
@@ -347,9 +410,7 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
 
               {selectedNotification.scope_id && (
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">
-                    {selectedNotification.scope === "user" ? "Mã người dùng" : "Mã lớp"}
-                  </label>
+                  <label className="text-sm font-semibold text-gray-600">{selectedNotification.scope === "user" ? "Mã người dùng" : "Mã lớp"}</label>
                   <div className="mt-1 text-gray-700">{selectedNotification.scope_id}</div>
                 </div>
               )}
@@ -389,4 +450,3 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
 });
 
 export default ClassNotificationsTab;
-

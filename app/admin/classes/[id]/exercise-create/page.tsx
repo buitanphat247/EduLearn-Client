@@ -6,6 +6,7 @@ import { App, Button, Input, Upload, Form, DatePicker, Modal, Spin } from "antd"
 import CustomCard from "@/app/components/common/CustomCard";
 import RichTextEditor, { type Editor } from "@/app/components/common/RichTextEditor";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { formatFileName } from "@/lib/utils/fileName";
 import {
   ArrowLeftOutlined,
   PaperClipOutlined,
@@ -49,7 +50,7 @@ export default function ExerciseCreatePage() {
       // Validate form
       const description = editorRef.current?.getHTML() || "";
       const plainText = editorRef.current?.getText() || "";
-      
+
       if (!values.title || values.title.trim() === "") {
         message.error("Vui lòng nhập tiêu đề bài tập");
         return;
@@ -145,14 +146,13 @@ export default function ExerciseCreatePage() {
 
           setUploadStatus(`Đang upload file ${i + 1}/${totalFiles}: ${file.name}`);
 
-          // Validate file before upload
-          if (file.originFileObj.size > 50 * 1024 * 1024) {
-            throw new Error(`File ${file.name} quá lớn (tối đa 50MB)`);
-          }
+          // File size validation removed - backend will handle size limits
 
           const formData = new FormData();
           formData.append("assignment_id", String(assignmentId));
-          formData.append("file", file.originFileObj, file.name);
+          // Format file name: remove diacritics, lowercase, replace spaces with underscores
+          const formattedFileName = formatFileName(file.name);
+          formData.append("file", file.originFileObj, formattedFileName);
 
           const uploadResponse = await fetch(`/api-proxy/assignment-attachments?userId=${numericUserId}`, {
             method: "POST",
@@ -162,12 +162,17 @@ export default function ExerciseCreatePage() {
           if (!uploadResponse.ok) {
             let errorMessage = "Lỗi không xác định";
             const status = uploadResponse.status;
-            
+
             try {
               const contentType = uploadResponse.headers.get("content-type");
               if (contentType && contentType.includes("application/json")) {
                 const errorData = await uploadResponse.json();
-                errorMessage = errorData?.message || errorData?.error || errorData?.detail || errorData?.error_message || `HTTP ${status}: ${uploadResponse.statusText}`;
+                errorMessage =
+                  errorData?.message ||
+                  errorData?.error ||
+                  errorData?.detail ||
+                  errorData?.error_message ||
+                  `HTTP ${status}: ${uploadResponse.statusText}`;
               } else {
                 const errorText = await uploadResponse.text();
                 errorMessage = errorText || `HTTP ${status}: ${uploadResponse.statusText}`;
@@ -175,19 +180,18 @@ export default function ExerciseCreatePage() {
             } catch (parseError) {
               errorMessage = `HTTP ${status}: ${uploadResponse.statusText}`;
             }
-            
+
             // Provide more specific error messages based on status code
             if (status === 500) {
               errorMessage = `Lỗi server (500): ${errorMessage}. Vui lòng thử lại sau hoặc liên hệ quản trị viên.`;
             } else if (status === 400) {
               errorMessage = `Dữ liệu không hợp lệ (400): ${errorMessage}`;
             } else if (status === 413) {
-              errorMessage = `File quá lớn (413): File phải nhỏ hơn 50MB`;
+              errorMessage = `File quá lớn (413): ${errorMessage}`;
             }
-            
+
             throw new Error(`Không thể upload file ${file.name}: ${errorMessage}`);
           }
-
 
           uploadedCount++;
           const progress = 30 + Math.floor((uploadedCount / totalFiles) * 70);
@@ -249,19 +253,15 @@ export default function ExerciseCreatePage() {
       return Upload.LIST_IGNORE;
     }
 
-    // Max 50MB as per API documentation
-    const isLt50M = file.size / 1024 / 1024 < 50;
-    if (!isLt50M) {
-      message.error("File phải nhỏ hơn 50MB!");
-      return Upload.LIST_IGNORE;
-    }
+    // File size validation removed - backend will handle size limits
+    // Allow files of any size to be uploaded
     return true;
   };
 
   const getFileIcon = (file: UploadFile) => {
     const fileName = file.name || "";
     const fileType = file.type || "";
-    
+
     if (fileType.includes("pdf") || fileName.toLowerCase().endsWith(".pdf")) {
       return <FilePdfOutlined className="text-red-500 text-xl" />;
     }
@@ -273,10 +273,7 @@ export default function ExerciseCreatePage() {
     ) {
       return <FileWordOutlined className="text-blue-500 text-xl" />;
     }
-    if (
-      fileType.includes("image") ||
-      fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif)$/i)
-    ) {
+    if (fileType.includes("image") || fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif)$/i)) {
       return <FileImageOutlined className="text-green-500 text-xl" />;
     }
     return <FileTextOutlined className="text-gray-500 text-xl" />;
@@ -362,11 +359,7 @@ export default function ExerciseCreatePage() {
                           <Spin size="large" tip="Đang tải trình soạn thảo..." />
                         </div>
                       )}
-                      <RichTextEditor
-                        placeholder="Nhập nội dung mô tả bài tập tại đây..."
-                        minHeight="300px"
-                        onEditorReady={handleEditorReady}
-                      />
+                      <RichTextEditor placeholder="Nhập nội dung mô tả bài tập tại đây..." minHeight="300px" onEditorReady={handleEditorReady} />
                     </div>
                   </div>
                 </div>
@@ -377,9 +370,7 @@ export default function ExerciseCreatePage() {
                 title={
                   <div className="flex items-center gap-2 text-base font-semibold text-gray-800">
                     <PaperClipOutlined /> Tệp đính kèm
-                    {fileList.length > 0 && (
-                      <span className="text-sm font-normal text-gray-500 ml-2">({fileList.length} tệp)</span>
-                    )}
+                    {fileList.length > 0 && <span className="text-sm font-normal text-gray-500 ml-2">({fileList.length} tệp)</span>}
                   </div>
                 }
                 padding="md"
@@ -395,9 +386,7 @@ export default function ExerciseCreatePage() {
                         <div className="shrink-0">{getFileIcon(file)}</div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {file.size ? formatFileSize(file.size) : "Đang tải..."}
-                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">{file.size ? formatFileSize(file.size) : "Đang tải..."}</p>
                         </div>
                         <Button
                           type="text"
@@ -430,7 +419,9 @@ export default function ExerciseCreatePage() {
                       <p className="ant-upload-text text-base font-medium text-gray-700 mb-1">
                         <span className="text-blue-600">Nhấn để tải lên</span> hoặc kéo thả tệp vào đây
                       </p>
-                      <p className="ant-upload-hint text-gray-400">PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, ZIP, RAR, JPG, JPEG, PNG, GIF lên đến 50MB</p>
+                      <p className="ant-upload-hint text-gray-400">
+                        PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, ZIP, RAR, JPG, JPEG, PNG, GIF
+                      </p>
                     </div>
                   </Upload.Dragger>
                 )}
@@ -504,19 +495,14 @@ export default function ExerciseCreatePage() {
         </Form>
 
         {/* Loading Modal */}
-        <Modal
-          open={showProgressModal}
-          closable={false}
-          maskClosable={false}
-          footer={null}
-          title="Đang tạo bài tập..."
-          centered
-        >
-          <div className="flex flex-col items-center justify-center space-y-6 py-8">
-            <Spin size="large" />
-            <p className="text-center text-gray-600 text-base font-medium">
-              {uploadStatus || "Đang xử lý..."}
-            </p>
+        <Modal open={showProgressModal} closable={false} maskClosable={false} footer={null} title="Đang tạo bài tập..." centered>
+          <div className="flex flex-col items-center justify-center space-y-5 py-8">
+            <div>
+              <Spin size="large" />
+            </div>
+            <div>
+              <p className="text-center text-gray-600 text-base font-medium">{uploadStatus || "Đang xử lý..."}</p>
+            </div>
           </div>
         </Modal>
       </div>

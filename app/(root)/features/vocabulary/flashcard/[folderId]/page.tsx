@@ -7,6 +7,7 @@ import { App, Spin, Button, Tag, ConfigProvider, theme } from "antd";
 import { LeftOutlined, RightOutlined, RollbackOutlined, SoundOutlined, SwapOutlined } from "@ant-design/icons";
 import { getVocabulariesByFolder, type VocabularyResponse } from "@/lib/api/vocabulary";
 import { IoArrowBackOutline } from "react-icons/io5";
+import VocabularyFlashcardSkeleton from "@/app/components/features/vocabulary/VocabularyFlashcardSkeleton";
 
 type Difficulty = "easy" | "medium" | "hard";
 
@@ -93,13 +94,16 @@ export default function VocabularyFlashcard() {
     setIsFlipped((prev) => !prev);
   }, []);
 
-  const handleSetDifficulty = useCallback((level: Difficulty) => {
-    if (!currentVocab) return;
-    setDifficulties((prev) => ({
-      ...prev,
-      [currentVocab.sourceWordId]: level,
-    }));
-  }, [currentVocab]);
+  const handleSetDifficulty = useCallback(
+    (level: Difficulty) => {
+      if (!currentVocab) return;
+      setDifficulties((prev) => ({
+        ...prev,
+        [currentVocab.sourceWordId]: level,
+      }));
+    },
+    [currentVocab]
+  );
 
   const parseExample = useCallback((exampleStr: string) => {
     try {
@@ -127,6 +131,10 @@ export default function VocabularyFlashcard() {
         </div>
       </main>
     );
+  }
+
+  if (loading) {
+    return <VocabularyFlashcardSkeleton />;
   }
 
   return (
@@ -183,12 +191,7 @@ export default function VocabularyFlashcard() {
             </div>
           </div>
 
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-32">
-              <Spin size="large" />
-              <p className="mt-4 text-slate-500">Đang chuẩn bị thẻ...</p>
-            </div>
-          ) : vocabularies.length === 0 ? (
+          {vocabularies.length === 0 ? (
             <div className="text-center py-24 bg-[#1e293b] rounded-3xl border border-slate-700">
               <p className="text-slate-400 mb-4">Chưa có từ vựng nào trong folder này.</p>
               <Button type="primary" onClick={() => router.push(`/features/vocabulary/${folderId}`)}>
@@ -356,7 +359,7 @@ export default function VocabularyFlashcard() {
                     <Button
                       onClick={() => handleSetDifficulty("hard")}
                       size="small"
-                       className={`h-10 px-6 bg-[#1e293b] border-slate-700 text-rose-500 hover:bg-rose-500/10 hover:border-rose-500/50 ${
+                      className={`h-10 px-6 bg-[#1e293b] border-slate-700 text-rose-500 hover:bg-rose-500/10 hover:border-rose-500/50 ${
                         difficulties[currentVocab!.sourceWordId] === "hard" ? "bg-rose-500/20 border-rose-500" : ""
                       }`}
                     >

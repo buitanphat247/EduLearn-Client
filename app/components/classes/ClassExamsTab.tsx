@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { App, Input, Button, Tag, Dropdown, Pagination, Empty } from "antd";
 import type { MenuProps } from "antd";
 import { SearchOutlined, PlusOutlined, MoreOutlined, CalendarOutlined } from "@ant-design/icons";
-import type { ClassTabProps, Exam } from "./types";
+import type { ClassExamsTabProps, Exam } from "./types";
 
 const ClassExamsTab = memo(function ClassExamsTab({
   classId,
@@ -14,7 +14,8 @@ const ClassExamsTab = memo(function ClassExamsTab({
   currentPage,
   pageSize,
   onPageChange,
-}: ClassTabProps) {
+  readOnly = false,
+}: ClassExamsTabProps) {
   const router = useRouter();
   const { message } = App.useApp();
 
@@ -90,32 +91,47 @@ const ClassExamsTab = memo(function ClassExamsTab({
   };
 
   const getMenuItems = useCallback(
-    (exam: Exam): MenuProps["items"] => [
-      {
-        key: "view",
-        label: "Xem chi tiết",
-      },
-      {
-        key: "edit",
-        label: "Chỉnh sửa",
-      },
-      {
-        type: "divider",
-      },
-      {
-        key: "delete",
-        label: "Xóa",
-        danger: true,
-      },
-    ],
-    []
+    (exam: Exam): MenuProps["items"] => {
+      const items: MenuProps["items"] = [
+        {
+          key: "view",
+          label: "Xem chi tiết",
+        },
+      ];
+
+      // Only show edit/delete actions if not readOnly
+      if (!readOnly) {
+        items.push(
+          {
+            key: "edit",
+            label: "Chỉnh sửa",
+          },
+          {
+            type: "divider",
+          },
+          {
+            key: "delete",
+            label: "Xóa",
+            danger: true,
+          }
+        );
+      }
+
+      return items;
+    },
+    [readOnly]
   );
 
   const handleMenuClick = useCallback(
     (key: string, exam: Exam) => {
       switch (key) {
         case "view":
-          router.push(`/admin/classes/${classId}/exams/${exam.id}`);
+          // Use user route if readOnly, otherwise use admin route
+          if (readOnly) {
+            router.push(`/user/classes/${classId}/exams/${exam.id}`);
+          } else {
+            router.push(`/admin/classes/${classId}/exams/${exam.id}`);
+          }
           break;
         case "edit":
           router.push(`/admin/classes/${classId}/exams/${exam.id}/edit`);
@@ -125,7 +141,7 @@ const ClassExamsTab = memo(function ClassExamsTab({
           break;
       }
     },
-    [router, classId, message]
+    [router, classId, message, readOnly]
   );
 
   return (
@@ -143,9 +159,11 @@ const ClassExamsTab = memo(function ClassExamsTab({
           className="flex-1"
           allowClear
         />
-        <Button size="middle" icon={<PlusOutlined />} onClick={handleCreateExam} className="bg-blue-600 hover:bg-blue-700">
-          Tạo kỳ thi mới
-        </Button>
+        {!readOnly && (
+          <Button size="middle" icon={<PlusOutlined />} onClick={handleCreateExam} className="bg-blue-600 hover:bg-blue-700">
+            Tạo kỳ thi mới
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

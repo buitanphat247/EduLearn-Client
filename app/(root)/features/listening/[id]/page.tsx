@@ -1,5 +1,7 @@
 "use client";
 
+import ListeningFeatureSkeleton from "@/app/components/features/listening/ListeningFeatureSkeleton";
+
 import React, { useState, useRef, useEffect } from "react";
 import { FaPlay, FaPause, FaCheck, FaKeyboard, FaLanguage, FaListAlt, FaEllipsisV, FaVolumeUp, FaEye, FaEyeSlash, FaSpinner } from "react-icons/fa";
 import { IoMdSkipForward } from "react-icons/io";
@@ -287,56 +289,7 @@ export default function ListeningPage() {
 
   // --- Render Loading ---
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0f172a] p-4 md:p-8 font-sans">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 animate-pulse">
-          {/* LEFT COLUMN SKELETON */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* Shortcuts Bar Skeleton */}
-            <div className="h-12 bg-slate-800/50 rounded-lg w-full"></div>
-
-            {/* Title Skeleton */}
-            <div className="flex items-center gap-3">
-              <div className="h-6 w-20 bg-blue-900/40 rounded-full"></div>
-              <div className="h-8 w-64 bg-slate-700 rounded-lg"></div>
-            </div>
-
-            {/* Audio Player Skeleton */}
-            <div className="bg-[#1e293b] rounded-2xl h-32 w-full border border-slate-700/50"></div>
-
-            {/* Input Area Skeleton */}
-            <div className="space-y-4">
-              <div className="h-6 w-40 bg-slate-700 rounded"></div>
-              <div className="h-32 bg-[#1e293b] rounded-xl border border-slate-700/50 w-full"></div>
-              <div className="flex gap-3">
-                <div className="h-12 w-32 bg-slate-700 rounded-lg"></div>
-                <div className="h-12 w-32 bg-slate-800 rounded-lg"></div>
-              </div>
-            </div>
-
-            {/* Result Box Skeleton */}
-            <div className="h-32 bg-[#1e293b] rounded-2xl border border-slate-700/50 w-full"></div>
-          </div>
-
-          {/* RIGHT COLUMN SKELETON */}
-          <div className="lg:col-span-5 h-[calc(100vh-8rem)] sticky top-4">
-            <div className="bg-[#1e293b] rounded-2xl border border-slate-700/50 h-full p-4 space-y-4 overflow-hidden">
-              <div className="flex justify-between items-center mb-6">
-                <div className="h-6 w-24 bg-slate-700 rounded"></div>
-                <div className="flex gap-2">
-                  <div className="h-8 w-20 bg-slate-800 rounded-full"></div>
-                  <div className="h-8 w-16 bg-slate-800 rounded-full"></div>
-                </div>
-              </div>
-              {/* List Items */}
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="h-20 bg-slate-800/50 rounded-xl w-full"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <ListeningFeatureSkeleton />;
   }
 
   // --- Render Empty ---
@@ -371,9 +324,7 @@ export default function ListeningPage() {
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 ">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">
-                {lessonInfo ? lessonInfo.name : "Học Nghe"}
-              </h1>
+              <h1 className="text-3xl font-bold text-white mb-2">{lessonInfo ? lessonInfo.name : "Học Nghe"}</h1>
               <p className="text-slate-400">
                 {challenges.length > 0 ? `Câu ${currentIdx + 1} trên tổng số ${challenges.length} câu` : "Đang tải nội dung bài học..."}
               </p>
@@ -422,14 +373,14 @@ export default function ListeningPage() {
               <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-blue-500 via-sky-500 to-indigo-500 opacity-70"></div>
 
               <audio
-              ref={audioRef}
-              src={currentChallenge.audioSrc_challenges}
-              onTimeUpdate={handleTimeUpdate}
-              onLoadedMetadata={handleLoadedMetadata}
-              onEnded={handleAudioEnded}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              className="hidden"
+                ref={audioRef}
+                src={currentChallenge.audioSrc_challenges}
+                onTimeUpdate={handleTimeUpdate}
+                onLoadedMetadata={handleLoadedMetadata}
+                onEnded={handleAudioEnded}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                className="hidden"
               />
 
               <div className="flex items-center gap-5">
@@ -550,7 +501,11 @@ export default function ListeningPage() {
                  `}
               >
                 <div className="text-xl md:text-2xl font-medium text-center tracking-wide relative z-10 transition-all">
-                  <MaskedText text={currentChallenge.content_challenges} revealed={feedback === "correct"} userInput={currentHistory.submittedInput} />
+                  <MaskedText
+                    text={currentChallenge.content_challenges}
+                    revealed={feedback === "correct"}
+                    userInput={currentHistory.submittedInput}
+                  />
                 </div>
 
                 {/* Translation appearing effect */}
@@ -565,70 +520,70 @@ export default function ListeningPage() {
 
           {/* RIGHT COLUMN - TRANSCRIPT */}
           <div className="lg:col-span-5 h-[calc(100vh-8rem)] sticky top-4">
-          <div className="bg-[#1e293b] rounded-2xl shadow-xl border border-slate-700 overflow-hidden h-full flex flex-col">
-            <div className="p-4 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-center bg-[#1e293b] gap-3">
-              <div className="flex items-center gap-2 font-bold text-slate-200">
-                <FaListAlt className="text-blue-500" /> Transcript
+            <div className="bg-[#1e293b] rounded-2xl shadow-xl border border-slate-700 overflow-hidden h-full flex flex-col">
+              <div className="p-4 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-center bg-[#1e293b] gap-3">
+                <div className="flex items-center gap-2 font-bold text-slate-200">
+                  <FaListAlt className="text-blue-500" /> Transcript
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowAppTranscript(!showAppTranscript)}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 transition border ${
+                      showAppTranscript
+                        ? "bg-blue-600 border-blue-500 text-white"
+                        : "bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white"
+                    }`}
+                  >
+                    {showAppTranscript ? <FaEyeSlash /> : <FaEye />} Transcript
+                  </button>
+                  <button
+                    onClick={() => setShowAppTranslation(!showAppTranslation)}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 transition border ${
+                      showAppTranslation
+                        ? "bg-orange-600 border-orange-500 text-white"
+                        : "bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white"
+                    }`}
+                  >
+                    <FaLanguage /> Dịch
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowAppTranscript(!showAppTranscript)}
-                  className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 transition border ${
-                    showAppTranscript
-                      ? "bg-blue-600 border-blue-500 text-white"
-                      : "bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white"
-                  }`}
-                >
-                  {showAppTranscript ? <FaEyeSlash /> : <FaEye />} Transcript
-                </button>
-                <button
-                  onClick={() => setShowAppTranslation(!showAppTranslation)}
-                  className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 transition border ${
-                    showAppTranslation
-                      ? "bg-orange-600 border-orange-500 text-white"
-                      : "bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white"
-                  }`}
-                >
-                  <FaLanguage /> Dịch
-                </button>
-              </div>
-            </div>
 
-            <div className="p-4 overflow-y-auto space-y-3 flex-1 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
-              {challenges.map((s, idx) => {
-                const isCurrent = idx === currentIdx;
-                const itemHistory = history[idx] || { feedback: "none", submittedInput: "" };
-                const isRevealed = idx < currentIdx || showAppTranscript || itemHistory.feedback === "correct";
+              <div className="p-4 overflow-y-auto space-y-3 flex-1 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
+                {challenges.map((s, idx) => {
+                  const isCurrent = idx === currentIdx;
+                  const itemHistory = history[idx] || { feedback: "none", submittedInput: "" };
+                  const isRevealed = idx < currentIdx || showAppTranscript || itemHistory.feedback === "correct";
 
-                return (
-                  <div
-                    key={s.id_challenges}
-                    className={`p-4 rounded-xl border transition-all relative overflow-hidden
+                  return (
+                    <div
+                      key={s.id_challenges}
+                      className={`p-4 rounded-xl border transition-all relative overflow-hidden
                                     ${
                                       isCurrent
                                         ? "border-blue-500/50 bg-blue-900/20 shadow-[inset_0_0_20px_rgba(59,130,246,0.1)]"
                                         : "border-slate-700/50 bg-[#243146] opacity-70"
                                     }
                                 `}
-                  >
-                    {isCurrent && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>}
+                    >
+                      {isCurrent && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>}
 
-                    <div
-                      className={`text-lg font-medium leading-relaxed font-sans
+                      <div
+                        className={`text-lg font-medium leading-relaxed font-sans
                                      ${isCurrent ? "text-blue-300" : "text-slate-500"}
                                 `}
-                    >
-                      <MaskedText text={s.content_challenges} revealed={isRevealed} userInput={itemHistory.submittedInput} />
+                      >
+                        <MaskedText text={s.content_challenges} revealed={isRevealed} userInput={itemHistory.submittedInput} />
+                      </div>
+                      {showAppTranslation && (
+                        <div className="mt-3 text-sm text-slate-500 border-t border-slate-700/50 pt-2 italic">{s.translateText_challenges}</div>
+                      )}
                     </div>
-                    {showAppTranslation && (
-                      <div className="mt-3 text-sm text-slate-500 border-t border-slate-700/50 pt-2 italic">{s.translateText_challenges}</div>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
         </div>
       </div>
     </div>

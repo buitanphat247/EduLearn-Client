@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { useRouter } from "next/navigation";
-import { App, Spin, Input, Button, Tag, Dropdown, Pagination, Empty } from "antd";
+import { App, Spin, Input, Button, Tag, Dropdown, Pagination, Empty, Modal } from "antd";
 import type { MenuProps } from "antd";
-import { SearchOutlined, PlusOutlined, MoreOutlined } from "@ant-design/icons";
+import { SearchOutlined, PlusOutlined, MoreOutlined, FileOutlined, CalendarOutlined } from "@ant-design/icons";
 import { IoBookOutline } from "react-icons/io5";
-import { getAssignmentsByClass, type AssignmentResponse } from "@/lib/api/assignments";
-import type { ClassTabProps, Exercise } from "./types";
+import { getAssignmentsByClass, getAssignmentById, deleteAssignment, type AssignmentResponse, type AssignmentDetailResponse } from "@/lib/api/assignments";
+import type { ClassExercisesTabProps, Exercise } from "./types";
 
 const ClassExercisesTab = memo(function ClassExercisesTab({
   classId,
@@ -16,13 +16,20 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
   currentPage,
   pageSize,
   onPageChange,
-}: ClassTabProps) {
+  readOnly = false,
+}: ClassExercisesTabProps) {
   const router = useRouter();
   const { message } = App.useApp();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [selectedAssignment, setSelectedAssignment] = useState<AssignmentDetailResponse | null>(null);
+  const [assignmentsMap, setAssignmentsMap] = useState<Map<string, AssignmentResponse>>(new Map());
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Debounce search query
   useEffect(() => {
@@ -93,6 +100,9 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
       total,
       graded,
       status,
+      classCode: assignment.class?.code || "",
+      className: assignment.class?.name || "",
+      creatorName: assignment.creator?.fullname || "",
     };
   }, []);
 
@@ -118,6 +128,13 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
       const mappedExercises = result.data.map(mapAssignmentToExercise);
       setExercises(mappedExercises);
       setTotal(result.total);
+
+      // Store assignments map for detail modal
+      const newMap = new Map<string, AssignmentResponse>();
+      result.data.forEach((assignment) => {
+        newMap.set(String(assignment.assignment_id), assignment);
+      });
+      setAssignmentsMap(newMap);
     } catch (error: any) {
       message.error(error?.message || "Không thể tải danh sách bài tập");
       setExercises([]);
@@ -136,7 +153,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
 
   const getStatusTag = useCallback((exercise: Exercise) => {
     if (exercise.status === "closed") {
-      return { text: "Đang đóng", color: "red" };
+      return { text: "Đã đóng", color: "red" };
     }
     return { text: "Đang mở", color: "green" };
   }, []);
@@ -146,50 +163,163 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
   };
 
   const getMenuItems = useCallback(
-    (exercise: Exercise): MenuProps["items"] => [
-      {
-        key: "view",
-        label: "Xem chi tiết",
-      },
-      {
-        key: "edit",
-        label: "Chỉnh sửa",
-      },
-      {
-        key: "grade",
-        label: "Chấm điểm",
-      },
-      {
-        type: "divider",
-      },
-      {
-        key: "delete",
-        label: "Xóa",
-        danger: true,
-      },
-    ],
-    []
+    (exercise: Exercise): MenuProps["items"] => {
+      const items: MenuProps["items"] = [
+        {
+          key: "view",
+          label: "Xem chi tiết",
+        },
+      ];
+
+      // Only show edit/delete actions if not readOnly
+      if (!readOnly) {
+        items.push(
+          {
+            key: "edit",
+            label: "Chỉnh sửa",
+          },
+          {
+            type: "divider",
+          },
+          {
+            key: "delete",
+            label: "Xóa",
+            danger: true,
+          }
+        );
+      }
+
+      return items;
+    },
+    [readOnly]
+  );
+
+  const handleViewDetail = useCallback(
+    async (exercise: Exercise) => {
+      setSelectedExercise(exercise);
+      setIsDetailModalOpen(true);
+      setLoadingDetail(true);
+
+      try {
+        const numericAssignmentId = typeof exercise.id === "string" ? Number(exercise.id) : exercise.id;
+        if (isNaN(numericAssignmentId)) {
+          message.error("ID bài tập không hợp lệ");
+          setLoadingDetail(false);
+          return;
+        }
+
+        const assignmentDetail = await getAssignmentById(numericAssignmentId);
+        setSelectedAssignment(assignmentDetail);
+      } catch (error: any) {
+        message.error(error?.message || "Không thể tải thông tin chi tiết bài tập");
+        setIsDetailModalOpen(false);
+        setSelectedExercise(null);
+      } finally {
+        setLoadingDetail(false);
+      }
+    },
+    [message]
+  );
+
+  const handleDelete = useCallback(
+    (exercise: Exercise) => {
+      Modal.confirm({
+        title: "Xác nhận xóa bài tập",
+        content: `Bạn có chắc chắn muốn xóa bài tập "${exercise.title}"? Hành động này không thể hoàn tác.`,
+        okText: "Xóa",
+        okType: "danger",
+        cancelText: "Hủy",
+        onOk: async () => {
+          try {
+            setDeletingId(exercise.id);
+            const numericAssignmentId = typeof exercise.id === "string" ? Number(exercise.id) : exercise.id;
+
+            if (isNaN(numericAssignmentId)) {
+              throw new Error("ID bài tập không hợp lệ");
+            }
+
+            await deleteAssignment(numericAssignmentId);
+            message.success("Xóa bài tập thành công");
+
+            // Refresh list
+            await fetchAssignments();
+
+            // If deleted exercise was selected, close modal
+            if (selectedExercise?.id === exercise.id) {
+              setIsDetailModalOpen(false);
+              setSelectedExercise(null);
+              setSelectedAssignment(null);
+            }
+          } catch (error: any) {
+            message.error(error?.message || "Không thể xóa bài tập");
+          } finally {
+            setDeletingId(null);
+          }
+        },
+      });
+    },
+    [message, fetchAssignments, selectedExercise]
   );
 
   const handleMenuClick = useCallback(
     (key: string, exercise: Exercise) => {
       switch (key) {
         case "view":
-          router.push(`/admin/classes/${classId}/exercises/${exercise.id}`);
+          handleViewDetail(exercise);
           break;
         case "edit":
-          router.push(`/admin/classes/${classId}/exercises/${exercise.id}/edit`);
-          break;
-        case "grade":
-          router.push(`/admin/classes/${classId}/exercises/${exercise.id}/grade`);
+          router.push(`/admin/classes/${classId}/exercise-edit/${exercise.id}`);
           break;
         case "delete":
-          message.warning("Tính năng xóa bài tập đang được phát triển");
+          handleDelete(exercise);
           break;
       }
     },
-    [router, classId, message]
+    [message, handleDelete, handleViewDetail]
   );
+
+  const handleDownloadFiles = useCallback(async () => {
+    if (!selectedAssignment || !selectedAssignment.attachments || selectedAssignment.attachments.length === 0) {
+      message.warning("Bài tập này không có file đính kèm");
+      return;
+    }
+
+    // Base URL for file storage
+    const baseUrl = "https://pub-3aaf3c9cd7694383ab5e47980be6dc67.r2.dev";
+
+    // Download each attachment
+    for (const attachment of selectedAssignment.attachments) {
+      try {
+        // Remove leading slash if present and combine with base URL
+        const filePath = attachment.file_url.startsWith("/") ? attachment.file_url.slice(1) : attachment.file_url;
+        const fileUrl = `${baseUrl}/${filePath}`;
+
+        // Fetch file as blob
+        const response = await fetch(fileUrl);
+        if (!response.ok) {
+          throw new Error(`Không thể tải file: ${attachment.file_name}`);
+        }
+
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        // Create download link
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = attachment.file_name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Clean up blob URL
+        URL.revokeObjectURL(blobUrl);
+      } catch (error: any) {
+        message.error(`Không thể tải file ${attachment.file_name}: ${error?.message || "Lỗi không xác định"}`);
+      }
+    }
+
+    message.success(`Đã tải ${selectedAssignment.attachments.length} file`);
+  }, [selectedAssignment, message]);
 
   return (
     <div className="space-y-4">
@@ -207,9 +337,11 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
           className="flex-1"
           allowClear
         />
-        <Button size="middle" icon={<PlusOutlined />} onClick={handleCreateExercise} className="bg-blue-600 hover:bg-blue-700">
-          Tạo bài tập mới
-        </Button>
+        {!readOnly && (
+          <Button size="middle" icon={<PlusOutlined />} onClick={handleCreateExercise} className="bg-blue-600 hover:bg-blue-700">
+            Tạo bài tập mới
+          </Button>
+        )}
       </div>
 
       {/* Exercises List */}
@@ -217,41 +349,79 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentExercises.length > 0 ? (
             currentExercises.map((exercise) => (
-              <div key={exercise.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div
+                key={exercise.id}
+                className={`bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer relative ${
+                  deletingId === exercise.id ? "opacity-50 pointer-events-none" : ""
+                }`}
+                onClick={() => handleViewDetail(exercise)}
+              >
                 <div className="flex flex-col h-full">
                   {/* Header with Icon, Tag and Menu */}
-                  <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="flex items-start justify-between gap-3 mb-4">
                     <div className="flex items-center gap-3">
-                      <div className={`${exercise.iconColor} w-12 h-12 rounded-lg flex items-center justify-center shrink-0`}>
-                        <IoBookOutline className="text-white text-2xl" />
+                      <div className={`${exercise.iconColor} w-14 h-14 rounded-lg flex items-center justify-center shrink-0 shadow-md`}>
+                        <IoBookOutline className="text-white text-3xl" />
                       </div>
-                      <Tag className={`${exercise.subjectColor} border-0 font-semibold`}>{exercise.subject}</Tag>
+                      <div className={`${exercise.subjectColor} border-0 font-semibold capitalize text-md px-2.5 py-1 rounded-lg shadow-sm`}>
+                        {exercise.subject}
+                      </div>
                     </div>
-                    <Dropdown
-                      menu={{
-                        items: getMenuItems(exercise),
-                        onClick: ({ key }) => handleMenuClick(key, exercise),
-                      }}
-                      trigger={["click"]}
-                    >
-                      <Button type="text" icon={<MoreOutlined />} className="shrink-0" />
-                    </Dropdown>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      {readOnly ? (
+                        <Button
+                          type="text"
+                          icon={<MoreOutlined />}
+                          className="shrink-0 text-gray-500 hover:text-gray-700"
+                          onClick={() => handleViewDetail(exercise)}
+                        />
+                      ) : (
+                        <Dropdown
+                          menu={{
+                            items: getMenuItems(exercise),
+                            onClick: ({ key }) => {
+                              handleMenuClick(key, exercise);
+                            },
+                          }}
+                          trigger={["click"]}
+                        >
+                          <Button type="text" icon={<MoreOutlined />} className="shrink-0 text-gray-500 hover:text-gray-700" />
+                        </Dropdown>
+                      )}
+                    </div>
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800 text-lg mb-2 line-clamp-2">{exercise.title}</h3>
-                    <div className="text-sm text-gray-600 mb-3">
-                      Hạn nộp: {exercise.dueDate}
-                      {exercise.dueTime && ` - ${exercise.dueTime}`}
+                  <div className="flex-1 space-y-3">
+                    <h3 className="font-semibold text-gray-800 text-lg line-clamp-2 leading-tight">{exercise.title}</h3>
+                    
+                    {/* Class Info */}
+                    {(exercise.className || exercise.classCode) && (
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        {exercise.className && <span className="font-medium text-gray-600">{exercise.className}</span>}
+                        {exercise.classCode && (
+                          <>
+                            {exercise.className && <span>•</span>}
+                            <span className="text-gray-500">Mã: {exercise.classCode}</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Creator */}
+                    {exercise.creatorName && (
+                      <div className="text-xs text-gray-500">
+                        Người tạo: <span className="text-gray-700 font-medium">{exercise.creatorName}</span>
+                      </div>
+                    )}
+
+                    {/* Due Date */}
+                    <div className="text-sm text-gray-600">
+                      Hạn nộp: <span className="text-gray-800 font-semibold">{exercise.dueDate}</span>
+                      {exercise.dueTime && <span className="text-gray-800 font-semibold"> - {exercise.dueTime}</span>}
                     </div>
 
-                    {/* Status Tag */}
-                    <div className="mt-3">
-                      <Tag color={getStatusTag(exercise).color} className="font-medium">
-                        {getStatusTag(exercise).text}
-                      </Tag>
-                    </div>
+                 
                   </div>
                 </div>
               </div>
@@ -273,9 +443,106 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
           <Pagination current={currentPage} total={total} pageSize={pageSize} onChange={onPageChange} showSizeChanger={false} />
         </div>
       )}
+
+      {/* Exercise Detail Modal */}
+      <Modal
+        title={
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-500 w-10 h-10 rounded-lg flex items-center justify-center shadow-sm">
+              <IoBookOutline className="text-white text-xl" />
+            </div>
+            <span className="text-lg font-semibold text-gray-800">Chi tiết bài tập</span>
+          </div>
+        }
+        open={isDetailModalOpen}
+        onCancel={() => {
+          setIsDetailModalOpen(false);
+          setSelectedExercise(null);
+          setSelectedAssignment(null);
+          setLoadingDetail(false);
+        }}
+        footer={null}
+        width={600}
+
+        destroyOnClose={true}
+      >
+        <Spin spinning={loadingDetail}>
+          {selectedExercise && (
+            <div className="space-y-5">
+              {/* Title with Status Tag */}
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-xl font-semibold text-gray-800 leading-tight flex-1">
+                  {selectedAssignment?.title || selectedExercise.title}
+                </h2>
+                <Tag color={getStatusTag(selectedExercise).color} className="text-sm font-semibold shrink-0">
+                  {getStatusTag(selectedExercise).text}
+                </Tag>
+              </div>
+
+              {/* Due Date */}
+              <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <CalendarOutlined className="text-blue-500 text-lg mt-0.5" />
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Hạn nộp</div>
+                  <div className="text-sm font-medium text-gray-800">
+                    {selectedExercise.dueDate}
+                    {selectedExercise.dueTime && ` - ${selectedExercise.dueTime}`}
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              {selectedAssignment?.description && (
+                <div>
+                  <div className="text-sm font-semibold text-gray-600 mb-2">Mô tả</div>
+                  <div
+                    className="p-4 bg-gray-50 rounded-lg border border-gray-200 prose prose-sm max-w-none text-gray-700 max-h-56 overflow-y-auto"
+                    dangerouslySetInnerHTML={{ __html: selectedAssignment.description }}
+                  />
+                </div>
+              )}
+
+              {/* Attachments List */}
+              {selectedAssignment?.attachments && selectedAssignment.attachments.length > 0 && (
+                <div>
+                  <div className="text-sm font-semibold text-gray-600 mb-2">File đính kèm ({selectedAssignment.attachments.length})</div>
+                  <div className="space-y-2">
+                    {selectedAssignment.attachments.map((attachment) => (
+                      <div
+                        key={String(attachment.attachment_id)}
+                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                      >
+                        <FileOutlined className="text-blue-500 text-lg" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-800 truncate">{attachment.file_name}</div>
+                          <div className="text-xs text-gray-500">{(Number(attachment.file_size) / 1024 / 1024).toFixed(2)} MB</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Button */}
+              <div className="pt-4 border-t border-gray-200">
+                <Button
+                  type="primary"
+                  icon={<FileOutlined />}
+                  onClick={handleDownloadFiles}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  size="large"
+                  disabled={!selectedAssignment?.attachments || selectedAssignment.attachments.length === 0}
+                >
+                  Tải file{" "}
+                  {selectedAssignment?.attachments && selectedAssignment.attachments.length > 0 && `(${selectedAssignment.attachments.length})`}
+                </Button>
+              </div>
+            </div>
+          )}
+        </Spin>
+      </Modal>
     </div>
   );
 });
 
 export default ClassExercisesTab;
-

@@ -1,6 +1,6 @@
 "use client";
 
-import { Table, Input, Button, App, Card, Spin } from "antd";
+import { Table, Input, Button, App, Spin } from "antd";
 import { SearchOutlined, UserAddOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -175,54 +175,52 @@ export default function AddSingleStudentPage() {
   ];
 
   return (
-    <div className="w-full mx-auto">
-      <Card className="border border-gray-200">
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Thêm học sinh vào lớp</h1>
-              {classInfo && (
-                <p className="text-gray-600 mt-1">
-                  Lớp: {classInfo.name} ({classInfo.code})
-                </p>
-              )}
-            </div>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => router.push(`/admin/classes/${classId}`)}
-            >
-              Quay lại
-            </Button>
-          </div>
+    <div className="space-y-6">
+      {/* Header with Title, Class Info, Back Button and Search */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Thêm học sinh vào lớp</h1>
+          {classInfo && (
+            <p className="text-gray-600">
+              Lớp: {classInfo.name} ({classInfo.code})
+            </p>
+          )}
         </div>
-
-        <div className="mb-4">
+        <div className="flex items-center gap-3">
           <Input
             prefix={<SearchOutlined className="text-gray-400" />}
             placeholder="Tìm kiếm theo tên, email, username..."
-            size="large"
+            size="middle"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             allowClear
+            className="w-80"
           />
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => router.push(`/admin/classes/${classId}`)}
+          >
+            Quay lại
+          </Button>
         </div>
+      </div>
 
-        <Spin spinning={loading}>
-          <Table
-            columns={columns}
-            dataSource={students}
-            rowKey={(record) => String(record.user_id)}
-            pagination={{
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              total: pagination.total,
-              showTotal: (total) => `Tổng ${total} học sinh`,
-              onChange: handleTableChange,
-            }}
-            size="middle"
-          />
-        </Spin>
-      </Card>
+      {/* Students Table */}
+      <Spin spinning={loading}>
+        <Table
+          columns={columns}
+          dataSource={students}
+          rowKey={(record) => String(record.user_id)}
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            showTotal: (total) => `Tổng ${total} học sinh`,
+            onChange: handleTableChange,
+          }}
+          size="middle"
+        />
+      </Spin>
     </div>
   );
 }

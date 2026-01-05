@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button, Dropdown, Avatar } from "antd";
 import type { MenuProps } from "antd";
-import { UserOutlined, AppstoreOutlined } from "@ant-design/icons";
+import { UserOutlined, AppstoreOutlined, MessageOutlined } from "@ant-design/icons";
 import { getCurrentUser } from "@/lib/api/users";
 import { signOut } from "@/lib/api/auth";
 import type { AuthState } from "@/lib/utils/auth-server";
@@ -267,6 +267,12 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
                       key: "profile",
                       icon: <UserOutlined className="text-slate-300" />,
                       label: <Link href="/profile" className="text-slate-200 hover:text-white">Hồ sơ cá nhân</Link>,
+                      style: { padding: '10px 16px' },
+                    },
+                    {
+                      key: "chat",
+                      icon: <MessageOutlined className="text-slate-300" />,
+                      label: <Link href="/social" className="text-slate-200 hover:text-white">Chat room</Link>,
                       style: { padding: '10px 16px' },
                     },
                     ...(roleDashboardPath ? [{

@@ -43,6 +43,9 @@ export interface Exercise {
   graded: number;
   status: "open" | "closed" | "completed";
   closedDate?: string;
+  classCode?: string;
+  className?: string;
+  creatorName?: string;
 }
 
 export interface ClassTabProps {
@@ -56,6 +59,15 @@ export interface ClassTabProps {
 
 export interface ClassNotificationsTabProps extends ClassTabProps {
   onNotificationCreated?: () => void;
+  readOnly?: boolean; // If true, hide create/edit/delete actions
+}
+
+export interface ClassExercisesTabProps extends ClassTabProps {
+  readOnly?: boolean; // If true, hide create/edit/delete actions
+}
+
+export interface ClassExamsTabProps extends ClassTabProps {
+  readOnly?: boolean; // If true, hide create/edit/delete actions
 }
 
 export interface CreateClassNotificationModalProps {

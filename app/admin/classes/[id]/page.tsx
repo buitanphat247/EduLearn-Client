@@ -59,6 +59,7 @@ export default function ClassDetail() {
   const [originalClassData, setOriginalClassData] = useState<ClassDetailResponse | null>(null);
   const [isBannedListModalOpen, setIsBannedListModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("students");
+  const [isTabLoading, setIsTabLoading] = useState(false);
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState("");
   const [exercisePage, setExercisePage] = useState(1);
   const exercisePageSize = 4;
@@ -412,6 +413,25 @@ export default function ClassDetail() {
     });
   }, [fetchClassStudents, fetchClassInfo]);
 
+  const handleTabChange = useCallback((key: string) => {
+    setIsTabLoading(true);
+    setActiveTab(key);
+    setTimeout(() => {
+      setIsTabLoading(false);
+    }, 500);
+  }, []);
+
+  const renderTabContent = (content: React.ReactNode) => {
+    if (isTabLoading) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <Spin size="large" />
+        </div>
+      );
+    }
+    return content;
+  };
+
   // Early returns after all hooks
   if (loading) {
     return (
@@ -451,7 +471,8 @@ export default function ClassDetail() {
       {/* Tabs */}
       <Tabs
         activeKey={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
+        destroyInactiveTabPane
         items={[
           {
             key: "students",
@@ -461,7 +482,7 @@ export default function ClassDetail() {
                 Danh sách học sinh
               </span>
             ),
-            children: (
+            children: renderTabContent(
               <ClassStudentsTable
                 students={students}
                 onViewStudent={handleViewStudent}
@@ -482,7 +503,7 @@ export default function ClassDetail() {
                 Bài tập
               </span>
             ),
-            children: (
+            children: renderTabContent(
               <ClassExercisesTab
                 classId={classId}
                 searchQuery={exerciseSearchQuery}
@@ -501,7 +522,7 @@ export default function ClassDetail() {
                 Thông báo
               </span>
             ),
-            children: (
+            children: renderTabContent(
               <ClassNotificationsTab
                 classId={classId}
                 searchQuery={notificationSearchQuery}
@@ -520,7 +541,7 @@ export default function ClassDetail() {
                 Kiểm tra
               </span>
             ),
-            children: (
+            children: renderTabContent(
               <ClassExamsTab
                 classId={classId}
                 searchQuery={examSearchQuery}
