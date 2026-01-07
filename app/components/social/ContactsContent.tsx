@@ -1,6 +1,6 @@
-import React from "react";
 import { Input, Button } from "antd";
-import { UserAddOutlined, ContactsOutlined, SearchOutlined, TeamOutlined, MessageOutlined, MoreOutlined, SendOutlined } from "@ant-design/icons";
+import Swal from "sweetalert2";
+import { UserAddOutlined, ContactsOutlined, SearchOutlined, TeamOutlined, MessageOutlined, DeleteOutlined, SendOutlined } from "@ant-design/icons";
 import { FriendRequestResponse, Contact } from "./types";
 
 interface ContactsContentProps {
@@ -11,6 +11,7 @@ interface ContactsContentProps {
   loadingFriendRequests: boolean;
   handleAcceptFriendRequest: (id: number) => void;
   handleRejectFriendRequest: (id: number) => void;
+  handleRemoveFriend: (id: string) => void;
 }
 
 export default function ContactsContent({
@@ -21,6 +22,7 @@ export default function ContactsContent({
   loadingFriendRequests,
   handleAcceptFriendRequest,
   handleRejectFriendRequest,
+  handleRemoveFriend,
 }: ContactsContentProps) {
   return (
     <div className="flex-1 overflow-y-auto bg-slate-900 p-8">
@@ -160,7 +162,7 @@ export default function ContactsContent({
                 .map((contact, index) => (
                   <div
                     key={contact.id}
-                    className={`flex items-center gap-4 p-4 hover:bg-slate-700/50 transition-colors cursor-pointer ${
+                    className={`flex items-center gap-4 p-2 hover:bg-slate-700/50 transition-colors cursor-pointer ${
                       index !== 0 ? "border-t border-slate-700" : ""
                     }`}
                   >
@@ -177,8 +179,38 @@ export default function ContactsContent({
                       {contact.mutualFriends && <p className="text-slate-400 text-sm">{contact.mutualFriends} bạn chung</p>}
                     </div>
                     <div className="flex gap-2">
-                      <Button icon={<MessageOutlined />} type="text" className="text-slate-400 hover:text-white hover:bg-slate-600" />
-                      <Button icon={<MoreOutlined />} type="text" className="text-slate-400 hover:text-white hover:bg-slate-600" />
+                      <Button icon={<MessageOutlined />} size="small" type="text" className="text-slate-400 hover:text-white hover:bg-slate-600" />
+                      <Button
+                        icon={<DeleteOutlined />}
+                        size="small"
+                        type="text"
+                        className="text-slate-400 hover:text-red-500 hover:bg-red-500/10"
+                        onClick={() => {
+                          Swal.fire({
+                            title: "Hủy kết bạn?",
+                            html: `<div style="color: #94a3b8">Bạn có chắc chắn muốn hủy kết bạn với <span style="color: #fff; font-weight: 600">${contact.name}</span>?</div>`,
+                            icon: "warning",
+                            background: "#1e293b",
+                            color: "#fff",
+                            showCancelButton: true,
+                            confirmButtonColor: "#dc2626",
+                            cancelButtonColor: "#334155",
+                            confirmButtonText: "Xóa bạn bè",
+                            cancelButtonText: "Hủy",
+                            focusCancel: true,
+                            customClass: {
+                              popup: "rounded-2xl border border-slate-700 shadow-xl",
+                              title: "text-xl font-bold text-white",
+                              confirmButton: "rounded-xl px-6 py-2.5 font-medium shadow-lg shadow-red-600/20 text-sm",
+                              cancelButton: "rounded-xl px-6 py-2.5 font-medium hover:bg-slate-600 text-white text-sm",
+                            },
+                          }).then((result) => {
+                            if (result.isConfirmed) {
+                              handleRemoveFriend(contact.id);
+                            }
+                          });
+                        }}
+                      />
                     </div>
                   </div>
                 ))

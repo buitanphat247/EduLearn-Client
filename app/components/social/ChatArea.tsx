@@ -7,10 +7,6 @@ import {
   MoreOutlined,
   FileTextOutlined,
   DownloadOutlined,
-  PaperClipOutlined,
-  PictureOutlined,
-  LinkOutlined,
-  SmileOutlined,
   SendOutlined,
 } from "@ant-design/icons";
 import { Conversation, Message } from "./types";
@@ -153,88 +149,25 @@ export default function ChatArea({ activeConversation, messages, message, handle
       </div>
 
       {/* Input Area */}
-      <div className="px-6 py-5 bg-slate-900 border-t border-slate-800 shrink-0 relative z-20">
-        <div className="bg-slate-800 rounded-2xl border border-slate-700/50 focus-within:border-blue-500/50 focus-within:shadow-lg focus-within:shadow-blue-500/10 transition-all duration-200 flex flex-col">
-          {/* Text Input Section */}
-          <div className="px-4 py-3">
-            <textarea
-              className="w-full bg-transparent border-none p-0 text-slate-200 placeholder-slate-500 focus:ring-0 focus:outline-none resize-none text-base leading-relaxed custom-scrollbar"
-              placeholder="Nhập tin nhắn..."
-              rows={1}
-              value={message}
-              onChange={handleTextareaChange}
-              onKeyDown={handleKeyPress}
-              style={{ minHeight: "24px", maxHeight: "150px" }}
-            />
-          </div>
-
-          {/* Toolbar Section (Bottom) */}
-          <div className="flex items-center justify-between px-2 pb-2 pt-1 border-t border-slate-700/30">
-            <div className="flex items-center gap-1">
-              {/* Attachments Group */}
-              <button
-                type="button"
-                className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-blue-400 hover:bg-slate-700/50 rounded-lg transition-all active:scale-95"
-                title="Đính kèm file"
-              >
-                <PaperClipOutlined className="text-xl" />
-              </button>
-              <button
-                type="button"
-                className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-blue-400 hover:bg-slate-700/50 rounded-lg transition-all active:scale-95"
-                title="Hình ảnh"
-              >
-                <PictureOutlined className="text-xl" />
-              </button>
-
-              <div className="w-px h-5 bg-slate-700/50 mx-1"></div>
-
-              {/* Rich Text / Other Tools */}
-              <button
-                type="button"
-                className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-blue-400 hover:bg-slate-700/50 rounded-lg transition-all active:scale-95"
-                title="Link"
-              >
-                <LinkOutlined className="text-xl" />
-              </button>
-              <button
-                type="button"
-                className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-blue-400 hover:bg-slate-700/50 rounded-lg transition-all active:scale-95"
-                title="Tài liệu"
-              >
-                <FileTextOutlined className="text-xl" />
-              </button>
-
-              <div className="w-px h-5 bg-slate-700/50 mx-1"></div>
-
-              <button
-                type="button"
-                className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-yellow-400 hover:bg-slate-700/50 rounded-lg transition-all active:scale-95"
-                title="Emoji"
-              >
-                <SmileOutlined className="text-xl" />
-              </button>
-              <button
-                type="button"
-                className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-blue-400 hover:bg-slate-700/50 rounded-lg transition-all active:scale-95 font-bold"
-                title="Mention"
-              >
-                @
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleSendMessage}
-                disabled={!message.trim()}
-                className="px-5 h-10 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all flex items-center gap-2 font-medium text-sm active:scale-95"
-              >
-                <SendOutlined />
-                <span>Gửi</span>
-              </button>
-            </div>
-          </div>
+      <div className="px-5 py-4 bg-slate-900 border-t border-slate-800 shrink-0 relative z-20">
+        <div className="flex items-end gap-3 bg-slate-800 p-2 pr-2 rounded-2xl border border-slate-700/50 focus-within:border-blue-500/50 focus-within:shadow-lg focus-within:shadow-blue-500/10 transition-all duration-200">
+          <textarea
+            className="flex-1 bg-transparent border-none px-4 py-3 text-slate-200 placeholder-slate-500 focus:ring-0 focus:outline-none resize-none text-base leading-relaxed custom-scrollbar max-h-[120px]"
+            placeholder="Nhập tin nhắn..."
+            rows={1}
+            value={message}
+            onChange={handleTextareaChange}
+            onKeyDown={handleKeyPress}
+            style={{ minHeight: "24px" }}
+          />
+          <button
+            type="button"
+            onClick={handleSendMessage}
+            disabled={!message.trim()}
+            className="mb-1 w-10 h-10 shrink-0 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all flex items-center justify-center active:scale-95"
+          >
+            <SendOutlined className="text-lg" />
+          </button>
         </div>
       </div>
     </>

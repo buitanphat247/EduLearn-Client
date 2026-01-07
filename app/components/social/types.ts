@@ -34,6 +34,7 @@ export interface Contact {
   status?: "online" | "offline" | "away";
   mutualFriends?: number;
   isFriend?: boolean;
+  friendshipId?: number;
 }
 
 export interface FriendRequestResponse {

@@ -1,12 +1,13 @@
-export default function SocialLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+"use client";
+
+import React from "react";
+import { SocialProvider } from "./SocialContext";
+import SocialShell from "./SocialShell";
+
+export default function SocialLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-screen overflow-hidden">
-      {children}
-    </div>
+    <SocialProvider>
+      <SocialShell>{children}</SocialShell>
+    </SocialProvider>
   );
 }
-

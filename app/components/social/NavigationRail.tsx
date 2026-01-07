@@ -1,53 +1,65 @@
 import React from "react";
-import { useRouter } from "next/navigation";
-import { MessageOutlined, ContactsOutlined, CloudOutlined, SettingOutlined, HomeOutlined } from "@ant-design/icons";
+import { useRouter, usePathname } from "next/navigation";
+import { Avatar } from "antd";
+import { MessageOutlined, ContactsOutlined, SettingOutlined, HomeOutlined } from "@ant-design/icons";
 
 interface NavigationRailProps {
-  bottomTab: "messages" | "contacts" | "cloud" | "settings";
-  setBottomTab: (tab: "messages" | "contacts" | "cloud" | "settings") => void;
+  onSettingsClick: () => void;
+  onProfileClick: () => void;
+  user: {
+    avatar?: string;
+    fullname?: string;
+    username?: string;
+  } | null;
 }
 
-export default function NavigationRail({ bottomTab, setBottomTab }: NavigationRailProps) {
+export default function NavigationRail({ onSettingsClick, onProfileClick, user }: NavigationRailProps) {
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Determine active tab based on path
+  const isContacts = pathname?.startsWith("/social/contacts");
+  const isMessages = !isContacts && (pathname === "/social" || pathname?.startsWith("/social/messages"));
 
   return (
-    <nav className="w-[64px] bg-slate-900 border-r border-slate-800 flex flex-col items-center py-6 gap-6 shrink-0 z-20">
+    <nav className="w-[64px] bg-slate-900 border-r border-slate-800 flex flex-col items-center py-6 gap-5 shrink-0 z-20">
+      {/* User Logic */}
+      <div>
+        <div
+          onClick={onProfileClick}
+          className="w-10 h-10 rounded-full cursor-pointer hover:opacity-80 transition-opacity border-2 border-transparent hover:border-blue-500 overflow-hidden"
+          title="Trang cá nhân"
+        >
+          {user?.avatar ? (
+            <Avatar src={user.avatar} size={36} />
+          ) : (
+            <div className="w-full h-full bg-linear-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-white text-sm font-bold">
+              {(user?.fullname?.[0] || user?.username?.[0] || "U").toUpperCase()}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Main Navigation Icons */}
       <div className="flex flex-col gap-4 w-full px-2">
         <button
-          onClick={() => setBottomTab("messages")}
+          onClick={() => router.push("/social")}
           title="Tin nhắn"
           className={`w-12 h-12 rounded-xl transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto ${
-            bottomTab === "messages" || bottomTab === null
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-              : "text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+            isMessages ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
           }`}
         >
           <MessageOutlined className="text-xl" />
         </button>
 
         <button
-          onClick={() => setBottomTab("contacts")}
+          onClick={() => router.push("/social/contacts")}
           title="Danh bạ"
           className={`w-12 h-12 rounded-xl transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto ${
-            bottomTab === "contacts"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-              : "text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+            isContacts ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
           }`}
         >
           <ContactsOutlined className="text-xl" />
-        </button>
-
-        <button
-          onClick={() => setBottomTab("cloud")}
-          title="Cloud của tôi"
-          className={`w-12 h-12 rounded-xl transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto ${
-            bottomTab === "cloud"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-              : "text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
-          }`}
-        >
-          <CloudOutlined className="text-xl" />
         </button>
       </div>
 
@@ -57,13 +69,9 @@ export default function NavigationRail({ bottomTab, setBottomTab }: NavigationRa
       {/* Bottom Actions */}
       <div className="flex flex-col gap-4 w-full px-2 mb-2">
         <button
-          onClick={() => setBottomTab("settings")}
+          onClick={onSettingsClick}
           title="Cài đặt"
-          className={`w-12 h-12 rounded-xl transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto ${
-            bottomTab === "settings"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-              : "text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
-          }`}
+          className="w-12 h-12 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto"
         >
           <SettingOutlined className="text-xl" />
         </button>

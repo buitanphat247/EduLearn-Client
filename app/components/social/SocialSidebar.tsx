@@ -1,20 +1,10 @@
 import React from "react";
 import { Input, Button } from "antd";
-import {
-  SearchOutlined,
-  UserAddOutlined,
-  ContactsOutlined,
-  TeamOutlined,
-  CloudOutlined,
-  BellOutlined,
-  MoreOutlined,
-  SendOutlined,
-} from "@ant-design/icons";
-import SettingsTab from "./SettingsTab";
+import { SearchOutlined, UserAddOutlined, ContactsOutlined, TeamOutlined, BellOutlined, MoreOutlined, SendOutlined } from "@ant-design/icons";
 import { Conversation } from "./types";
 
 interface SocialSidebarProps {
-  bottomTab: "messages" | "contacts" | "cloud" | "settings";
+  bottomTab: "messages" | "contacts";
   contactSubTab: "friends" | "groups" | "requests" | "sent_requests";
   setContactSubTab: (tab: "friends" | "groups" | "requests" | "sent_requests") => void;
   conversations: Conversation[];
@@ -131,21 +121,6 @@ export default function SocialSidebar({
               <span className="font-medium">Lời mời đã gửi</span>
             </div>
           </div>
-        ) : bottomTab === "cloud" ? (
-          // Cloud Content
-          <div className="px-4 py-8 flex flex-col items-center justify-center h-[60%]">
-            <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mb-6">
-              <CloudOutlined className="text-4xl text-blue-500" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-200 mb-2">Cloud của tôi</h3>
-            <p className="text-sm text-slate-400 mb-6 text-center max-w-[200px]">Lưu trữ và đồng bộ dữ liệu quan trọng của bạn.</p>
-            <Button type="primary" className="bg-blue-600 hover:bg-blue-500 h-10 px-6 rounded-xl font-medium shadow-lg shadow-blue-600/20">
-              Tải file lên
-            </Button>
-          </div>
-        ) : bottomTab === "settings" ? (
-          // Settings Content
-          <SettingsTab />
         ) : (
           // Conversations List (default for messages)
           <div className="py-2 px-2 flex flex-col gap-1">
@@ -161,11 +136,7 @@ export default function SocialSidebar({
               >
                 {/* Avatar/Icon */}
                 <div className="relative shrink-0">
-                  {conversation.isCloud ? (
-                    <div className="w-12 h-12 rounded-full bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                      <CloudOutlined className="text-xl text-white" />
-                    </div>
-                  ) : conversation.isNotification ? (
+                  {conversation.isNotification ? (
                     <div className="w-12 h-12 rounded-full bg-linear-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
                       <BellOutlined className="text-xl text-white" />
                     </div>
