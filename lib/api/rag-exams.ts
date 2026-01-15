@@ -68,3 +68,23 @@ export const deleteRagTest = async (testId: string): Promise<boolean> => {
     return false;
   }
 };
+
+export const updateRagTest = async (testId: string, data: any): Promise<boolean> => {
+  try {
+    const response = await axios.put(`${AI_API_URL}/test/${testId}`, data);
+    return response.data.status === "success";
+  } catch (error) {
+    console.error("Error updating RAG test:", error);
+    return false;
+  }
+};
+
+export const updateRagQuestion = async (questionId: string, data: any): Promise<boolean> => {
+  try {
+    const response = await axios.put(`${AI_API_URL}/question/${questionId}`, data);
+    return response.data.status === "success";
+  } catch (error) {
+    console.error("Error updating RAG question:", error);
+    return false;
+  }
+};

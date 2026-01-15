@@ -57,6 +57,7 @@ export default function AIGenerationSection({ uploadedFile }: AIGenerationSectio
       formData.append("difficulty", values.difficulty);
       formData.append("mode", values.mode);
       formData.append("duration_minutes", values.duration_minutes.toString());
+      formData.append("max_attempts", values.max_attempts.toString()); // Added
       formData.append("class_id", classId);
 
       // URL của Python AI Tool - Nên để trong env
@@ -70,9 +71,9 @@ export default function AIGenerationSection({ uploadedFile }: AIGenerationSectio
 
       if (response.status === 201) {
         message.success("Đã sinh đề thi thành công bằng AI!");
-        console.log("Result:", response.data);
-        // Sau khi sinh xong, có thể chuyển hướng đến trang xem đề hoặc editor
-        // router.push(`/admin/classes/${classId}/exams/${response.data.data.test_id}`);
+        const testId = response.data.data.test_id;
+        // Chuyển hướng đến trang editor để chỉnh sửa nội dung AI vừa sinh
+        router.push(`/admin/classes/${classId}/examinate/ai_editor?testId=${testId}`);
       }
     } catch (error: any) {
       console.error(error);
@@ -110,9 +111,10 @@ export default function AIGenerationSection({ uploadedFile }: AIGenerationSectio
         layout="vertical"
         initialValues={{
           num_questions: 10,
-          difficulty: "medium",
+          difficulty: "hard",
           mode: "llamaindex",
-          duration_minutes: 45
+          duration_minutes: 45,
+          max_attempts: 0 // 0 = Infinity
         }}
         onFinish={onFinish}
       >
@@ -149,26 +151,24 @@ export default function AIGenerationSection({ uploadedFile }: AIGenerationSectio
             <SettingOutlined className="text-blue-600" />
             <span>Cấu hình AI nâng cao</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-0">
             <Form.Item name="num_questions" label={<span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Số lượng câu hỏi</span>}>
-              <InputNumber min={1} max={50} className="w-full rounded-lg h-10 flex items-center" />
+              <InputNumber min={1} max={30} className="w-full rounded-lg h-10 flex items-center" />
             </Form.Item>
             <Form.Item name="duration_minutes" label={<span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Thời gian (phút)</span>}>
               <InputNumber min={5} max={180} className="w-full rounded-lg h-10 flex items-center" />
             </Form.Item>
-            <Form.Item name="difficulty" label={<span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Độ khó</span>}>
-              <Select className="w-full h-10 rounded-lg">
-                <Select.Option value="easy">Dễ</Select.Option>
-                <Select.Option value="medium">Trung bình</Select.Option>
-                <Select.Option value="hard">Khó</Select.Option>
-              </Select>
+            <Form.Item name="max_attempts" label={<span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Số lượt làm bài</span>}>
+              <InputNumber min={0} max={100} className="w-full rounded-lg h-10 flex items-center" placeholder="0 = Không giới hạn" />
             </Form.Item>
-            <Form.Item name="mode" label={<span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Chế độ AI</span>}>
-              <Select className="w-full h-10 rounded-lg" disabled>
-                <Select.Option value="llamaindex">LlamaIndex (Smart)</Select.Option>
-                <Select.Option value="online">GPT-4o Online</Select.Option>
-                <Select.Option value="offline">Ollama Offline (Riêng tư)</Select.Option>
-              </Select>
+          </div>
+
+          <div className="hidden">
+            <Form.Item name="difficulty">
+              <Input />
+            </Form.Item>
+            <Form.Item name="mode">
+              <Input />
             </Form.Item>
           </div>
         </div>

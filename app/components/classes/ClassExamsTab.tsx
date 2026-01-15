@@ -161,7 +161,11 @@ const ClassExamsTab = memo(function ClassExamsTab({
           }
           break;
         case "edit":
-          router.push(`/admin/classes/${classId}/exams/${exam.id}/edit`);
+          if (exam.isAi) {
+            router.push(`/admin/classes/${classId}/examinate/ai_editor?testId=${exam.id}`);
+          } else {
+            router.push(`/admin/classes/${classId}/exams/${exam.id}/edit`);
+          }
           break;
         case "delete":
           if (exam.isAi) {
