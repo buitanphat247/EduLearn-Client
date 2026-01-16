@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { BookOutlined, FileTextOutlined, UserOutlined, AppstoreOutlined } from "@ant-design/icons";
-import { App, Skeleton, Card } from "antd";
+import { App } from "antd";
 import UserWelcomeBanner from "@/app/components/user/dashboard/UserWelcomeBanner";
 import UserStatisticsCards from "@/app/components/user/dashboard/UserStatisticsCards";
 import ProgressCard from "@/app/components/user/dashboard/ProgressCard";
 import UpcomingClassesList from "@/app/components/user/classes/UpcomingClassesList";
 import { getStats, type StatsResponse } from "@/lib/api/stats";
-import CustomCard from "@/app/components/common/CustomCard";
 
 const upcomingClasses = [
   {
@@ -83,38 +82,36 @@ export default function UserDashboard() {
     fetchStats();
   }, [message]);
 
-  const userStats = stats
-    ? [
-        {
-          label: "Tài liệu",
-          value: stats.documents.toString(),
-          icon: FileTextOutlined,
-          color: "text-purple-600",
-          bgColor: "bg-purple-50",
-        },
-        {
-          label: "Người dùng",
-          value: stats.users.toString(),
-          icon: UserOutlined,
-          color: "text-cyan-600",
-          bgColor: "bg-cyan-50",
-        },
-        {
-          label: "Tin tức",
-          value: stats.news.toString(),
-          icon: AppstoreOutlined,
-          color: "text-green-600",
-          bgColor: "bg-green-50",
-        },
-        {
-          label: "Sự kiện",
-          value: stats.events.toString(),
-          icon: BookOutlined,
-          color: "text-blue-600",
-          bgColor: "bg-blue-50",
-        },
-      ]
-    : [];
+  const userStats = [
+    {
+      label: "Tài liệu",
+      value: stats?.documents?.toString() || "0",
+      icon: FileTextOutlined,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50",
+    },
+    {
+      label: "Người dùng",
+      value: stats?.users?.toString() || "0",
+      icon: UserOutlined,
+      color: "text-cyan-600",
+      bgColor: "bg-cyan-50",
+    },
+    {
+      label: "Tin tức",
+      value: stats?.news?.toString() || "0",
+      icon: AppstoreOutlined,
+      color: "text-green-600",
+      bgColor: "bg-green-50",
+    },
+    {
+      label: "Sự kiện",
+      value: stats?.events?.toString() || "0",
+      icon: BookOutlined,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -122,23 +119,7 @@ export default function UserDashboard() {
       <UserWelcomeBanner />
 
       {/* Statistics Cards */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((index) => (
-            <CustomCard key={index} padding="md">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <Skeleton active paragraph={{ rows: 0 }} title={{ width: "60%", style: { marginBottom: 8 } }} />
-                  <Skeleton active paragraph={{ rows: 0 }} title={{ width: "40%", style: { marginTop: 8, height: 32 } }} />
-                </div>
-                <Skeleton.Avatar active size={64} shape="square" className="rounded-xl" />
-              </div>
-            </CustomCard>
-          ))}
-        </div>
-      ) : (
-        <UserStatisticsCards stats={userStats} />
-      )}
+      <UserStatisticsCards stats={userStats} />
 
       {/* Progress */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
