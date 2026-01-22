@@ -8,6 +8,7 @@ import { LeftOutlined, RightOutlined, RollbackOutlined, SoundOutlined, SwapOutli
 import { getVocabulariesByFolder, type VocabularyResponse } from "@/lib/api/vocabulary";
 import { IoArrowBackOutline } from "react-icons/io5";
 import VocabularyFlashcardSkeleton from "@/app/components/features/vocabulary/VocabularyFlashcardSkeleton";
+import { useTheme } from "@/app/context/ThemeContext";
 
 type Difficulty = "easy" | "medium" | "hard";
 
@@ -16,6 +17,7 @@ export default function VocabularyFlashcard() {
   const router = useRouter();
   const params = useParams();
   const folderId = params?.folderId ? parseInt(params.folderId as string, 10) : null;
+  const { theme: currentTheme } = useTheme();
 
   const [vocabularies, setVocabularies] = useState<VocabularyResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,6 +135,7 @@ export default function VocabularyFlashcard() {
     );
   }
 
+  // Use Skeleton if loading, and maybe update Skeleton to be theme-aware too if not already
   if (loading) {
     return <VocabularyFlashcardSkeleton />;
   }
@@ -140,42 +143,42 @@ export default function VocabularyFlashcard() {
   return (
     <ConfigProvider
       theme={{
-        algorithm: theme.darkAlgorithm,
+        algorithm: currentTheme === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {
           colorPrimary: "#3b82f6",
         },
       }}
     >
-      <main className="min-h-screen bg-[#0f172a] py-8 md:py-12 text-slate-200">
+      <main className="min-h-screen bg-slate-50 dark:bg-[#0f172a] py-8 md:py-12 text-slate-800 dark:text-slate-200 transition-colors duration-500">
         <div className="container mx-auto px-4">
           {/* Header & Breadcrumb */}
           <div className="mb-8">
-            <div className="mb-6 bg-[#1e293b] border border-slate-700/50 rounded-xl px-6 py-4 shadow-sm text-sm font-medium flex items-center flex-wrap gap-2">
-              <Link href="/" className="text-blue-400 hover:text-blue-300 transition-colors">
+            <div className="mb-6 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded-xl px-6 py-4 shadow-sm text-sm font-medium flex items-center flex-wrap gap-2 transition-colors">
+              <Link href="/" className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
                 Trang chủ
               </Link>
-              <span className="text-slate-600">/</span>
-              <Link href="/features/vocabulary" className="text-blue-400 hover:text-blue-300 transition-colors">
+              <span className="text-slate-400 dark:text-slate-600">/</span>
+              <Link href="/features/vocabulary" className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
                 Học từ vựng
               </Link>
               {folderName && (
                 <>
-                  <span className="text-slate-600">/</span>
-                  <Link href={`/features/vocabulary/${folderId}`} className="text-blue-400 hover:text-blue-300 transition-colors">
+                  <span className="text-slate-400 dark:text-slate-600">/</span>
+                  <Link href={`/features/vocabulary/${folderId}`} className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
                     {folderName}
                   </Link>
-                  <span className="text-slate-600">/</span>
-                  <span className="text-slate-300 font-medium">Flashcard</span>
+                  <span className="text-slate-400 dark:text-slate-600">/</span>
+                  <span className="text-slate-600 dark:text-slate-300 font-medium">Flashcard</span>
                 </>
               )}
             </div>
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 ">
               <div>
-                <h1 className="text-3xl font-bold text-white mb-2">
-                  Chế độ Flashcard <span className="text-slate-600 font-light">|</span> {folderName}
+                <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2 transition-colors">
+                  Chế độ Flashcard <span className="text-slate-400 dark:text-slate-600 font-light">|</span> {folderName}
                 </h1>
-                <p className="text-slate-400">
+                <p className="text-slate-500 dark:text-slate-400">
                   {vocabularies.length > 0 ? `Thẻ thứ ${currentIndex + 1} trên tổng số ${vocabularies.length} từ` : "Đang tải danh sách từ vựng..."}
                 </p>
               </div>
@@ -183,8 +186,8 @@ export default function VocabularyFlashcard() {
               <Button
                 icon={<IoArrowBackOutline />}
                 onClick={() => router.push(`/features/vocabulary/${folderId}`)}
-                size="small"
-                className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 border-0 text-white font-medium shadow-lg shadow-blue-900/30 hover:shadow-blue-900/50 transition-all duration-300 hover:scale-105"
+                size="middle"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 border-0 text-white font-medium shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105"
               >
                 Quay lại danh sách
               </Button>
@@ -192,8 +195,8 @@ export default function VocabularyFlashcard() {
           </div>
 
           {vocabularies.length === 0 ? (
-            <div className="text-center py-24 bg-[#1e293b] rounded-3xl border border-slate-700">
-              <p className="text-slate-400 mb-4">Chưa có từ vựng nào trong folder này.</p>
+            <div className="text-center py-24 bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-700 transition-colors">
+              <p className="text-slate-500 dark:text-slate-400 mb-4">Chưa có từ vựng nào trong folder này.</p>
               <Button type="primary" onClick={() => router.push(`/features/vocabulary/${folderId}`)}>
                 Thêm từ vựng ngay
               </Button>
@@ -211,7 +214,7 @@ export default function VocabularyFlashcard() {
                   >
                     {/* Front Face */}
                     <div
-                      className="absolute inset-0 bg-[#1e293b] rounded-3xl shadow-2xl shadow-black/20 border border-slate-700 p-8 flex flex-col items-center justify-center text-center transition-transform duration-300 ease-in-out"
+                      className="absolute inset-0 bg-white dark:bg-[#1e293b] rounded-3xl shadow-2xl shadow-blue-900/5 dark:shadow-black/20 border border-slate-200 dark:border-slate-700 p-8 flex flex-col items-center justify-center text-center transition-all duration-300 ease-in-out"
                       style={{
                         backfaceVisibility: "hidden",
                         WebkitBackfaceVisibility: "hidden",
@@ -219,7 +222,7 @@ export default function VocabularyFlashcard() {
                       }}
                     >
                       <div className="flex items-center gap-4 mb-4">
-                        <h2 className="text-5xl font-extrabold text-white tracking-tight">{currentVocab.content}</h2>
+                        <h2 className="text-5xl font-extrabold text-slate-800 dark:text-white tracking-tight transition-colors">{currentVocab.content}</h2>
                         {currentVocab.audioUrl?.[0]?.url && (
                           <Button
                             type="text"
@@ -230,19 +233,19 @@ export default function VocabularyFlashcard() {
                               e.stopPropagation();
                               playAudio(currentVocab.audioUrl![0].url);
                             }}
-                            className="text-slate-400 hover:text-blue-400 hover:bg-slate-800 flex items-center justify-center"
+                            className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center justify-center transition-colors"
                           />
                         )}
                       </div>
 
-                      <p className="text-xl text-slate-400 font-mono mb-8">/{currentVocab.pronunciation}/</p>
+                      <p className="text-xl text-slate-500 dark:text-slate-400 font-mono mb-8 transition-colors">/{currentVocab.pronunciation}/</p>
 
                       <Button
                         type="primary"
                         icon={<SwapOutlined />}
-                        size="small"
+                        size="large"
                         onClick={handleFlip}
-                        className="bg-blue-600 h-12 px-8 rounded-full shadow-lg shadow-blue-900/40 hover:scale-105 transition-transform border-none"
+                        className="bg-blue-600 h-12 px-8 rounded-full shadow-lg shadow-blue-500/30 hover:scale-105 transition-transform border-none font-semibold"
                       >
                         Lật thẻ xem nghĩa
                       </Button>
@@ -250,38 +253,38 @@ export default function VocabularyFlashcard() {
 
                     {/* Back Face */}
                     <div
-                      className="absolute inset-0 bg-[#1e293b] rounded-3xl shadow-2xl shadow-black/20 border border-blue-500/30 p-8 flex flex-col text-center transition-transform duration-300 ease-in-out"
+                      className="absolute inset-0 bg-white dark:bg-[#1e293b] rounded-3xl shadow-2xl shadow-blue-900/5 dark:shadow-black/20 border border-blue-200 dark:border-blue-500/30 p-8 flex flex-col text-center transition-all duration-300 ease-in-out"
                       style={{
                         backfaceVisibility: "hidden",
                         WebkitBackfaceVisibility: "hidden",
                         transform: isFlipped ? "rotateY(0deg)" : "rotateY(180deg)",
                       }}
                     >
-                      <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-700">
-                        <h2 className="text-3xl font-bold text-white">{currentVocab.content}</h2>
+                      <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-slate-700 transition-colors">
+                        <h2 className="text-3xl font-bold text-slate-800 dark:text-white transition-colors">{currentVocab.content}</h2>
                         {currentVocab.audioUrl?.[0]?.url && (
                           <Button
                             type="text"
                             icon={<SoundOutlined />}
                             onClick={() => playAudio(currentVocab.audioUrl![0].url)}
-                            className="text-slate-400 hover:text-blue-400"
+                            className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"
                           />
                         )}
                       </div>
 
                       <div className="flex-1 flex flex-col items-center justify-center">
-                        <p className="text-4xl text-blue-400 font-bold mb-4">{currentVocab.translation}</p>
+                        <p className="text-4xl text-blue-600 dark:text-blue-400 font-bold mb-4 transition-colors">{currentVocab.translation}</p>
 
                         {currentVocab.pos && (
-                          <span className="inline-block px-3 py-1 bg-slate-800 text-slate-300 text-sm font-semibold rounded-lg uppercase tracking-wider mb-6 border border-slate-700">
+                          <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-semibold rounded-lg uppercase tracking-wider mb-6 border border-slate-200 dark:border-slate-700 transition-colors">
                             {currentVocab.pos}
                           </span>
                         )}
 
                         {/* Mini Example Preview */}
                         {parsedExample && (
-                          <div className="max-w-lg mx-auto bg-slate-800/50 p-4 rounded-xl text-sm border border-slate-700/50">
-                            <p className="text-slate-300 italic mb-1" dangerouslySetInnerHTML={{ __html: parsedExample.content }} />
+                          <div className="max-w-lg mx-auto bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl text-sm border border-slate-100 dark:border-slate-700/50 transition-colors">
+                            <p className="text-slate-700 dark:text-slate-300 italic mb-1" dangerouslySetInnerHTML={{ __html: parsedExample.content }} />
                             <p className="text-slate-500" dangerouslySetInnerHTML={{ __html: parsedExample.translation }} />
                           </div>
                         )}
@@ -290,9 +293,9 @@ export default function VocabularyFlashcard() {
                       <Button
                         type="default"
                         icon={<SwapOutlined />}
-                        size="small"
+                        size="middle"
                         onClick={handleFlip}
-                        className="mt-8 self-center bg-transparent border-slate-600 text-slate-400 hover:text-blue-400 hover:border-blue-400"
+                        className="mt-8 self-center bg-transparent border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-400 dark:hover:border-blue-400 transition-colors"
                       >
                         Xem mặt trước
                       </Button>
@@ -308,15 +311,13 @@ export default function VocabularyFlashcard() {
                     <Button
                       icon={<LeftOutlined />}
                       onClick={handlePrev}
-                      size="small"
+                      size="middle"
                       disabled={vocabularies.length <= 1}
-                      className="h-12 bg-[#1e293b] border-slate-700 text-slate-300 hover:text-blue-400 hover:border-blue-400 hover:bg-slate-800"
-                    >
-                      Trước
-                    </Button>
+                      className="h-12 w-12 rounded-full flex items-center justify-center bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-400 shadow-sm transition-all"
+                    />
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-slate-500 tabular-nums tracking-widest">
+                    <span className="text-base font-semibold text-slate-600 dark:text-slate-400 tabular-nums tracking-widest bg-white dark:bg-[#1e293b] px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
                       {String(currentIndex + 1).padStart(2, "0")} / {String(vocabularies.length).padStart(2, "0")}
                     </span>
                   </div>
@@ -325,42 +326,40 @@ export default function VocabularyFlashcard() {
                       icon={<RightOutlined />}
                       iconPosition="end"
                       onClick={handleNext}
-                      size="small"
+                      size="middle"
                       disabled={vocabularies.length <= 1}
-                      className="h-12 bg-[#1e293b] border-slate-700 text-slate-300 hover:text-blue-400 hover:border-blue-400 hover:bg-slate-800"
-                    >
-                      Tiếp
-                    </Button>
+                      className="h-12 w-12 rounded-full flex items-center justify-center bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-400 shadow-sm transition-all"
+                    />
                   </div>
                 </div>
 
                 {/* Difficulty Rating */}
                 <div className="flex flex-col items-center gap-3">
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Đánh giá độ khó</p>
+                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Đánh giá độ khó</p>
                   <div className="flex gap-3">
                     <Button
                       onClick={() => handleSetDifficulty("easy")}
-                      size="small"
-                      className={`h-10 px-6 bg-[#1e293b] border-slate-700 text-emerald-500 hover:bg-emerald-500/10 hover:border-emerald-500/50 ${
-                        difficulties[currentVocab!.sourceWordId] === "easy" ? "bg-emerald-500/20 border-emerald-500" : ""
+                      size="middle"
+                      className={`h-10 px-6 bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:border-emerald-300 dark:hover:border-emerald-500/50 font-medium transition-all ${
+                        difficulties[currentVocab!.sourceWordId] === "easy" ? "bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500 shadow-md ring-2 ring-emerald-500/20" : ""
                       }`}
                     >
                       Dễ
                     </Button>
                     <Button
                       onClick={() => handleSetDifficulty("medium")}
-                      size="small"
-                      className={`h-10 px-6 bg-[#1e293b] border-slate-700 text-blue-500 hover:bg-blue-500/10 hover:border-blue-500/50 ${
-                        difficulties[currentVocab!.sourceWordId] === "medium" ? "bg-blue-500/20 border-blue-500" : ""
+                      size="middle"
+                      className={`h-10 px-6 bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:border-blue-300 dark:hover:border-blue-500/50 font-medium transition-all ${
+                        difficulties[currentVocab!.sourceWordId] === "medium" ? "bg-blue-50 dark:bg-blue-500/20 border-blue-500 shadow-md ring-2 ring-blue-500/20" : ""
                       }`}
                     >
                       Trung bình
                     </Button>
                     <Button
                       onClick={() => handleSetDifficulty("hard")}
-                      size="small"
-                      className={`h-10 px-6 bg-[#1e293b] border-slate-700 text-rose-500 hover:bg-rose-500/10 hover:border-rose-500/50 ${
-                        difficulties[currentVocab!.sourceWordId] === "hard" ? "bg-rose-500/20 border-rose-500" : ""
+                      size="middle"
+                      className={`h-10 px-6 bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-rose-600 dark:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-300 dark:hover:border-rose-500/50 font-medium transition-all ${
+                        difficulties[currentVocab!.sourceWordId] === "hard" ? "bg-rose-50 dark:bg-rose-500/20 border-rose-500 shadow-md ring-2 ring-rose-500/20" : ""
                       }`}
                     >
                       Khó
