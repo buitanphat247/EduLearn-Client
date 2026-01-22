@@ -23,7 +23,7 @@ export default function UserStatisticsCards({ stats }: UserStatisticsCardsProps)
         const Icon = stat.icon;
         const numericValue = parseInt(stat.value.replace(/,/g, "")) || 0;
         return (
-          <CustomCard key={index} padding="md" className="hover:scale-105 transition-transform duration-200 border border-gray-100 dark:!border-slate-600">
+          <CustomCard key={index} padding="md" className="hover:scale-105">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{stat.label}</p>

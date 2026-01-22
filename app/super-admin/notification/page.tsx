@@ -205,8 +205,13 @@ export default function SuperAdminNotifications() {
             okType: "danger",
             cancelText: "Hủy",
             async onOk() {
+              const userId = getUserIdFromCookie();
+              if (!userId) {
+                message.error("Không tìm thấy thông tin người dùng để thực hiện xóa");
+                return;
+              }
               try {
-                await deleteNotification(record.id);
+                await deleteNotification(record.id, userId);
                 setAllNotifications((prev) => prev.filter((item) => item.id !== record.id));
                 setPagination((prev) => ({
                   ...prev,

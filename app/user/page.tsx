@@ -68,7 +68,7 @@ function QuickActionsGrid({ items }: { items: any[] }) {
               }
               router.push(item.path);
             }}
-            className="group cursor-pointer hover:shadow-lg transition-shadow duration-300 overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:!border-slate-600"
+            className="group cursor-pointer border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm transition-shadow duration-300 overflow-hidden bg-white dark:bg-gray-800"
             styles={{
               body: { padding: 0 },
             }}
@@ -78,7 +78,7 @@ function QuickActionsGrid({ items }: { items: any[] }) {
               <div className="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-12 -mb-12"></div>
               <div className="relative z-10">
                 <div
-                  className={`${item.iconBg} dark:bg-white/20 w-16 h-16 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}
+                  className={`${item.iconBg} dark:bg-white/10 w-16 h-16 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}
                 >
                   <span className="text-black dark:text-white">
                     <Icon className={`text-3xl ${item.iconColor} dark:text-white`} />

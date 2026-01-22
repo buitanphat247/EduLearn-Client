@@ -66,7 +66,7 @@ function WelcomeBanner() {
   };
 
   return (
-    <div className="bg-linear-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white hover:shadow-lg transition-shadow duration-300">
+    <div className="bg-linear-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white shadow-none dark:shadow-sm transition-shadow duration-300">
       <h1 className="text-3xl font-bold mb-2">{getGreeting()}, Admin Teacher!</h1>
       <p className="text-blue-100 text-lg">Chào mừng bạn quay trở lại. Dưới đây là tổng quan về hệ thống của bạn.</p>
     </div>
@@ -82,7 +82,7 @@ function StatisticsCards({ stats }: { stats: any[] }) {
         return (
           <Card
             key={index}
-            className="border border-gray-200 dark:!border-slate-600 hover:shadow-lg transition-all duration-300 cursor-default bg-white dark:bg-gray-800"
+            className="border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm transition-all duration-300 cursor-default bg-white dark:bg-gray-800"
             styles={{
               body: { padding: "24px" },
             }}
@@ -94,7 +94,7 @@ function StatisticsCards({ stats }: { stats: any[] }) {
                   <CountUp start={0} end={numericValue} duration={2} separator="," decimals={0} />
                 </p>
               </div>
-              <div className={`${stat.bgColor} dark:bg-opacity-20 p-4 rounded-xl`}>
+              <div className={`${stat.bgColor} p-4 rounded-xl`}>
                 <Icon className={`text-2xl ${stat.color} dark:brightness-110`} />
               </div>
             </div>
@@ -124,7 +124,7 @@ function QuickActionsGrid({ items }: { items: any[] }) {
               }
               router.push(item.path);
             }}
-            className="group cursor-pointer border border-gray-200 dark:!border-slate-600 hover:shadow-lg transition-shadow duration-300 overflow-hidden bg-white dark:bg-gray-800"
+            className="group cursor-pointer border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm transition-shadow duration-300 overflow-hidden bg-white dark:bg-gray-800"
             styles={{
               body: { padding: 0 },
             }}
@@ -134,7 +134,7 @@ function QuickActionsGrid({ items }: { items: any[] }) {
               <div className="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-12 -mb-12"></div>
               <div className="relative z-10">
                 <div
-                  className={`${item.iconBg} dark:bg-white/20 w-16 h-16 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}
+                  className={`${item.iconBg} dark:bg-white/10 w-16 h-16 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}
                 >
                   <span className="text-black dark:text-white">
                     <Icon className={`text-3xl ${item.iconColor} dark:text-white`} />
@@ -183,29 +183,29 @@ export default function AdminDashboard() {
       label: "Tài liệu",
       value: stats?.documents?.toString() || "0",
       icon: FileTextOutlined,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
+      color: "text-purple-600 dark:text-purple-400",
+      bgColor: "bg-purple-50 dark:bg-purple-900/30",
     },
     {
       label: "Người dùng",
       value: stats?.users?.toString() || "0",
       icon: UserOutlined,
-      color: "text-cyan-600",
-      bgColor: "bg-cyan-50",
+      color: "text-cyan-600 dark:text-cyan-400",
+      bgColor: "bg-cyan-50 dark:bg-cyan-900/30",
     },
     {
       label: "Tin tức",
       value: stats?.news?.toString() || "0",
       icon: AppstoreOutlined,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      color: "text-green-600 dark:text-green-400",
+      bgColor: "bg-green-50 dark:bg-green-900/30",
     },
     {
       label: "Sự kiện",
       value: stats?.events?.toString() || "0",
       icon: CloudDownloadOutlined,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-50",
+      color: "text-indigo-600 dark:text-indigo-400",
+      bgColor: "bg-indigo-50 dark:bg-indigo-900/30",
     },
   ];
 

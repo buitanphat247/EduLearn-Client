@@ -7,7 +7,6 @@
   --border-color: #d1d5dc;
 }
 
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -47,15 +46,34 @@ body {
   /* Removed transition here to let View Transition handle the big effect */
 }
 
-html {
-  /* Removed transition here */
-}
 
-div, section, article, aside, nav, main, header, footer, 
-p, h1, h2, h3, h4, h5, h6, span, a, label, button,
-input, textarea, select {
+div,
+section,
+article,
+aside,
+nav,
+main,
+header,
+footer,
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+span,
+a,
+label,
+button,
+input,
+textarea,
+select {
   /* Keep generic transitions for hover states, but maybe reduce for theme switch if View Transition is used */
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 /* Exclude elements with explicit transition classes or animations */
@@ -138,24 +156,38 @@ video {
   border-color: #d1d5dc !important;
 }
 
-/* Apply border color to all gray borders */
-.border-gray-300,
-.border-gray-200,
-.border-gray-100,
-.border-gray-50,
-.border-t.border-gray-300,
-.border-b.border-gray-300,
-.border-l.border-gray-300,
-.border-r.border-gray-300,
-.border-t.border-gray-200,
-.border-b.border-gray-200,
-.border-l.border-gray-200,
-.border-r.border-gray-200,
-.border-t.border-gray-200,
-.border-t.border-gray-200,
-.border-b.border-gray-200,
-[class*="border-gray"] {
+html.dark .ant-card.ant-card-bordered {
+  border-color: #314059 !important;
+}
+
+/* Apply border color to all gray borders in light mode */
+html:not(.dark) .border-gray-300,
+html:not(.dark) .border-gray-200,
+html:not(.dark) .border-gray-100,
+html:not(.dark) .border-gray-50,
+html:not(.dark) [class*="border-gray"] {
   border-color: #d1d5dc !important;
+}
+
+/* Dark mode border colors */
+html.dark .border-gray-700,
+html.dark .border-gray-600,
+html.dark .border-gray-300,
+html.dark .border-gray-200,
+html.dark .border-gray-100,
+html.dark [class*="border-gray"],
+html.dark .dark\:border-slate-700,
+html.dark .dark\:border-slate-600,
+html.dark .dark\:border-slate-800,
+html.dark [class*="dark:border-slate"] {
+  border-color: #314059 !important;
+}
+
+html.dark .dark\:\!border-slate-700,
+html.dark .dark\:\!border-slate-600,
+html.dark .dark\:\!border-slate-800,
+html.dark [class*="dark:!border-slate"] {
+  border-color: #314059 !important;
 }
 
 /* Notification Panel Animation */
@@ -289,7 +321,9 @@ html.dark .news-table .ant-table {
 /* Search Modal Style - Command Palette Style */
 .search-modal .ant-modal-content {
   border-radius: 16px !important;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
   border: 1px solid rgba(0, 0, 0, 0.05) !important;
 }
 

@@ -91,7 +91,7 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
 
   return (
     <>
-      <header className="bg-white dark:bg-gray-900 h-16 flex items-center justify-between px-6 shadow-sm border-b border-gray-200 dark:!border-slate-600 transition-colors duration-300">
+      <header className="bg-white dark:bg-gray-900 h-16 flex items-center justify-between px-6 shadow-none border-b border-gray-100 dark:!border-slate-700 transition-colors duration-300">
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Hệ thống học tập</h1>
           {currentPageTitle && (

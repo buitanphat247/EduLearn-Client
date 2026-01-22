@@ -35,12 +35,12 @@ export default function CustomCard({
   if (title) {
     return (
       <div
-        className={`bg-white dark:bg-gray-800 rounded-xl transition-colors duration-300 ${className}`}
+        className={`bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm transition-colors duration-300 ${className}`}
         style={style}
         onClick={onClick}
       >
         <div
-          className={`px-6 py-4 border-b border-gray-200 dark:!border-slate-600 flex items-center justify-between ${headerClassName}`}
+          className={`px-6 py-4 border-b border-gray-100 dark:!border-slate-700 flex items-center justify-between ${headerClassName}`}
         >
           <div>
             {typeof title === "string" ? (
@@ -58,7 +58,7 @@ export default function CustomCard({
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-xl transition-all duration-300 ${
+      className={`bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm transition-all duration-300 ${
         paddingClasses[padding]
       } ${className} ${onClick ? "cursor-pointer" : ""}`}
       style={style}
