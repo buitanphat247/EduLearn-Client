@@ -15,35 +15,39 @@ export default function InfoBox({ type = "info", icon, title, children }: InfoBo
     switch (type) {
       case "warning":
         return {
-          container: "bg-blue-50/50 rounded-lg p-3 border border-blue-100",
-          iconColor: "text-blue-600",
+          container: "bg-blue-50/50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-100 dark:border-blue-800/50",
+          iconColor: "text-blue-600 dark:text-blue-400",
         };
       case "success":
         return {
-          container: "bg-green-50/50 rounded-lg p-4 border border-green-100",
-          iconColor: "text-green-600",
+          container: "bg-green-50/50 dark:bg-green-900/20 rounded-lg p-4 border border-green-100 dark:border-green-800/50",
+          iconColor: "text-green-600 dark:text-green-400",
         };
       default:
         return {
-          container: "bg-blue-50/50 rounded-lg p-4 border border-blue-100",
-          iconColor: "text-blue-500",
+          container: "bg-blue-50/50 dark:bg-slate-800 rounded-lg p-4 border border-blue-100 dark:border-slate-700",
+          iconColor: "text-blue-500 dark:text-blue-400",
         };
     }
   };
 
   const styles = getStyles();
-  const defaultIcon = type === "success" ? <QuestionCircleOutlined className={`${styles.iconColor} text-lg shrink-0 mt-0.5`} /> : <InfoCircleOutlined className={`${styles.iconColor} text-lg shrink-0 mt-0.5`} />;
+  const defaultIcon =
+    type === "success" ? (
+      <QuestionCircleOutlined className={`${styles.iconColor} text-lg shrink-0 mt-0.5`} />
+    ) : (
+      <InfoCircleOutlined className={`${styles.iconColor} text-lg shrink-0 mt-0.5`} />
+    );
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} transition-colors duration-200`}>
       <div className="flex gap-3">
         {icon || defaultIcon}
-        <div className="text-sm text-gray-700">
-          {title && <p className="font-medium mb-1">{title}</p>}
+        <div className="text-sm text-gray-700 dark:text-gray-300">
+          {title && <p className="font-medium mb-1 dark:text-gray-200">{title}</p>}
           {children}
         </div>
       </div>
     </div>
   );
 }
-

@@ -104,7 +104,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
   ];
 
   const featureItems: MenuProps["items"] = [
-    { key: "translator", label: "Dịch thuật" },
     { key: "vocabulary", label: "Học từ vựng" },
     { key: "writing", label: "Luyện viết" },
     { key: "listening", label: "Luyện nghe" },

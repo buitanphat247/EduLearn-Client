@@ -14,6 +14,8 @@ export interface RagTestOverview {
   is_published: boolean;
   mode: string;
   max_attempts: number;
+  end_at: string;
+  max_violations: number;
   user_attempt_count: number;
 }
 
@@ -31,20 +33,14 @@ export interface RagTestDetail extends RagTestOverview {
   questions: RagQuestion[];
 }
 
-export const getRagTestsByClass = async (
-  classId: string | number, 
-  studentId?: number,
-  isTeacher: boolean = false
-): Promise<RagTestOverview[]> => {
+export const getRagTestsByClass = async (classId: string | number, studentId?: number, isTeacher: boolean = false): Promise<RagTestOverview[]> => {
   try {
     const ts = new Date().getTime();
     const params = studentId ? `student_id=${studentId}` : "";
     const endpoint = isTeacher ? "teacher" : "published";
-    
+
     // Explicitly call specialized endpoints to ensure correct data (especially drafts for teachers)
-    const response = await axios.get(
-      `${AI_API_URL}/tests/class/${classId}/${endpoint}?${params}${params ? '&' : ''}_ts=${ts}`
-    );
+    const response = await axios.get(`${AI_API_URL}/tests/class/${classId}/${endpoint}?${params}${params ? "&" : ""}_ts=${ts}`);
     return response.data.data;
   } catch (error) {
     console.error("Error fetching RAG tests:", error);
@@ -91,8 +87,11 @@ export interface UpdateTestData {
   title?: string;
   description?: string;
   duration_minutes?: number;
+  total_score?: number;
   max_attempts?: number;
   is_published?: boolean;
+  end_at?: string;
+  max_violations?: number;
 }
 
 export const updateRagTest = async (testId: string, data: UpdateTestData): Promise<boolean> => {
@@ -118,7 +117,7 @@ export const publishRagTest = async (testId: string, isPublished: boolean): Prom
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
     return response.status === 200 && response.data.status === "success";
   } catch (error) {

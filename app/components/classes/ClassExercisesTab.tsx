@@ -160,9 +160,27 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
 
   const getStatusTag = useCallback((exercise: Exercise) => {
     if (exercise.status === "closed") {
-      return { text: "Đã đóng", color: "red" };
+      return {
+        text: "Kết thúc",
+        style: {
+          backgroundColor: "#fff1f0",
+          color: "#cf1322",
+          borderColor: "#ffa39e",
+          borderWidth: "1px",
+          borderStyle: "solid",
+        },
+      };
     }
-    return { text: "Đang mở", color: "green" };
+    return {
+      text: "Đang diễn ra",
+      style: {
+        backgroundColor: "#f6ffed",
+        color: "#389e0d",
+        borderColor: "#b7eb8f",
+        borderWidth: "1px",
+        borderStyle: "solid",
+      },
+    };
   }, []);
 
   const handleCreateExercise = () => {
@@ -288,41 +306,14 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
   const handleCardClick = useCallback(
     (exercise: Exercise, e: React.MouseEvent) => {
       // Chỉ xử lý khi click vào card, không xử lý khi click vào dropdown menu (chỉ có ở admin)
-      if (!readOnly && (e.target as HTMLElement).closest('.ant-dropdown-trigger')) {
+      if (!readOnly && (e.target as HTMLElement).closest(".ant-dropdown-trigger")) {
         return;
       }
 
       // Chỉ hiển thị modal xác nhận khi ở chế độ readOnly (trang user)
       if (readOnly) {
-        Swal.fire({
-          title: "Xác nhận nộp bài",
-          html: `
-            <div class="text-left">
-              <p class="mb-2">Bạn có muốn nộp bài tập:</p>
-              <p class="font-semibold text-lg mb-3">${exercise.title}</p>
-              <div class="text-sm text-gray-600 space-y-1">
-                ${exercise.className ? `<p>📚 <strong>Lớp:</strong> ${exercise.className}</p>` : ''}
-                ${exercise.dueDate ? `<p>📅 <strong>Hạn nộp:</strong> ${exercise.dueDate}${exercise.dueTime ? ` - ${exercise.dueTime}` : ''}</p>` : ''}
-                ${exercise.creatorName ? `<p>👤 <strong>Người tạo:</strong> ${exercise.creatorName}</p>` : ''}
-              </div>
-            </div>
-          `,
-          icon: "question",
-          showCancelButton: true,
-          confirmButtonColor: "#3085d6",
-          cancelButtonColor: "#d33",
-          confirmButtonText: "Nộp bài",
-          cancelButtonText: "Hủy",
-          focusConfirm: true,
-          customClass: {
-            popup: "swal2-popup-custom",
-            htmlContainer: "text-left",
-          },
-        }).then((result) => {
-          if (result.isConfirmed) {
-            router.push(`/user/classes/${classId}/exercises/${exercise.id}/submit`);
-          }
-        });
+        // Navigate directly to submission page without confirmation
+        router.push(`/user/classes/${classId}/exercises/${exercise.id}/submit`);
       } else {
         // Admin mode: mở modal chi tiết như cũ
         handleViewDetail(exercise);
@@ -400,77 +391,92 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
       {/* Exercises List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {currentExercises.length > 0 ? (
-          currentExercises.map((exercise) => (
-            <div
-              key={exercise.id}
-              className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:!border-slate-600 p-6 hover:shadow-lg transition-all cursor-pointer relative ${
-                deletingId === exercise.id ? "opacity-50 pointer-events-none" : ""
-              }`}
-              onClick={(e) => handleCardClick(exercise, e)}
-            >
-              <div className="flex flex-col h-full">
-                {/* Header with Icon, Tag and Menu */}
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`${exercise.iconColor} w-14 h-14 rounded-lg flex items-center justify-center shrink-0 shadow-md`}>
-                      <IoBookOutline className="text-white text-3xl" />
+          currentExercises.map((exercise) => {
+            const statusInfo = getStatusTag(exercise);
+            const subjectStyle = {
+              backgroundColor: "#e6f4ff",
+              color: "#0958d9",
+              borderColor: "#91caff",
+              borderWidth: "1px",
+              borderStyle: "solid",
+            };
+            return (
+              <div
+                key={exercise.id}
+                className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:!border-slate-600 p-6 hover:shadow-lg transition-all cursor-pointer relative ${
+                  deletingId === exercise.id ? "opacity-50 pointer-events-none" : ""
+                }`}
+                onClick={(e) => handleCardClick(exercise, e)}
+              >
+                <div className="flex flex-col h-full">
+                  {/* Header with Icon, Tag and Menu */}
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`${exercise.iconColor} w-14 h-14 rounded-lg flex items-center justify-center shrink-0 shadow-md`}>
+                        <IoBookOutline className="text-white text-3xl" />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Tag className="font-bold border-0 text-md px-2 py-1 m-0 rounded-md" style={subjectStyle}>
+                          {exercise.subject}
+                        </Tag>
+                        <Tag className="font-bold border-0 text-md px-2 py-1 m-0 rounded-md" style={statusInfo.style}>
+                          {statusInfo.text}
+                        </Tag>
+                      </div>
                     </div>
-                    <div className={`${exercise.subjectColor} border-0 font-semibold capitalize text-md px-2.5 py-1 rounded-lg shadow-sm`}>
-                      {exercise.subject}
-                    </div>
-                  </div>
-                  {!readOnly && (
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <Dropdown
-                        menu={{
-                          items: getMenuItems(exercise),
-                          onClick: ({ key }) => {
-                            handleMenuClick(key, exercise);
-                          },
-                        }}
-                        trigger={["click"]}
-                      >
-                        <Button type="text" icon={<MoreOutlined />} className="shrink-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" />
-                      </Dropdown>
-                    </div>
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 space-y-3">
-                  <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-lg line-clamp-2 leading-tight">{exercise.title}</h3>
-                  
-                  {/* Class Info */}
-                  {(exercise.className || exercise.classCode) && (
-                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                      {exercise.className && <span className="font-medium text-gray-600 dark:text-gray-300">{exercise.className}</span>}
-                      {exercise.classCode && (
-                        <>
-                          {exercise.className && <span>•</span>}
-                          <span className="text-gray-500 dark:text-gray-400">Mã: {exercise.classCode}</span>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Creator */}
-                  {exercise.creatorName && (
-                    <div className="text-xs text-gray-500">
-                      Người tạo: <span className="text-gray-700 dark:text-gray-300 font-medium">{exercise.creatorName}</span>
-                    </div>
-                  )}
-
-                  {/* Due Date */}
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Hạn nộp: <span className="text-gray-800 dark:text-gray-200 font-semibold">{exercise.dueDate}</span>
-                    {exercise.dueTime && <span className="text-gray-800 dark:text-gray-200 font-semibold"> - {exercise.dueTime}</span>}
+                    {!readOnly && (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Dropdown
+                          menu={{
+                            items: getMenuItems(exercise),
+                            onClick: ({ key }) => {
+                              handleMenuClick(key, exercise);
+                            },
+                          }}
+                          trigger={["click"]}
+                        >
+                          <Button type="text" icon={<MoreOutlined />} className="shrink-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" />
+                        </Dropdown>
+                      </div>
+                    )}
                   </div>
 
-               
+                  {/* Content */}
+                  <div className="flex-1 space-y-3">
+                    <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-lg line-clamp-2 leading-tight">{exercise.title}</h3>
+                    
+                    {/* Class Info */}
+                    {(exercise.className || exercise.classCode) && (
+                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        {exercise.className && <span className="font-medium text-gray-600 dark:text-gray-300">{exercise.className}</span>}
+                        {exercise.classCode && (
+                          <>
+                            {exercise.className && <span>•</span>}
+                            <span className="text-gray-500 dark:text-gray-400">Mã: {exercise.classCode}</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Creator */}
+                    {exercise.creatorName && (
+                      <div className="text-xs text-gray-500">
+                        Người tạo: <span className="text-gray-700 dark:text-gray-300 font-medium">{exercise.creatorName}</span>
+                      </div>
+                    )}
+
+                    {/* Due Date */}
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Hạn nộp: <span className="text-gray-800 dark:text-gray-200 font-semibold">{exercise.dueDate}</span>
+                      {exercise.dueTime && <span className="text-gray-800 dark:text-gray-200 font-semibold"> - {exercise.dueTime}</span>}
+                    </div>
+
+                 
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         ) : !loading ? (
           <div className="col-span-full">
             <Empty description={searchQuery ? "Không tìm thấy bài tập nào" : "Chưa có bài tập nào"} image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -522,7 +528,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
                 <h2 className="text-xl font-semibold text-gray-800 leading-tight flex-1">
                   {selectedAssignment?.title || selectedExercise.title}
                 </h2>
-                <Tag color={getStatusTag(selectedExercise).color} className="text-sm font-semibold shrink-0">
+                <Tag className="text-sm font-semibold shrink-0" style={getStatusTag(selectedExercise).style}>
                   {getStatusTag(selectedExercise).text}
                 </Tag>
               </div>

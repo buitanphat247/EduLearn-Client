@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Form } from "antd";
+import dayjs from "dayjs";
 import { getRagTestDetail, RagTestDetail } from "@/lib/api/rag-exams";
 import { DEMO_TEST_DATA } from "../constants/demoData";
 
@@ -78,6 +79,8 @@ export function useTestData(testId: string | null, metadataForm: ReturnType<type
           total_score: data.total_score,
           difficulty: (data as any).difficulty || "medium",
           is_published: data.is_published ?? false,
+          end_at: data.end_at ? dayjs(data.end_at) : null,
+          max_violations: data.max_violations,
         });
       } catch (error) {
         console.error("Error fetching test:", error);
@@ -148,6 +151,8 @@ export function useTestData(testId: string | null, metadataForm: ReturnType<type
         duration_minutes: data.duration_minutes,
         max_attempts: data.max_attempts,
         total_score: data.total_score,
+        end_at: data.end_at ? dayjs(data.end_at) : null,
+        max_violations: data.max_violations,
       });
     } catch (error) {
       let fallbackData = DEMO_TEST_DATA;

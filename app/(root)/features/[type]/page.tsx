@@ -6,7 +6,6 @@ import FeaturesHeader from "@/app/components/features/FeaturesHeader";
 import VocabularyFeature from "@/app/components/features/vocabulary/VocabularyFeature";
 import ListeningFeature from "@/app/components/features/listening/ListeningFeature";
 import WritingFeature from "@/app/components/features/writing/WritingFeature";
-import TranslatorFeature from "@/app/components/features/translator/TranslatorFeature";
 
 export default function Features() {
   const params = useParams();
@@ -23,7 +22,6 @@ export default function Features() {
         {type === "vocabulary" && <VocabularyFeature />}
         {type === "listening" && <ListeningFeature />}
         {type === "writing" && <WritingFeature />}
-        {type === "translator" && <TranslatorFeature />}
       </div>
     </main>
   );

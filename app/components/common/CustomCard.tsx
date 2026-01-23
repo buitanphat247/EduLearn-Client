@@ -39,16 +39,8 @@ export default function CustomCard({
         style={style}
         onClick={onClick}
       >
-        <div
-          className={`px-6 py-4 border-b border-gray-100 dark:!border-slate-700 flex items-center justify-between ${headerClassName}`}
-        >
-          <div>
-            {typeof title === "string" ? (
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{title}</h3>
-            ) : (
-              title
-            )}
-          </div>
+        <div className={`px-6 py-4 border-b border-gray-100 dark:!border-slate-700 flex items-center justify-between ${headerClassName}`}>
+          <div>{typeof title === "string" ? <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{title}</h3> : title}</div>
           {extra && <div>{extra}</div>}
         </div>
         <div className={`px-6 py-4 ${bodyClassName}`}>{children}</div>
@@ -58,7 +50,7 @@ export default function CustomCard({
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm transition-all duration-300 ${
+      className={`bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-md transition-all duration-300 ${
         paddingClasses[padding]
       } ${className} ${onClick ? "cursor-pointer" : ""}`}
       style={style}

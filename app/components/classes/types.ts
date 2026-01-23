@@ -32,6 +32,8 @@ export interface Exam {
   isAi?: boolean;
   isLocked?: boolean;
   isPublished?: boolean;
+  end_at?: string;
+  max_violations?: number;
 }
 
 export interface Exercise {

@@ -32,7 +32,13 @@ export function useTestMetadata({ testId, test, setTest, refetch }: UseTestMetad
             }
             message.success("Đã cập nhật cấu hình (demo mode)");
           } else {
-            const success = await updateRagTest(testId!, values);
+            // Prepare payload
+            const payload = { ...values };
+            if (payload.end_at && typeof payload.end_at.format === "function") {
+               payload.end_at = payload.end_at.format("YYYY-MM-DD HH:mm:ss");
+            }
+
+            const success = await updateRagTest(testId!, payload);
             if (success) {
               message.success("Đã cập nhật cấu hình");
               await refetch();

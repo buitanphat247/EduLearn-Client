@@ -12,6 +12,7 @@ import {
   InfoCircleOutlined,
   FileTextOutlined,
   DeleteOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import type { UploadFile, UploadProps } from "antd";
 import { getAssignmentById, type AssignmentDetailResponse } from "@/lib/api/assignments";
@@ -149,6 +150,9 @@ export default function ExerciseSubmitPage() {
 
   const daysRemaining = getDaysRemaining(assignment.due_at);
   const dueDateFormatted = formatDate(assignment.due_at);
+  
+  // Calculate exact overdue status by comparing timestamps
+  const isOverdueWarning = assignment.due_at ? new Date(assignment.due_at).getTime() < new Date().getTime() : false;
 
   return (
     <div className="mx-auto">
@@ -234,8 +238,22 @@ export default function ExerciseSubmitPage() {
           <div className="h-px flex-1 bg-gray-200 ml-2"></div>
         </div>
 
-        {/* Dragger - Only show when no files */}
-        {fileList.length === 0 && (
+        {/* Overdue Warning */}
+        {isOverdueWarning && (
+           <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 text-red-600 mb-3">
+               <ExclamationCircleOutlined className="text-2xl" />
+             </div>
+             <h3 className="text-lg font-bold text-red-800 mb-2">Đã hết hạn nộp bài</h3>
+             <p className="text-red-600 max-w-lg mx-auto">
+               Bài tập này đã quá hạn nộp vào lúc <span className="font-semibold">{dueDateFormatted}</span>. 
+               Bạn không thể nộp bài được nữa. Vui lòng liên hệ giáo viên nếu cần hỗ trợ.
+             </p>
+           </div>
+        )}
+
+        {/* Dragger - Only show when no files and NOT Overdue */}
+        {fileList.length === 0 && !isOverdueWarning && (
           <Dragger {...uploadProps} className=" hover:border-blue-500 rounded-xl bg-gray-50/50">
             <p className="ant-upload-drag-icon flex justify-center mb-4">
               <CloudUploadOutlined className="text-blue-600 text-5xl" />
@@ -260,40 +278,46 @@ export default function ExerciseSubmitPage() {
                   <p className="font-bold text-gray-900 truncate">{file.name}</p>
                   <p className="text-sm text-gray-500">{file.size ? formatFileSize(file.size) : "0 Bytes"}</p>
                 </div>
-                <button onClick={() => handleRemove(file)} className="shrink-0 p-2 text-gray-400 hover:text-red-500 transition-colors">
-                  <DeleteOutlined className="text-lg" />
-                </button>
+                {!isOverdueWarning && (
+                  <button onClick={() => handleRemove(file)} className="shrink-0 p-2 text-gray-400 hover:text-red-500 transition-colors">
+                    <DeleteOutlined className="text-lg" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
         )}
 
-        <div className="mt-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded uppercase">.pdf</span>
-            <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded uppercase">.docx</span>
-            <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded uppercase">.zip</span>
-            <span className="ml-2 text-xs text-gray-400 italic">Tối đa 50MB</span>
-          </div>
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <Button
-              size="middle"
-              className="flex-1 md:flex-none font-black uppercase tracking-widest"
-              onClick={handleSubmit}
-              loading={submitting}
-              disabled={fileList.length === 0}
-            >
-              Nộp bài
-            </Button>
-          </div>
-        </div>
+        {!isOverdueWarning && (
+          <>
+            <div className="mt-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded uppercase">.pdf</span>
+                <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded uppercase">.docx</span>
+                <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded uppercase">.zip</span>
+                <span className="ml-2 text-xs text-gray-400 italic">Tối đa 50MB</span>
+              </div>
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <Button
+                  size="middle"
+                  className="flex-1 md:flex-none font-black uppercase tracking-widest"
+                  onClick={handleSubmit}
+                  loading={submitting}
+                  disabled={fileList.length === 0}
+                >
+                  Nộp bài
+                </Button>
+              </div>
+            </div>
 
-        {/* Empty State Message */}
-        {fileList.length === 0 && (
-          <div className="mt-6 flex items-center gap-3 p-4 bg-blue-50 border border-blue-100 rounded-xl">
-            <InfoCircleOutlined className="text-blue-600" />
-            <p className="text-sm text-blue-700 font-medium">Bạn chưa chọn tệp nào. Nút "Nộp bài" sẽ được kích hoạt sau khi bạn tải tệp lên.</p>
-          </div>
+            {/* Empty State Message */}
+            {fileList.length === 0 && (
+              <div className="mt-6 flex items-center gap-3 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                <InfoCircleOutlined className="text-blue-600" />
+                <p className="text-sm text-blue-700 font-medium">Bạn chưa chọn tệp nào. Nút "Nộp bài" sẽ được kích hoạt sau khi bạn tải tệp lên.</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -14,11 +14,11 @@ export default function ErrorState({ type, classId }: ErrorStateProps) {
 
   if (type === "noTestId") {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex items-center justify-center min-h-[60vh] bg-transparent">
         <Result
           status="warning"
-          title="Thiếu mã bộ đề"
-          subTitle="Vui lòng quay lại trang tạo đề AI."
+          title={<span className="dark:text-gray-200">Thiếu mã bộ đề</span>}
+          subTitle={<span className="dark:text-gray-400">Vui lòng quay lại trang tạo đề AI.</span>}
           extra={
             <Button type="primary" onClick={() => router.push(`/admin/classes/${classId}/examinate`)}>
               Quay lại
@@ -30,8 +30,8 @@ export default function ErrorState({ type, classId }: ErrorStateProps) {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <Empty description="Không tìm thấy bộ đề" />
+    <div className="flex items-center justify-center min-h-[60vh] bg-transparent">
+      <Empty description={<span className="dark:text-gray-400">Không tìm thấy bộ đề</span>} />
     </div>
   );
 }

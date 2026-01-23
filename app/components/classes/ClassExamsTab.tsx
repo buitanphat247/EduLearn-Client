@@ -87,6 +87,8 @@ const ClassExamsTab = memo(function ClassExamsTab({
           isAi: true,
           isLocked: isLocked, // Attach lock status
           isPublished: t.is_published ?? false, // Add publish status
+          end_at: t.end_at,
+          max_violations: t.max_violations,
         };
       });
       setRagExams(mappedTests);
@@ -116,7 +118,7 @@ const ClassExamsTab = memo(function ClassExamsTab({
         exam.subject.toLowerCase().includes(query)
       );
     });
-  }, [allExams, ragExams, searchQuery]);
+  }, [allExams, ragExams, searchQuery, readOnly]);
 
   const totalExams = filteredExams.length;
   const startIndex = (currentPage - 1) * pageSize;
@@ -394,7 +396,7 @@ const ClassExamsTab = memo(function ClassExamsTab({
                         THI THỬ AI
                       </Tag>
                     )}
-                    {exam.isPublished !== undefined && (
+                    {!readOnly && exam.isPublished !== undefined && (
                       <Tag 
                         color={exam.isPublished ? "blue" : "orange"} 
                         className="font-bold"
@@ -429,9 +431,15 @@ const ClassExamsTab = memo(function ClassExamsTab({
                         {exam.date} - {exam.time}
                       </span>
                     </div>
-                    <div className="text-xs">
+                    <div className="text-xs space-y-1 mt-2">
                       <div>Phòng thi: {exam.room}</div>
                       <div>Hình thức: {exam.format}</div>
+                      {exam.end_at && (
+                         <div className="text-red-500 font-medium">Hạn chót: {new Date(exam.end_at).toLocaleString("vi-VN", {hour: '2-digit', minute:'2-digit', day:'2-digit', month:'2-digit', year:'numeric'})}</div>
+                      )}
+                      {exam.max_violations !== undefined && (
+                         <div className="text-orange-600 font-medium">Vi phạm tối đa: {exam.max_violations} lỗi</div>
+                      )}
                     </div>
                   </div>
                 </div>

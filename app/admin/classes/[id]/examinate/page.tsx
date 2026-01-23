@@ -32,13 +32,13 @@ export default function ExaminatePage() {
   ];
 
   return (
-    <div className="bg-gray-50/50 space-y-6">
+    <div className="bg-gray-50/50 dark:bg-gray-900/50 space-y-6">
       <div className="flex items-center justify-start">
         <Button
           icon={<ArrowLeftOutlined />}
           onClick={handleCancel}
           disabled={isCreating}
-          className="border-gray-300 text-gray-600 hover:text-blue-600 hover:border-blue-600 transition-colors"
+          className="border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-600 dark:hover:border-blue-400 transition-colors bg-transparent"
         >
           Quay lại
         </Button>
@@ -50,10 +50,7 @@ export default function ExaminatePage() {
           <CustomCard padding="lg">
             <div className="space-y-6">
               <div className="pt-4">
-                <AIGenerationSection 
-                  uploadedFile={fileList.length > 0 ? fileList[0] : null} 
-                  onLoadingChange={setIsCreating}
-                />
+                <AIGenerationSection uploadedFile={fileList.length > 0 ? fileList[0] : null} onLoadingChange={setIsCreating} />
               </div>
 
               <div className="space-y-3 pt-2">
@@ -85,28 +82,12 @@ export default function ExaminatePage() {
       </div>
 
       {/* Modal hiển thị khi đang tạo bài */}
-      <Modal
-        open={isCreating}
-        closable={false}
-        footer={null}
-        centered
-        maskClosable={false}
-        className="text-center"
-      >
+      <Modal open={isCreating} closable={false} footer={null} centered maskClosable={false} className="text-center">
         <div className="py-6">
-          <Spin 
-            indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} 
-            className="mb-4"
-          />
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">
-            Đang tạo bài thi...
-          </h3>
-          <p className="text-gray-600 mb-1">
-            AI Agent đang xử lý và tạo câu hỏi cho bạn
-          </p>
-          <p className="text-sm text-gray-500">
-            Quá trình này có thể mất 30-60 giây tùy độ dài tài liệu
-          </p>
+          <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} className="mb-4" />
+          <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2">Đang tạo bài thi...</h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-1">AI Agent đang xử lý và tạo câu hỏi cho bạn</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Quá trình này có thể mất 30-60 giây tùy độ dài tài liệu</p>
         </div>
       </Modal>
     </div>

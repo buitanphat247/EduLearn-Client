@@ -265,9 +265,10 @@ export default function ExamSessionPage() {
     };
   }, [test, attemptId, isSubmitted]);
 
-  // Anti-Cheat Lock (5 Violations)
+  // Anti-Cheat Lock (Dynamic Violations)
   useEffect(() => {
-    if (violations.length >= 5 && !isSubmitted && attemptId) {
+    const limit = test?.max_violations || 3;
+    if (violations.length >= limit && !isSubmitted && attemptId) {
       // Silent Background Submit
       const finalizeExam = async () => {
         setIsSubmitted(true);
@@ -281,7 +282,7 @@ export default function ExamSessionPage() {
       };
       finalizeExam();
     }
-  }, [violations.length, isSubmitted, attemptId, studentId, userAnswers, examId]);
+  }, [violations.length, isSubmitted, attemptId, studentId, userAnswers, examId, test]);
 
   // 3. Chế độ "MÁY MÓC": Đóng tab hoặc rời đi = Nộp bài ngay lập tực
   useEffect(() => {
@@ -658,7 +659,7 @@ export default function ExamSessionPage() {
               {[
                 "Làm bài ở chế độ TOÀN MÀN HÌNH.",
                 "KHÔNG chuyển sang Tab khác hoặc thoát trình duyệt.",
-                "Vi phạm đủ 5 lần hệ thống sẽ tự động khóa bài.",
+                `Vi phạm quá ${test?.max_violations || 3} lần hệ thống sẽ tự động khóa bài.`,
                 "Tuyệt đối không sử dụng công cụ DevTools.",
                 "Bài thi sẽ được tự động nộp khi hết thời gian.",
               ].map((rule, i) => (
