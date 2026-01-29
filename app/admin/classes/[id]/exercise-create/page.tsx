@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { App, Button, Input, Upload, Form, DatePicker, Modal, Spin } from "antd";
 import CustomCard from "@/app/components/common/CustomCard";
 import RichTextEditor, { type Editor } from "@/app/components/common/RichTextEditor";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId";
 import { formatFileName } from "@/lib/utils/fileName";
 import {
   ArrowLeftOutlined,
@@ -26,6 +26,7 @@ export default function ExerciseCreatePage() {
   const router = useRouter();
   const params = useParams();
   const { message } = App.useApp();
+  const { userId } = useUserId();
   const [form] = Form.useForm();
   const classId = params?.id as string;
 
@@ -61,8 +62,7 @@ export default function ExerciseCreatePage() {
         return;
       }
 
-      // Get userId
-      const userId = getUserIdFromCookie();
+      // Validate userId
       if (!userId) {
         message.error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
         return;

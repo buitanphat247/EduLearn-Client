@@ -31,9 +31,8 @@ export default function SuperAdminSidebar() {
   const router = useRouter();
   const { message } = App.useApp();
 
-  const handleLogout = async () => {
-    const { signOut } = await import("@/lib/api/auth");
-    await signOut();
+  const handleGoHome = () => {
+    router.push("/");
   };
 
   return (
@@ -83,9 +82,9 @@ export default function SuperAdminSidebar() {
         })}
       </nav>
 
-      {/* Logout Button */}
+      {/* Go Home Button */}
       <div className="p-4">
-        <Button size="large" type="primary" danger onClick={handleLogout} className="w-full">
+        <Button size="large" type="primary" danger onClick={handleGoHome} className="w-full">
           <LogoutOutlined className="text-xl transition-colors duration-200" />
           <span>Thoát hệ thống</span>
         </Button>

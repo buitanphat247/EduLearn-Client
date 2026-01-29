@@ -73,7 +73,7 @@ export const clearAuthCache = (): void => {
   cachedAuthTimestamp = 0;
 };
 
-const setTokens = (accessToken: string, refreshToken?: string): void => {
+export const setTokens = (accessToken: string, refreshToken?: string): void => {
   // KHÔNG lưu vào localStorage nữa
   // Tất cả thông tin được lưu trong cookie đã mã hóa từ backend
   // Chỉ cần xóa localStorage cũ nếu có
@@ -83,7 +83,7 @@ const setTokens = (accessToken: string, refreshToken?: string): void => {
   localStorage.removeItem("user");
 };
 
-const clearTokens = (): void => {
+export const clearTokens = (): void => {
   if (typeof window === "undefined") return;
   
   // Xóa các keys cũ trong localStorage (nếu có)
@@ -456,6 +456,5 @@ export const clearCacheByPattern = (pattern: string | RegExp): void => {
   });
 };
 
-export { getAccessToken, getRefreshToken, setTokens, clearTokens };
 export default apiClient;
 

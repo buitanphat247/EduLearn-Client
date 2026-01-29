@@ -12,7 +12,7 @@ import {
   PhoneOutlined,
 } from "@ant-design/icons";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId";
 
 interface SettingsFormData {
   fullname: string;
@@ -23,6 +23,7 @@ interface SettingsFormData {
 
 export default function AdminSettings() {
   const { message: messageApi } = App.useApp();
+  const { userId, loading: userIdLoading } = useUserId();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,14 +39,15 @@ export default function AdminSettings() {
 
   // Fetch user info
   useEffect(() => {
-    const fetchUserInfo = async () => {
-      const userId = getUserIdFromCookie();
-      if (!userId) {
+    if (userIdLoading || !userId) {
+      if (!userIdLoading && !userId) {
         messageApi.error("Không tìm thấy thông tin người dùng");
         setLoading(false);
-        return;
       }
+      return;
+    }
 
+    const fetchUserInfo = async () => {
       try {
         setLoading(true);
         const user = await getUserInfo(userId);
@@ -64,7 +66,7 @@ export default function AdminSettings() {
     };
 
     fetchUserInfo();
-  }, [form, messageApi]);
+  }, [userId, userIdLoading, form, messageApi]);
 
   const handleSaveProfile = async (values: SettingsFormData) => {
     try {

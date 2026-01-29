@@ -614,7 +614,7 @@ export default function ExerciseDetailPage() {
                         <Button 
                             danger
                             className="flex-1" 
-                            onClick={handleUngrade}
+                            onClick={() => handleUngrade()}
                             loading={isSubmittingGrade}
                         >
                             Gỡ điểm

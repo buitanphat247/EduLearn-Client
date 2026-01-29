@@ -6,11 +6,12 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { ColumnsType } from "antd/es/table";
 import StudentDetailModal from "@/app/components/students/StudentDetailModal";
 import { getStudentsByUserId, type StudentResponse } from "@/lib/api/users";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId";
 import type { StudentItem } from "@/interface/students";
 
 export default function AdminStudents() {
   const { message } = App.useApp();
+  const { userId, loading: userIdLoading } = useUserId();
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -67,9 +68,7 @@ export default function AdminStudents() {
   // Fetch students from API
   const fetchStudents = useCallback(
     async (page: number = 1, limit: number = 10, search?: string) => {
-      const userId = getUserIdFromCookie();
-      if (!userId) {
-        message.error("Không tìm thấy thông tin người dùng (cookie)");
+      if (userIdLoading || !userId) {
         return;
       }
 
@@ -107,8 +106,15 @@ export default function AdminStudents() {
         setLoading(false);
       }
     },
-    [message, mapStudentResponse]
+    [userId, userIdLoading, message, mapStudentResponse]
   );
+
+  // Hiển thị lỗi nếu không có user_id sau khi đợi decrypt
+  useEffect(() => {
+    if (!userIdLoading && !userId) {
+      message.error("Không tìm thấy thông tin người dùng");
+    }
+  }, [userId, userIdLoading, message]);
 
   // Initial fetch and refetch on dependencies change
   useEffect(() => {

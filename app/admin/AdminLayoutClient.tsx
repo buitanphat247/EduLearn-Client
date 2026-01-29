@@ -5,7 +5,7 @@ import AdminSidebar from "../components/layout/AdminSidebar";
 import { usePathname } from "next/navigation";
 import { Modal, Spin, message, Switch } from "antd";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId";
 import { useTheme } from "@/app/context/ThemeContext";
 import { MoonOutlined, SunOutlined, BulbOutlined, BulbFilled } from "@ant-design/icons";
 
@@ -24,6 +24,7 @@ interface InitialUserData {
 
 function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | null }) {
   const pathname = usePathname();
+  const { userId } = useUserId();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
@@ -41,8 +42,6 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
 
   // Memoize fetch function
   const fetchUserInfo = useCallback(async (showError = false) => {
-    const userId = getUserIdFromCookie();
-    console.log("userId", userId);
     if (!userId) {
       if (showError) message.error("Không tìm thấy thông tin người dùng");
       return;
@@ -60,7 +59,7 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
     } finally {
       if (showError) setLoadingProfile(false);
     }
-  }, []);
+  }, [userId, message]);
 
   // Fetch user info on mount (silent)
   useEffect(() => {
@@ -92,7 +91,7 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
 
   return (
     <>
-      <header className="bg-white dark:bg-gray-900 h-16 flex items-center justify-between px-6 shadow-none transition-colors duration-300 border-b border-gray-100 dark:!border-slate-700">
+      <header className="bg-white dark:bg-gray-900 h-16 flex items-center justify-between px-6 shadow-none transition-colors duration-300 border-b border-gray-100 dark:border-slate-700!">
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Hệ thống quản lý Admin</h1>
           {currentPageTitle && (

@@ -7,7 +7,7 @@ import CustomCard from "@/app/components/common/CustomCard";
 import RichTextEditor, { type Editor } from "@/app/components/common/RichTextEditor";
 import FileUploadSection from "@/app/components/exercises/FileUploadSection";
 import ProgressModal from "@/app/components/exercises/ProgressModal";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId";
 import { getAssignmentById, updateAssignment } from "@/lib/api/assignments";
 import { formatFileName } from "@/lib/utils/fileName";
 import { useFileHandlers } from "@/app/hooks/useFileUpload";
@@ -23,6 +23,7 @@ export default function ExerciseEditPage() {
   const router = useRouter();
   const params = useParams();
   const { message } = App.useApp();
+  const { userId } = useUserId();
   const [form] = Form.useForm();
   const classId = params?.id as string;
   const exerciseId = params?.exerciseId as string;
@@ -137,8 +138,7 @@ export default function ExerciseEditPage() {
         return;
       }
 
-      // Get userId
-      const userId = getUserIdFromCookie();
+      // Validate userId
       if (!userId) {
         message.error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
         return;

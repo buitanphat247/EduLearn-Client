@@ -10,11 +10,12 @@ import { getClassesByUser, deleteClass, getClassById, type ClassResponse, type C
 import { deleteRagTestsByClass } from "@/lib/api/rag-exams";
 import type { ClassItem } from "@/interface/classes";
 import { ensureMinLoadingTime, CLASS_STATUS_MAP } from "@/lib/utils/classUtils";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
 import { classSocketClient } from "@/lib/socket/class-client";
+import { useUserId } from "@/app/hooks/useUserId";
 
 export default function AdminClasses() {
   const { message, modal } = App.useApp();
+  const { userId, loading: userIdLoading } = useUserId();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -53,17 +54,14 @@ export default function AdminClasses() {
 
   // Fetch classes
   const fetchClasses = useCallback(async () => {
+    // Đợi user_id decrypt xong
+    if (userIdLoading || !userId) {
+      return;
+    }
+
     const startTime = Date.now();
     try {
       setLoading(true);
-
-      // Get current user ID from cookie
-      const userId = getUserIdFromCookie();
-      if (!userId) {
-        message.error("Không tìm thấy thông tin người dùng");
-        setLoading(false);
-        return;
-      }
 
       const result = await getClassesByUser({
         userId: userId,
@@ -84,12 +82,19 @@ export default function AdminClasses() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, debouncedSearchQuery, message, mapClassData]);
+  }, [userId, userIdLoading, pagination.current, pagination.pageSize, debouncedSearchQuery, message, mapClassData]);
 
   // Fetch classes on mount and when dependencies change
   useEffect(() => {
     fetchClasses();
   }, [fetchClasses]);
+
+  // Hiển thị lỗi nếu không có user_id sau khi đợi decrypt
+  useEffect(() => {
+    if (!userIdLoading && !userId) {
+      message.error("Không tìm thấy thông tin người dùng");
+    }
+  }, [userId, userIdLoading, message]);
 
   // Real-time updates via Socket.io
   useEffect(() => {
@@ -175,10 +180,9 @@ export default function AdminClasses() {
     const unsubscribeDeleted = classSocketClient.on("class_deleted", (data: any) => {
       setClasses((prev) => prev.filter((c) => Number(c.key) !== Number(data.class_id)));
       setPagination((prev) => ({ ...prev, total: Math.max(0, prev.total - 1) }));
-      
-      const currentUserId = getUserIdFromCookie();
-      if (data.deleted_by && Number(data.deleted_by) !== Number(currentUserId)) {
-          message.info(`Lớp học "${data.name}" đã bị xóa`);
+
+      if (data.deleted_by && userId && Number(data.deleted_by) !== Number(userId)) {
+        message.info(`Lớp học "${data.name}" đã bị xóa`);
       }
     });
 
@@ -192,17 +196,21 @@ export default function AdminClasses() {
       unsubscribeStatus();
       unsubscribeDeleted();
     };
-  }, [JSON.stringify(classes.map((c) => c.key))]);
+  }, [JSON.stringify(classes.map((c) => c.key)), userId, message]);
 
   const handleTableChange = (page: number, pageSize: number) => {
     setPagination((prev) => ({ ...prev, current: page, pageSize }));
   };
 
   const handleEdit = async (classItem: ClassItem) => {
+    if (!userId) {
+      message.error("Không tìm thấy thông tin người dùng");
+      return;
+    }
+
     try {
       // Fetch class detail để lấy đầy đủ thông tin
-      const userId = getUserIdFromCookie();
-      const numericUserId = userId ? (typeof userId === "string" ? Number(userId) : userId) : undefined;
+      const numericUserId = typeof userId === "string" ? Number(userId) : userId;
       const classDetail = await getClassById(classItem.key, numericUserId);
       setOriginalClassData(classDetail);
       setSelectedClass(classItem);

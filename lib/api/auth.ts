@@ -1,5 +1,5 @@
 import apiClient, { clearTokens, clearAuthCache, clearResponseCache } from "@/app/config/api";
-import { clearUserCache, clearCookieCache } from "@/lib/utils/cookies";
+import { clearUserCache, clearCookieCache, saveUserDataToSession } from "@/lib/utils/cookies";
 import type { SignInRequest, SignInResponse, SignUpRequest, SignUpResponse } from "@/interface/auth";
 
 export const signIn = async (credentials: SignInRequest): Promise<SignInResponse> => {

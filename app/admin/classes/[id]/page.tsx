@@ -28,13 +28,14 @@ import {
 import { deleteRagTestsByClass } from "@/lib/api/rag-exams";
 import type { StudentItem } from "@/interface/students";
 import { ensureMinLoadingTime, CLASS_STATUS_MAP, formatStudentId } from "@/lib/utils/classUtils";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId";
 import { classSocketClient } from "@/lib/socket/class-client";
 
 export default function ClassDetail() {
   const router = useRouter();
   const params = useParams();
   const { modal, message } = App.useApp();
+  const { userId } = useUserId();
   const classId = params?.id as string;
 
   // Use ref to store stable values
@@ -105,11 +106,11 @@ export default function ClassDetail() {
       const currentClassId = classIdRef.current;
       if (!currentClassId) return "";
 
+      if (!userId) {
+        throw new Error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
+      }
+
       try {
-        const userId = getUserIdFromCookie();
-        if (!userId) {
-          throw new Error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
-        }
         const numericUserId = typeof userId === "string" ? Number(userId) : userId;
         if (isNaN(numericUserId)) {
           throw new Error("User ID không hợp lệ");
@@ -138,7 +139,7 @@ export default function ClassDetail() {
         throw error;
       }
     },
-    [message]
+    [userId, message]
   );
 
   // Fetch class students (separate from class info)
@@ -212,13 +213,13 @@ export default function ClassDetail() {
     }
   }, [fetchClassInfo, fetchClassStudents]);
 
-  // Only fetch when classId changes
+  // Only fetch when classId and userId are ready
   useEffect(() => {
-    if (classId) {
+    if (classId && userId) {
       fetchClassDetail();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classId]);
+  }, [classId, userId]);
 
   // Real-time updates via Socket.io
   useEffect(() => {
@@ -244,8 +245,7 @@ export default function ClassDetail() {
         classNameRef.current = data.name;
 
         // Chỉ hiển thị toast nếu không phải là người vừa thực hiện chỉnh sửa (để tránh 2 toast)
-        const currentUserId = getUserIdFromCookie();
-        if (Number(data.updated_by) !== Number(currentUserId)) {
+        if (userId && Number(data.updated_by) !== Number(userId)) {
           const toastMessage = data.old_name && data.name !== data.old_name
             ? `Lớp học "${data.old_name}" vừa đổi tên thành "${data.name}"`
             : `Lớp học "${data.name}" vừa được cập nhật`;
@@ -263,8 +263,7 @@ export default function ClassDetail() {
     const unsubscribeDeleted = classSocketClient.on("class_deleted", (data: any) => {
       console.log("Class deleted via socket:", data);
       if (Number(data.class_id) === Number(classId)) {
-        const currentUserId = getUserIdFromCookie();
-        if (data.deleted_by && Number(data.deleted_by) !== Number(currentUserId)) {
+        if (userId && data.deleted_by && Number(data.deleted_by) !== Number(userId)) {
           message.warning(`Lớp học "${data.name}" đã bị giải tán bởi quản trị viên khác.`);
           router.push("/admin/classes");
         }
@@ -347,7 +346,7 @@ export default function ClassDetail() {
       unsubscribeRemoved();
       unsubscribeStatus();
     };
-  }, [classId, message]);
+  }, [classId, userId, message, router]);
 
   const handleEdit = useCallback(() => {
     setIsEditModalOpen(true);
