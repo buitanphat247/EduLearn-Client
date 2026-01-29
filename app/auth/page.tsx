@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Form, Input, Button, Divider, Checkbox, App, Radio, ConfigProvider, theme, Select } from "antd";
 import { UserOutlined, LockOutlined, MailOutlined, GoogleOutlined, FacebookFilled } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
@@ -17,6 +17,8 @@ export default function AuthPage() {
   const [signUpLoading, setSignUpLoading] = useState(false);
   const router = useRouter();
   const { message } = App.useApp();
+  const isFirstMount = useRef(true); // Track first mount to skip animation on refresh
+  const [shouldAnimate, setShouldAnimate] = useState(false); // Control animation state
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -26,6 +28,17 @@ export default function AuthPage() {
       router.push("/profile");
     }
   }, [router]);
+
+  // Reset animation state when form changes (after animation completes)
+  useEffect(() => {
+    if (shouldAnimate) {
+      // Reset animation state after animation completes (0.5s)
+      const timer = setTimeout(() => {
+        setShouldAnimate(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isSignUp, shouldAnimate]);
 
   const handleSignIn = async (values: any) => {
     setSignInLoading(true);
@@ -204,7 +217,10 @@ export default function AuthPage() {
                 }
               }}
             >
-              <div key={isSignUp ? "signup" : "signin"} className="animate-fade-in-up w-full">
+              <div
+                key={isSignUp ? "signup" : "signin"}
+                className={`w-full ${shouldAnimate ? 'animate-fade-in-up' : ''}`}
+              >
                 {isSignUp ? (
                   <Form
                     form={signUpForm}
@@ -294,7 +310,10 @@ export default function AuthPage() {
 
                     <div className="text-center mt-4">
                       <span className="text-slate-500 dark:text-slate-400 text-sm">Đã có tài khoản? </span>
-                      <button onClick={() => setIsSignUp(false)} className="text-blue-600 dark:text-blue-400 font-bold hover:text-blue-500 dark:hover:text-blue-300 transition-colors ml-1 cursor-pointer">
+                      <button onClick={() => {
+                        setShouldAnimate(true);
+                        setIsSignUp(false);
+                      }} className="text-blue-600 dark:text-blue-400 font-bold hover:text-blue-500 dark:hover:text-blue-300 transition-colors ml-1 cursor-pointer">
                         Đăng nhập
                       </button>
                     </div>
@@ -353,7 +372,10 @@ export default function AuthPage() {
 
                     <div className="text-center mt-4">
                       <span className="text-slate-500 dark:text-slate-400 text-sm">Chưa có tài khoản? </span>
-                      <button onClick={() => setIsSignUp(true)} className="text-blue-600 dark:text-blue-400 font-bold hover:text-blue-500 dark:hover:text-blue-300 transition-colors ml-1 cursor-pointer">
+                      <button onClick={() => {
+                        setShouldAnimate(true);
+                        setIsSignUp(true);
+                      }} className="text-blue-600 dark:text-blue-400 font-bold hover:text-blue-500 dark:hover:text-blue-300 transition-colors ml-1 cursor-pointer">
                         Đăng ký ngay
                       </button>
                     </div>
