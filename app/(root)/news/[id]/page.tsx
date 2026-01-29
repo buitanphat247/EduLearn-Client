@@ -56,7 +56,7 @@ export default function NewsDetail() {
                 {news.category}
               </Tag>
               <h1 className="text-3xl md:text-4xl font-bold text-white mb-6 leading-tight">{news.title}</h1>
-              
+
               <div className="flex items-center gap-6 text-slate-400 mb-8 border-b border-slate-700 pb-6">
                 <div className="flex items-center gap-2">
                   <CalendarOutlined />
@@ -82,7 +82,7 @@ export default function NewsDetail() {
                     ))}
                   </div>
 
-                  <div className="mt-10 p-6 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl text-white shadow-lg">
+                  <div className="mt-10 p-6 bg-linear-to-r from-blue-600 to-indigo-600 rounded-xl text-white shadow-lg">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                       <div>
                         <h3 className="text-xl font-bold mb-2">Thư viện số</h3>
@@ -100,7 +100,7 @@ export default function NewsDetail() {
 
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-6">
-              
+
               {/* Widget 1: Featured News List */}
               <div className="bg-[#1e293b] rounded-2xl border border-slate-700 p-6 shadow-lg">
                 <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
@@ -176,7 +176,7 @@ export default function NewsDetail() {
                   </svg>
                 </div>
                 <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-500 text-sm text-center font-medium shadow-sm">
-                   Nội dung cập nhật liên tục
+                  Nội dung cập nhật liên tục
                 </div>
               </div>
 

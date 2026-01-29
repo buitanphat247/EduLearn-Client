@@ -236,7 +236,7 @@ export default function AdminStudents() {
               onChange: handleTableChange,
             }}
             className="[&_.ant-pagination]:px-6 [&_.ant-pagination]:pb-4"
-            rowClassName="group hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-200 cursor-pointer border-b border-gray-100 dark:border-gray-800"
+            rowClassName="group hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-200 cursor-pointer border-b border-gray-100 dark:border-gray-800"
             size="small"
             onRow={(record) => ({
               onClick: () => {

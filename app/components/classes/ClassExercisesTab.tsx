@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { useRouter } from "next/navigation";
 import { App, Spin, Input, Button, Tag, Dropdown, Pagination, Empty, Modal } from "antd";
 import type { MenuProps } from "antd";
-import { SearchOutlined, PlusOutlined, MoreOutlined, FileOutlined, CalendarOutlined } from "@ant-design/icons";
+import { SearchOutlined, PlusOutlined, MoreOutlined, FileOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { IoBookOutline } from "react-icons/io5";
 import Swal from "sweetalert2";
-import { getAssignmentsByClass, getAssignmentById, deleteAssignment, type AssignmentResponse, type AssignmentDetailResponse } from "@/lib/api/assignments";
+import { getAssignmentsByClass, getAssignmentById, deleteAssignment, getAssignmentStudents, type AssignmentResponse, type AssignmentDetailResponse } from "@/lib/api/assignments";
+import { getUserIdFromCookie } from "@/lib/utils/cookies";
 import type { ClassExercisesTabProps, Exercise } from "./types";
 
 const ClassExercisesTab = memo(function ClassExercisesTab({
@@ -31,6 +32,8 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
   const [assignmentsMap, setAssignmentsMap] = useState<Map<string, AssignmentResponse>>(new Map());
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Track submission status for each assignment (only for readOnly/student mode)
+  const [submissionStatusMap, setSubmissionStatusMap] = useState<Map<string, { status: string; score: number | null }>>(new Map());
 
   // Debounce search query
   useEffect(() => {
@@ -155,6 +158,43 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
   useEffect(() => {
     fetchAssignments();
   }, [fetchAssignments]);
+
+  // Fetch submission status for each assignment (only in readOnly mode for students)
+  useEffect(() => {
+    if (!readOnly || exercises.length === 0) return;
+
+    const fetchSubmissionStatus = async () => {
+      const userId = getUserIdFromCookie();
+      if (!userId) return;
+
+      const numericClassId = typeof classId === "string" ? Number(classId) : classId;
+      if (isNaN(numericClassId)) return;
+
+      try {
+        // Fetch all assignment_students records for this class
+        const result = await getAssignmentStudents({
+          classId: numericClassId,
+          limit: 200, // Get all
+        });
+
+        // Filter by current user and build status map
+        const newMap = new Map<string, { status: string; score: number | null }>();
+        result.data.forEach((record) => {
+          if (String(record.student_id) === String(userId)) {
+            newMap.set(String(record.assignment_id), {
+              status: record.status,
+              score: record.score,
+            });
+          }
+        });
+        setSubmissionStatusMap(newMap);
+      } catch (error) {
+        console.error("Failed to fetch submission status:", error);
+      }
+    };
+
+    fetchSubmissionStatus();
+  }, [readOnly, exercises, classId]);
 
   const currentExercises = exercises;
 
@@ -424,6 +464,44 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
                         <Tag className="font-bold border-0 text-md px-2 py-1 m-0 rounded-md" style={statusInfo.style}>
                           {statusInfo.text}
                         </Tag>
+                        {/* Submission Status Tag (only for student/readOnly mode) */}
+                        {readOnly && (() => {
+                          const submissionStatus = submissionStatusMap.get(exercise.id);
+                          if (submissionStatus?.status === 'graded') {
+                            return (
+                              <Tag 
+                                icon={<CheckCircleOutlined />}
+                                className="font-bold border-0 text-md px-2 py-1 m-0 rounded-md"
+                                style={{
+                                  backgroundColor: "#d9f7be",
+                                  color: "#52c41a",
+                                  borderColor: "#95de64",
+                                  borderWidth: "1px",
+                                  borderStyle: "solid",
+                                }}
+                              >
+                                {submissionStatus.score !== null ? `${submissionStatus.score}/10` : "Đã chấm"}
+                              </Tag>
+                            );
+                          } else if (submissionStatus?.status === 'submitted') {
+                            return (
+                              <Tag 
+                                icon={<ClockCircleOutlined />}
+                                className="font-bold border-0 text-md px-2 py-1 m-0 rounded-md"
+                                style={{
+                                  backgroundColor: "#e6f4ff",
+                                  color: "#1677ff",
+                                  borderColor: "#91caff",
+                                  borderWidth: "1px",
+                                  borderStyle: "solid",
+                                }}
+                              >
+                                Đã nộp
+                              </Tag>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     </div>
                     {!readOnly && (

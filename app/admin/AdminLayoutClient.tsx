@@ -42,6 +42,7 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
   // Memoize fetch function
   const fetchUserInfo = useCallback(async (showError = false) => {
     const userId = getUserIdFromCookie();
+    console.log("userId", userId);
     if (!userId) {
       if (showError) message.error("Không tìm thấy thông tin người dùng");
       return;

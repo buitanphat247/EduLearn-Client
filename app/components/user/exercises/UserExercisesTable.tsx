@@ -81,23 +81,23 @@ export default function UserExercisesTable({ data }: UserExercisesTableProps) {
     <Table
       columns={columns}
       dataSource={data}
-        pagination={{
-          position: ["bottomRight"],
-          showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} bài tập`,
-          pageSizeOptions: ["10", "20", "50"],
-          className: "px-4 py-3",
-          size: "small",
-        }}
-        className="news-table"
-        rowClassName="group hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-200 cursor-pointer border-b border-gray-100 dark:border-gray-800"
-        size="small"
-        style={{
-          padding: "0",
-        }}
-        onRow={(record) => ({
-          onClick: () => router.push(`/user/exercises/${record.key}`),
-        })}
+      pagination={{
+        position: ["bottomRight"],
+        showSizeChanger: true,
+        showTotal: (total) => `Tổng ${total} bài tập`,
+        pageSizeOptions: ["10", "20", "50"],
+        className: "px-4 py-3",
+        size: "small",
+      }}
+      className="news-table"
+      rowClassName="group hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-200 cursor-pointer border-b border-gray-100 dark:border-gray-800"
+      size="small"
+      style={{
+        padding: "0",
+      }}
+      onRow={(record) => ({
+        onClick: () => router.push(`/user/exercises/${record.key}`),
+      })}
     />
   );
 }

@@ -11,6 +11,8 @@ export const DEMO_TEST_DATA: RagTestDetail = {
   is_published: false,
   mode: "exam",
   max_attempts: 3,
+  end_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+  max_violations: 3,
   user_attempt_count: 0,
   questions: [
     {

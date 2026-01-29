@@ -6,7 +6,6 @@ import { useState, useEffect } from "react";
 import { Button, Dropdown, Avatar, Switch } from "antd";
 import type { MenuProps } from "antd";
 import { UserOutlined, AppstoreOutlined, MessageOutlined, MoonOutlined, SunOutlined, BulbOutlined, BulbFilled } from "@ant-design/icons";
-import { getCurrentUser } from "@/lib/api/users";
 import { signOut } from "@/lib/api/auth";
 import type { AuthState } from "@/lib/utils/auth-server";
 import { useTheme } from "@/app/context/ThemeContext";
@@ -37,62 +36,32 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
     }
   };
 
+  // Chỉ dựa vào server-side auth state, không check localStorage
   const [user, setUser] = useState<any>(() => {
     if (initialAuth.authenticated && initialAuth.userData) {
       return initialAuth.userData;
     }
-
-    if (typeof window === "undefined") return null;
-
-    try {
-      const currentUser = getCurrentUser();
-      const token = localStorage.getItem("accessToken");
-      return currentUser && token ? currentUser : null;
-    } catch {
-      return null;
-    }
+    return null;
   });
 
-  const [authenticated, setAuthenticated] = useState(initialAuth.authenticated || !!user);
+  const [authenticated, setAuthenticated] = useState(initialAuth.authenticated);
 
   const router = useRouter();
   const pathname = usePathname();
 
+  // Chỉ listen storage event để sync khi đăng nhập/đăng xuất từ tab khác
+  // Không check localStorage, chỉ dựa vào server-side state
+  // Backend sẽ tự động giải mã cookie khi nhận request, không cần giải mã ở frontend
   useEffect(() => {
-    const checkAuth = () => {
-      if (typeof window === "undefined") return;
-
-      const currentUser = getCurrentUser();
-      const token = localStorage.getItem("accessToken");
-
-      if (currentUser && token) {
-        setUser((prevUser: any) => {
-          if (!prevUser || prevUser.user_id !== currentUser.user_id) {
-            setAuthenticated(true);
-            return currentUser;
-          }
-          return prevUser;
-        });
-      } else {
-        setUser((prevUser: any) => {
-          if (prevUser !== null) {
-            setAuthenticated(false);
-            return null;
-          }
-          return prevUser;
-        });
-      }
-    };
-
-    const interval = setInterval(checkAuth, 1000);
     const handleStorageChange = () => {
-      checkAuth();
+      // Khi có storage event từ tab khác, reload page để server-side check lại
+      // Server-side sẽ tự động giải mã cookie và trả về auth state mới
+      window.location.reload();
     };
 
     window.addEventListener("storage", handleStorageChange);
 
     return () => {
-      clearInterval(interval);
       window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
@@ -146,23 +115,18 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
   const isAboutActive = pathname === "/about" || pathname === "/system" || pathname === "/guide" || pathname === "/faq" || false;
 
   const handleLogout = async () => {
-    try {
-      await signOut();
-      setUser(null);
-      setAuthenticated(false);
-      router.push("/");
-    } catch (error) {
-      // Logout error is handled silently - user is redirected anyway
-    }
+    // signOut() đã tự động clear tokens, cache và redirect về /auth
+    // Không cần setUser/setAuthenticated vì sẽ redirect ngay
+    await signOut();
   };
 
   // Get user role label
   const getUserRoleLabel = () => {
     if (!user) return "Thành viên";
-    
+
     const roleId = user.role_id || user.role?.role_id;
     const roleName = user.role?.role_name?.toLowerCase() || "";
-    
+
     // Check by role_id
     if (roleId === 3 || roleName === "student" || roleName === "học sinh") {
       return "Học sinh";
@@ -173,17 +137,17 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
     if (roleId === 1 || roleName === "admin" || roleName === "super admin") {
       return "Quản trị viên";
     }
-    
+
     return "Thành viên";
   };
 
   // Get role dashboard path
   const getRoleDashboardPath = () => {
     if (!user) return null;
-    
+
     const roleId = user.role_id || user.role?.role_id;
     const roleName = user.role?.role_name?.toLowerCase() || "";
-    
+
     // Check by role_id
     if (roleId === 3 || roleName === "student" || roleName === "học sinh") {
       return "/user";
@@ -194,7 +158,7 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
     if (roleId === 1 || roleName === "admin" || roleName === "super admin") {
       return "/super-admin";
     }
-    
+
     return null;
   };
 
@@ -225,19 +189,18 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
                     color: isActive
                       ? undefined
                       : theme === "dark"
-                      ? "#ffffff"
-                      : "#475569",
+                        ? "#ffffff"
+                        : "#475569",
                   }}
                 >
                   <span
-                    className={`font-bold text-lg relative z-10 ${
-                      isActive ? "text-blue-600 dark:text-blue-400" : ""
-                    }`}
+                    className={`font-bold text-lg relative z-10 ${isActive ? "text-blue-600 dark:text-blue-400" : ""
+                      }`}
                     style={
                       !isActive
                         ? {
-                            color: theme === "dark" ? "#ffffff" : "#475569",
-                          }
+                          color: theme === "dark" ? "#ffffff" : "#475569",
+                        }
                         : undefined
                     }
                   >
@@ -263,24 +226,23 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
               overlayClassName="user-dropdown-overlay"
             >
               <button
-                className={`relative py-2 flex items-center gap-1 transition-colors duration-200 ${
-                  isFeatureActive || isFeatureDropdownOpen
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "nav-link"
-                }`}
+                className={`relative py-2 flex items-center gap-1 transition-colors duration-200 ${isFeatureActive || isFeatureDropdownOpen
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "nav-link"
+                  }`}
                 style={
                   !(isFeatureActive || isFeatureDropdownOpen)
                     ? {
-                        color: theme === "dark" ? "#ffffff" : "#475569",
-                      }
+                      color: theme === "dark" ? "#ffffff" : "#475569",
+                    }
                     : undefined
                 }
               >
-                 <span className="font-bold text-lg relative z-10">Tính năng</span>
-                 {/* Active underline */}
-                 {(isFeatureActive || isFeatureDropdownOpen) && (
-                   <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
-                 )}
+                <span className="font-bold text-lg relative z-10">Tính năng</span>
+                {/* Active underline */}
+                {(isFeatureActive || isFeatureDropdownOpen) && (
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
+                )}
               </button>
             </Dropdown>
 
@@ -296,24 +258,23 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
               overlayClassName="user-dropdown-overlay"
             >
               <button
-                className={`relative py-2 flex items-center gap-1 transition-colors duration-200 ${
-                  isAboutActive || isAboutDropdownOpen
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "nav-link"
-                }`}
+                className={`relative py-2 flex items-center gap-1 transition-colors duration-200 ${isAboutActive || isAboutDropdownOpen
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "nav-link"
+                  }`}
                 style={
                   !(isAboutActive || isAboutDropdownOpen)
                     ? {
-                        color: theme === "dark" ? "#ffffff" : "#475569",
-                      }
+                      color: theme === "dark" ? "#ffffff" : "#475569",
+                    }
                     : undefined
                 }
               >
-                 <span className="font-bold text-lg relative z-10">Về chúng tôi</span>
-                 {/* Active underline */}
-                 {(isAboutActive || isAboutDropdownOpen) && (
-                   <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
-                 )}
+                <span className="font-bold text-lg relative z-10">Về chúng tôi</span>
+                {/* Active underline */}
+                {(isAboutActive || isAboutDropdownOpen) && (
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
+                )}
               </button>
             </Dropdown>
           </div>
@@ -327,8 +288,8 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
               {theme === "dark" ? <BulbFilled /> : <BulbOutlined />}
             </button>
             {user ? (
-              <Dropdown 
-                menu={{ 
+              <Dropdown
+                menu={{
                   items: [
                     {
                       key: 'user-info',
@@ -378,32 +339,32 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
                     },
                   ],
                   className: "user-dropdown-menu"
-                }} 
-                placement="bottomRight" 
+                }}
+                placement="bottomRight"
                 arrow={{ pointAtCenter: true }}
                 trigger={['click']}
                 overlayClassName="user-dropdown-overlay"
               >
                 <div className="flex items-center gap-3 cursor-pointer group py-1">
                   <div className="w-10 h-10 rounded-full border-2 border-slate-200 dark:border-white/30 bg-slate-100 dark:bg-white/20 backdrop-blur-sm flex items-center justify-center text-slate-600 dark:text-white group-hover:bg-white group-hover:text-blue-600 group-hover:border-blue-500 transition-colors duration-300 shadow-sm relative overflow-hidden">
-                     {user.avatar ? (
-                        <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
-                     ) : (
-                        <span className="font-bold text-lg select-none">
-                          {fixUtf8(user.fullname || user.username || "U").charAt(0).toUpperCase()}
-                        </span>
-                     )}
+                    {user.avatar ? (
+                      <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="font-bold text-lg select-none">
+                        {fixUtf8(user.fullname || user.username || "U").charAt(0).toUpperCase()}
+                      </span>
+                    )}
                   </div>
                   <div className="hidden md:block text-right">
-                     <div className="text-sm font-bold text-slate-700 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
-                        {fixUtf8(user.fullname || user.username)}
-                     </div>
-                     <div className="text-[10px] text-slate-500 dark:text-blue-100 font-medium opacity-80 uppercase tracking-widest group-hover:opacity-100 transition-opacity duration-300">
-                        {userRoleLabel.toUpperCase()}
-                     </div>
+                    <div className="text-sm font-bold text-slate-700 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
+                      {fixUtf8(user.fullname || user.username)}
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-blue-100 font-medium opacity-80 uppercase tracking-widest group-hover:opacity-100 transition-opacity duration-300">
+                      {userRoleLabel.toUpperCase()}
+                    </div>
                   </div>
                   <svg className="w-4 h-4 text-slate-500 dark:text-blue-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
               </Dropdown>

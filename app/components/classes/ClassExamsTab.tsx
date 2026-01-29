@@ -324,7 +324,7 @@ const ClassExamsTab = memo(function ClassExamsTab({
             htmlContainer: "p-0 m-0",
             actions: "mt-8 gap-3",
             confirmButton:
-              "px-8 py-3 rounded-xl font-bold text-[14px] text-white bg-gradient-to-r from-indigo-600 to-violet-600 shadow-lg shadow-indigo-200 hover:shadow-indigo-300/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
+              "px-8 py-3 rounded-xl font-bold text-[14px] text-white bg-linear-to-r from-indigo-600 to-violet-600 shadow-lg shadow-indigo-200 hover:shadow-indigo-300/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
             cancelButton:
               "px-8 py-3 rounded-xl font-bold text-[14px] text-gray-500 bg-gray-50 hover:bg-gray-100 hover:text-gray-700 transition-all duration-200 border-0",
           },
@@ -366,24 +366,22 @@ const ClassExamsTab = memo(function ClassExamsTab({
             <div
               key={exam.id}
               onClick={(e) => handleCardClick(exam, e)}
-              className={`bg-white dark:bg-gray-800 rounded-lg border-l-4 ${
-                exam.isAi ? "border-cyan-500" : "border-orange-500"
-              } border-t border-r border-b border-gray-200 dark:!border-slate-600 p-6 hover:shadow-md transition-shadow ${readOnly ? "cursor-pointer" : ""} ${
-                exam.isLocked ? "opacity-60 grayscale cursor-not-allowed" : ""
-              }`}
+              className={`bg-white dark:bg-gray-800 rounded-lg border-l-4 ${exam.isAi ? "border-cyan-500" : "border-orange-500"
+                } border-t border-r border-b border-gray-200 dark:!border-slate-600 p-6 hover:shadow-md transition-shadow ${readOnly ? "cursor-pointer" : ""} ${exam.isLocked ? "opacity-60 grayscale cursor-not-allowed" : ""
+                }`}
             >
               <div className="flex flex-col h-full">
                 <div className="flex items-start justify-between gap-4 mb-3">
                   <div className="flex flex-wrap gap-2">
-                    <Tag 
+                    <Tag
                       className={`${exam.subjectColor} border-0 font-semibold`}
                       style={exam.subjectStyle}
                     >
                       {exam.subject}
                     </Tag>
                     {exam.isAi && (
-                      <Tag 
-                        icon={<RobotOutlined />} 
+                      <Tag
+                        icon={<RobotOutlined />}
                         className="font-bold"
                         style={{
                           backgroundColor: "#e6f4ff",
@@ -397,8 +395,8 @@ const ClassExamsTab = memo(function ClassExamsTab({
                       </Tag>
                     )}
                     {!readOnly && exam.isPublished !== undefined && (
-                      <Tag 
-                        color={exam.isPublished ? "blue" : "orange"} 
+                      <Tag
+                        color={exam.isPublished ? "blue" : "orange"}
                         className="font-bold"
                         style={{
                           backgroundColor: exam.isPublished ? "#e6f4ff" : "#fff7e6",
@@ -435,10 +433,10 @@ const ClassExamsTab = memo(function ClassExamsTab({
                       <div>Phòng thi: {exam.room}</div>
                       <div>Hình thức: {exam.format}</div>
                       {exam.end_at && (
-                         <div className="text-red-500 font-medium">Hạn chót: {new Date(exam.end_at).toLocaleString("vi-VN", {hour: '2-digit', minute:'2-digit', day:'2-digit', month:'2-digit', year:'numeric'})}</div>
+                        <div className="text-red-500 font-medium">Hạn chót: {new Date(exam.end_at).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
                       )}
                       {exam.max_violations !== undefined && (
-                         <div className="text-orange-600 font-medium">Vi phạm tối đa: {exam.max_violations} lỗi</div>
+                        <div className="text-orange-600 font-medium">Vi phạm tối đa: {exam.max_violations} lỗi</div>
                       )}
                     </div>
                   </div>

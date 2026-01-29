@@ -20,8 +20,9 @@ export default function AdminSidebar() {
   const router = useRouter();
   const { message } = App.useApp();
 
-  const handleLogout = () => {
-    router.push("/");
+  const handleLogout = async () => {
+    const { signOut } = await import("@/lib/api/auth");
+    await signOut();
   };
 
   const handleMenuItemClick = (item: typeof menuItems[0], e: React.MouseEvent) => {

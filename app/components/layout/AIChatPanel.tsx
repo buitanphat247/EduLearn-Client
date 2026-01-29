@@ -76,23 +76,23 @@ export default function AIChatPanel({ open, onClose }: AIChatPanelProps) {
 
   const generateAIResponse = (userText: string): string => {
     const lowerText = userText.toLowerCase();
-    
+
     if (lowerText.includes("xin chào") || lowerText.includes("hello") || lowerText.includes("hi")) {
       return "Xin chào! Rất vui được trò chuyện với bạn. Bạn cần tôi giúp gì hôm nay?";
     }
-    
+
     if (lowerText.includes("bài tập") || lowerText.includes("homework")) {
       return "Tôi có thể giúp bạn với bài tập. Bạn đang gặp khó khăn với môn học nào? Hãy mô tả chi tiết câu hỏi hoặc vấn đề bạn đang gặp phải.";
     }
-    
+
     if (lowerText.includes("toán") || lowerText.includes("math")) {
       return "Tôi có thể hỗ trợ bạn với môn Toán. Bạn có thể gửi cho tôi câu hỏi cụ thể, và tôi sẽ cố gắng giải thích cách giải cho bạn.";
     }
-    
+
     if (lowerText.includes("cảm ơn") || lowerText.includes("thank")) {
       return "Không có gì! Tôi rất vui được giúp đỡ bạn. Nếu bạn có thêm câu hỏi nào khác, đừng ngại hỏi tôi nhé!";
     }
-    
+
     return "Cảm ơn bạn đã hỏi. Tôi đang học hỏi và cải thiện khả năng của mình. Bạn có thể mô tả chi tiết hơn về câu hỏi của bạn không? Tôi sẽ cố gắng hỗ trợ bạn tốt nhất có thể.";
   };
 
@@ -115,12 +115,11 @@ export default function AIChatPanel({ open, onClose }: AIChatPanelProps) {
 
       {/* AI Chat Panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-96 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed top-0 right-0 h-full w-96 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${open ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         {/* Header */}
-          <div className="h-16 bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-between px-4 shrink-0">
+        <div className="h-16 bg-linear-to-r from-blue-600 to-purple-600 flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
               <RobotOutlined className="text-2xl text-blue-600" />
@@ -148,7 +147,7 @@ export default function AIChatPanel({ open, onClose }: AIChatPanelProps) {
               sender={message.sender}
             />
           ))}
-          
+
           {/* Typing Indicator */}
           {isTyping && (
             <div className="flex justify-start">
@@ -161,7 +160,7 @@ export default function AIChatPanel({ open, onClose }: AIChatPanelProps) {
               </div>
             </div>
           )}
-          
+
           <div ref={messagesEndRef} />
         </div>
 
@@ -215,18 +214,16 @@ function AIMessageBubble({ text, time, sender }: AIMessageBubbleProps) {
       )}
       <div className="flex flex-col max-w-[75%]">
         <div
-          className={`rounded-lg px-4 py-2.5 ${
-            sender === "user"
-              ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+          className={`rounded-lg px-4 py-2.5 ${sender === "user"
+              ? "bg-linear-to-r from-blue-500 to-blue-600 text-white"
               : "bg-white text-gray-800 border border-gray-300 shadow-sm"
-          }`}
+            }`}
         >
           <p className="text-sm whitespace-pre-wrap wrap-break-word">{text}</p>
         </div>
         <span
-          className={`text-xs mt-1 px-1 ${
-            sender === "user" ? "text-right text-gray-500" : "text-left text-gray-500"
-          }`}
+          className={`text-xs mt-1 px-1 ${sender === "user" ? "text-right text-gray-500" : "text-left text-gray-500"
+            }`}
         >
           {time}
         </span>

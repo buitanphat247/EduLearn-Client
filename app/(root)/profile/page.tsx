@@ -13,7 +13,7 @@ import {
   SettingOutlined,
   BulbOutlined,
 } from "@ant-design/icons";
-import { getUserInfo, getCurrentUser } from "@/lib/api/users";
+import { getProfile } from "@/lib/api/auth";
 import type { UserInfoResponse } from "@/lib/api/users";
 import { useTheme } from "@/app/context/ThemeContext";
 
@@ -31,13 +31,9 @@ export default function Profile() {
     const fetchUserInfo = async () => {
       hasFetched.current = true;
       try {
-        const currentUser = getCurrentUser();
-        if (currentUser?.user_id) {
-          const userInfo = await getUserInfo(currentUser.user_id);
-          setUser(userInfo);
-        } else {
-          setLoading(false);
-        }
+        // Lấy thông tin profile từ API (đọc từ cookie đã mã hóa)
+        const userInfo = await getProfile();
+        setUser(userInfo as UserInfoResponse);
       } catch (error: any) {
         message.error(error.message || "Không thể tải thông tin user");
         setLoading(false);
@@ -106,11 +102,10 @@ export default function Profile() {
             {/* Tags */}
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
               <span
-                className={`px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider border transition-colors duration-300 ${
-                  isAdmin
-                    ? "border-red-500/20 text-red-500 dark:text-red-400 bg-red-500/10"
-                    : "border-blue-500/20 text-blue-600 dark:text-blue-400 bg-blue-500/10"
-                }`}
+                className={`px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider border transition-colors duration-300 ${isAdmin
+                  ? "border-red-500/20 text-red-500 dark:text-red-400 bg-red-500/10"
+                  : "border-blue-500/20 text-blue-600 dark:text-blue-400 bg-blue-500/10"
+                  }`}
               >
                 {user.role?.role_name || "Member"}
               </span>

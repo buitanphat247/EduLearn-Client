@@ -31,8 +31,9 @@ export default function SuperAdminSidebar() {
   const router = useRouter();
   const { message } = App.useApp();
 
-  const handleLogout = () => {
-    router.push("/");
+  const handleLogout = async () => {
+    const { signOut } = await import("@/lib/api/auth");
+    await signOut();
   };
 
   return (

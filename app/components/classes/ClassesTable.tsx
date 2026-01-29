@@ -135,24 +135,24 @@ export default function ClassesTable({ data, loading, pagination, onEdit, onDele
       pagination={
         pagination
           ? {
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              total: pagination.total,
-              showSizeChanger: false,
-              showTotal: (total) => <span className="text-gray-600 dark:text-gray-400">Tổng {total} lớp học</span>,
-              // pageSizeOptions: ["10", "20", "50"],
-              size: "small",
-              onChange: pagination.onChange,
-            }
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            showSizeChanger: false,
+            showTotal: (total) => <span className="text-gray-600 dark:text-gray-400">Tổng {total} lớp học</span>,
+            // pageSizeOptions: ["10", "20", "50"],
+            size: "small",
+            onChange: pagination.onChange,
+          }
           : {
-              showSizeChanger: false,
-              showTotal: (total) => <span className="text-gray-600 dark:text-gray-400">Tổng {total} lớp học</span>,
-              // pageSizeOptions: ["10", "20", "50"], // Hidden since showSizeChanger is false
-              size: "small",
-            }
+            showSizeChanger: false,
+            showTotal: (total) => <span className="text-gray-600 dark:text-gray-400">Tổng {total} lớp học</span>,
+            // pageSizeOptions: ["10", "20", "50"], // Hidden since showSizeChanger is false
+            size: "small",
+          }
       }
       className="[&_.ant-pagination]:px-6 [&_.ant-pagination]:pb-4"
-      rowClassName="group hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-200 cursor-pointer border-b border-gray-100 dark:border-gray-800"
+      rowClassName="group hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-200 cursor-pointer border-b border-gray-100 dark:border-gray-800"
       size="small"
     />
   );

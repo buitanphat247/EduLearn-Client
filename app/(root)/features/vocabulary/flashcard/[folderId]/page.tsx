@@ -187,7 +187,7 @@ export default function VocabularyFlashcard() {
                 icon={<IoArrowBackOutline />}
                 onClick={() => router.push(`/features/vocabulary/${folderId}`)}
                 size="middle"
-                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 border-0 text-white font-medium shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105"
+                className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 border-0 text-white font-medium shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105"
               >
                 Quay lại danh sách
               </Button>
@@ -340,27 +340,24 @@ export default function VocabularyFlashcard() {
                     <Button
                       onClick={() => handleSetDifficulty("easy")}
                       size="middle"
-                      className={`h-10 px-6 bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:border-emerald-300 dark:hover:border-emerald-500/50 font-medium transition-all ${
-                        difficulties[currentVocab!.sourceWordId] === "easy" ? "bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500 shadow-md ring-2 ring-emerald-500/20" : ""
-                      }`}
+                      className={`h-10 px-6 bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:border-emerald-300 dark:hover:border-emerald-500/50 font-medium transition-all ${difficulties[currentVocab!.sourceWordId] === "easy" ? "bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500 shadow-md ring-2 ring-emerald-500/20" : ""
+                        }`}
                     >
                       Dễ
                     </Button>
                     <Button
                       onClick={() => handleSetDifficulty("medium")}
                       size="middle"
-                      className={`h-10 px-6 bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:border-blue-300 dark:hover:border-blue-500/50 font-medium transition-all ${
-                        difficulties[currentVocab!.sourceWordId] === "medium" ? "bg-blue-50 dark:bg-blue-500/20 border-blue-500 shadow-md ring-2 ring-blue-500/20" : ""
-                      }`}
+                      className={`h-10 px-6 bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:border-blue-300 dark:hover:border-blue-500/50 font-medium transition-all ${difficulties[currentVocab!.sourceWordId] === "medium" ? "bg-blue-50 dark:bg-blue-500/20 border-blue-500 shadow-md ring-2 ring-blue-500/20" : ""
+                        }`}
                     >
                       Trung bình
                     </Button>
                     <Button
                       onClick={() => handleSetDifficulty("hard")}
                       size="middle"
-                      className={`h-10 px-6 bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-rose-600 dark:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-300 dark:hover:border-rose-500/50 font-medium transition-all ${
-                        difficulties[currentVocab!.sourceWordId] === "hard" ? "bg-rose-50 dark:bg-rose-500/20 border-rose-500 shadow-md ring-2 ring-rose-500/20" : ""
-                      }`}
+                      className={`h-10 px-6 bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-rose-600 dark:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-300 dark:hover:border-rose-500/50 font-medium transition-all ${difficulties[currentVocab!.sourceWordId] === "hard" ? "bg-rose-50 dark:bg-rose-500/20 border-rose-500 shadow-md ring-2 ring-rose-500/20" : ""
+                        }`}
                     >
                       Khó
                     </Button>

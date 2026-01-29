@@ -199,7 +199,7 @@ export interface AssignmentStudentResponse {
   assignment_id: number;
   class_id: number;
   student_id: number;
-  status: "assigned" | "viewed" | "submitted" | "graded";
+  status: "assigned" | "viewed" | "submitted" | "graded" | "late" | "resubmitted";
   score: number | null;
   submitted_at: string | null;
   student?: {
@@ -225,11 +225,13 @@ export interface GetAssignmentStudentsResult {
   total: number;
   page: number;
   limit: number;
+  search?: string;
 }
 
 export const getAssignmentStudents = async (
   params: GetAssignmentStudentsParams
 ): Promise<GetAssignmentStudentsResult> => {
+// ... (code omitted, keep existing implementation)
   try {
     const response = await apiClient.get<any>(
       `/assignment-students`,
@@ -292,3 +294,50 @@ export const getAssignmentStudents = async (
   }
 };
 
+
+export interface UpdateAssignmentStudentParams {
+  status?: "assigned" | "viewed" | "submitted" | "graded" | "late" | "resubmitted";
+  score?: number;
+}
+
+export const updateAssignmentStudent = async (
+  assignmentStudentId: number | string,
+  params: UpdateAssignmentStudentParams
+): Promise<AssignmentStudentResponse> => {
+  try {
+    const numericId = typeof assignmentStudentId === "string" ? Number(assignmentStudentId) : assignmentStudentId;
+    if (isNaN(numericId)) throw new Error("ID không hợp lệ");
+
+    const response = await apiClient.patch(
+      `/assignment-students/${numericId}`,
+      params
+    );
+    
+    // NestJS response commonly wrapped in data
+    const data = response.data?.data || response.data;
+    return data as AssignmentStudentResponse;
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể cập nhật trạng thái bài tập";
+    throw new Error(errorMessage);
+  }
+};
+
+export const ungradeAssignmentStudent = async (
+  assignmentStudentId: number | string
+): Promise<AssignmentStudentResponse> => {
+  try {
+    const numericId = typeof assignmentStudentId === "string" ? Number(assignmentStudentId) : assignmentStudentId;
+    if (isNaN(numericId)) throw new Error("ID không hợp lệ");
+
+    const response = await apiClient.post(
+      `/assignment-students/${numericId}/ungrade`
+    );
+    
+    // NestJS response commonly wrapped in data
+    const data = response.data?.data || response.data;
+    return data as AssignmentStudentResponse;
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể gỡ điểm bài tập";
+    throw new Error(errorMessage);
+  }
+};

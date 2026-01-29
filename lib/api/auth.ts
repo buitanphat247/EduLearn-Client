@@ -1,23 +1,16 @@
-import apiClient, { setTokens, getRefreshToken, clearTokens } from "@/app/config/api";
+import apiClient, { clearTokens, clearAuthCache, clearResponseCache } from "@/app/config/api";
+import { clearUserCache, clearCookieCache } from "@/lib/utils/cookies";
 import type { SignInRequest, SignInResponse, SignUpRequest, SignUpResponse } from "@/interface/auth";
 
 export const signIn = async (credentials: SignInRequest): Promise<SignInResponse> => {
   try {
-    const response = await apiClient.post<SignInResponse>("/auth/signin", credentials);
+    const response = await apiClient.post<SignInResponse>("/auth/signin", credentials, {
+      withCredentials: true, // Cần để gửi và nhận cookie
+    });
     
-    if (response.data.data?.user?.access_token && response.data.data?.user?.refresh_token) {
-      setTokens(
-        response.data.data.user.access_token,
-        response.data.data.user.refresh_token
-      );
-      
-      if (typeof window !== "undefined" && response.data.data.user) {
-        const userData = { ...response.data.data.user };
-        delete (userData as any).access_token;
-        delete (userData as any).refresh_token;
-        document.cookie = `user=${JSON.stringify(userData)}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
-      }
-    }
+    // Backend đã mã hóa và set accessToken và user vào cookie rồi
+    // KHÔNG lưu vào localStorage nữa - chỉ dùng cookie đã mã hóa
+    // Tất cả thông tin sẽ được đọc từ cookie ở server-side
     
     return response.data;
   } catch (error: any) {
@@ -28,21 +21,13 @@ export const signIn = async (credentials: SignInRequest): Promise<SignInResponse
 
 export const signUp = async (data: SignUpRequest): Promise<SignUpResponse> => {
   try {
-    const response = await apiClient.post<SignUpResponse>("/auth/signup", data);
+    const response = await apiClient.post<SignUpResponse>("/auth/signup", data, {
+      withCredentials: true, // Cần để gửi và nhận cookie
+    });
     
-    if (response.data.data?.user?.access_token && response.data.data?.user?.refresh_token) {
-      setTokens(
-        response.data.data.user.access_token,
-        response.data.data.user.refresh_token
-      );
-      
-      if (typeof window !== "undefined" && response.data.data.user) {
-        const userData = { ...response.data.data.user };
-        delete (userData as any).access_token;
-        delete (userData as any).refresh_token;
-        document.cookie = `user=${JSON.stringify(userData)}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
-      }
-    }
+    // Backend đã mã hóa và set accessToken và user vào cookie rồi
+    // KHÔNG lưu vào localStorage nữa - chỉ dùng cookie đã mã hóa
+    // Tất cả thông tin sẽ được đọc từ cookie ở server-side
     
     return response.data;
   } catch (error: any) {
@@ -52,35 +37,88 @@ export const signUp = async (data: SignUpRequest): Promise<SignUpResponse> => {
 };
 
 export const signOut = async (): Promise<void> => {
-  const refreshToken = getRefreshToken();
-  
-  if (!refreshToken) {
-    clearTokens();
-    if (typeof window !== "undefined") {
-      window.location.href = "/auth";
-    }
-    return;
-  }
-
   try {
-    await apiClient.post("/auth/signout", {
-      refresh_token: refreshToken,
+    await apiClient.post("/auth/signout", {}, {
+      withCredentials: true, // Cần để gửi cookie _at và _u
     });
   } catch (error: any) {
-    const status = error?.response?.status;
-    
-    if (status === 400) {
-      console.error("Dữ liệu không hợp lệ khi đăng xuất");
-    } else if (status === 401) {
-      console.error("Refresh token không hợp lệ");
-    } else {
-      console.error("Error signing out:", error);
+    // Logout vẫn tiếp tục ngay cả khi API call fail
+    // Backend có thể đã xóa token rồi, hoặc network error
+    if (process.env.NODE_ENV === 'development') {
+      const status = error?.response?.status;
+      if (status === 400) {
+        console.error("Dữ liệu không hợp lệ khi đăng xuất");
+      } else if (status === 401) {
+        console.error("Token không hợp lệ khi đăng xuất");
+      } else if (error?.message) {
+        console.error("Error signing out:", error.message);
+      }
     }
   } finally {
+    // Luôn clear tokens và cache, kể cả khi API call fail
     clearTokens();
+    clearUserCache();
+    clearCookieCache();
+    clearAuthCache();
+    clearResponseCache(); // Clear tất cả API response cache
+    
+    // Force reload để đảm bảo tất cả state được reset
+    // Sử dụng window.location.replace để không lưu vào history
     if (typeof window !== "undefined") {
-      window.location.href = "/auth";
+      // Chỉ xóa các keys liên quan đến authentication
+      // Giữ lại theme và các settings khác
+      const theme = localStorage.getItem("theme");
+      localStorage.clear();
+      // Khôi phục theme sau khi clear
+      if (theme) {
+        localStorage.setItem("theme", theme);
+      }
+      // Force reload về trang auth
+      window.location.replace("/auth");
     }
   }
 };
 
+export interface ProfileResponse {
+  status: boolean;
+  message: string;
+  data: {
+    user_id: number | string;
+    username: string;
+    fullname: string;
+    email: string;
+    phone: string;
+    avatar: string;
+    status: string;
+    role_id?: number;
+    role?: {
+      role_id: number;
+      role_name: string;
+      created_at: string;
+      updated_at: string;
+    };
+    created_at: string;
+    updated_at: string;
+  };
+  statusCode: number;
+  timestamp: string;
+}
+
+export const getProfile = async (): Promise<ProfileResponse['data']> => {
+  try {
+    const response = await apiClient.get<ProfileResponse>("/auth/profile", {
+      withCredentials: true, // Cần để gửi cookie _u và _at
+    });
+    
+    // Response từ backend đã được ResponseInterceptor wrap:
+    // { status, message, data: user, statusCode, timestamp }
+    if (response.data.status && response.data.data) {
+      return response.data.data;
+    }
+    
+    throw new Error(response.data.message || "Không thể lấy thông tin profile");
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy thông tin profile";
+    throw new Error(errorMessage);
+  }
+};

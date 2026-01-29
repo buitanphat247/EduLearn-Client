@@ -83,13 +83,13 @@ export default function CardDocument({ title, grade, subject, updateDate, author
             <UserOutlined className="text-gray-400" />
             <span>{author}</span>
           </div>
-        
+
         </div>
       </div>
 
       {/* Hover indicator */}
       <div
-        className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${config.gradient} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300`}
+        className={`absolute bottom-0 left-0 right-0 h-1 bg-linear-to-r ${config.gradient} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300`}
       ></div>
     </CustomCard>
   );

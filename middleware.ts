@@ -20,64 +20,32 @@ export function middleware(request: NextRequest) {
     }
   }
   
-  const token = request.cookies.get("accessToken")?.value;
-  const userCookie = request.cookies.get("user")?.value;
+  // Lưu ý: Cookie đã được mã hóa và đổi tên thành _at và _u để khó đoán
+  // Middleware chỉ kiểm tra cookie có tồn tại hay không
+  // Việc giải mã và kiểm tra role sẽ được thực hiện ở client-side hoặc server components
+  const hasAccessToken = request.cookies.has("_at");
+  const hasUserCookie = request.cookies.has("_u");
 
   const protectedRoutes = ["/admin", "/user", "/profile", "/super-admin"];
   const authRoute = "/auth";
   
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   
-  if (isProtectedRoute && !token) {
+  // Chỉ kiểm tra cookie có tồn tại hay không (đã được mã hóa)
+  if (isProtectedRoute && !hasAccessToken) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth";
     return NextResponse.redirect(url);
   }
 
-  if (pathname.startsWith(authRoute) && token) {
+  if (pathname.startsWith(authRoute) && hasAccessToken) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
-  if (token && userCookie) {
-    try {
-      const user = JSON.parse(userCookie);
-      const roleId = user?.role?.role_id;
-      const roleName = user?.role?.role_name?.toLowerCase();
-
-      if (pathname.startsWith("/admin")) {
-        if (roleId === 1) {
-          const url = request.nextUrl.clone();
-          url.pathname = "/super-admin";
-          return NextResponse.redirect(url);
-        }
-        if (roleId !== 2) {
-          const url = request.nextUrl.clone();
-          url.pathname = "/";
-          return NextResponse.redirect(url);
-        }
-      }
-
-      if (pathname.startsWith("/user")) {
-        if (roleId !== 3) {
-          const url = request.nextUrl.clone();
-          url.pathname = "/";
-          return NextResponse.redirect(url);
-        }
-      }
-
-      if (pathname.startsWith("/super-admin")) {
-        if (roleId !== 1) {
-          const url = request.nextUrl.clone();
-          url.pathname = "/";
-          return NextResponse.redirect(url);
-        }
-      }
-    } catch (error) {
-      console.error("Error parsing user cookie in middleware:", error);
-    }
-  }
+  // Role-based access control sẽ được xử lý ở client-side hoặc server components
+  // vì middleware chạy ở Edge Runtime không thể giải mã cookie
   
   return NextResponse.next();
 }

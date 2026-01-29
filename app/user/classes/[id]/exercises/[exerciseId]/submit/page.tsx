@@ -20,7 +20,7 @@ import {
 import type { UploadFile, UploadProps } from "antd";
 import CustomCard from "@/app/components/common/CustomCard";
 import DataLoadingSplash from "@/app/components/common/DataLoadingSplash";
-import { getAssignmentById, type AssignmentDetailResponse } from "@/lib/api/assignments";
+import { getAssignmentById, getAssignmentStudents, type AssignmentDetailResponse, type AssignmentStudentResponse } from "@/lib/api/assignments";
 import {
   createSubmission,
   updateSubmission,
@@ -31,6 +31,7 @@ import {
   type StudentSubmissionAttachment,
 } from "@/lib/api/submissions";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { classSocketClient } from "@/lib/socket/class-client";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/vi";
@@ -52,6 +53,7 @@ export default function SubmitExercisePage() {
   const [submitting, setSubmitting] = useState(false);
   const [note, setNote] = useState("");
   const [isOverdue, setIsOverdue] = useState(false);
+  const [gradingInfo, setGradingInfo] = useState<{ status: string; score: number | null } | null>(null);
 
   // Helper: Format file size
   const formatFileSize = (bytes: number) => {
@@ -91,14 +93,30 @@ export default function SubmitExercisePage() {
       }
 
       // Parallel fetching for performance
-      const [assignmentData, submissionsData] = await Promise.all([
+      const [assignmentData, submissionsData, assignmentStudentData] = await Promise.all([
         getAssignmentById(exerciseId),
         getSubmissions({
             assignmentId: Number(exerciseId),
             studentId: Number(userId),
             classId: Number(classId),
+        }),
+        getAssignmentStudents({
+            assignmentId: Number(exerciseId),
+            classId: Number(classId),
+            limit: 100, // Get all to find current user
         })
       ]);
+
+      // Find grading info for current student
+      const myGradingRecord = assignmentStudentData.data.find(
+        (record) => Number(record.student_id) === Number(userId)
+      );
+      if (myGradingRecord) {
+        setGradingInfo({
+          status: myGradingRecord.status,
+          score: myGradingRecord.score,
+        });
+      }
 
       setAssignment(assignmentData);
 
@@ -136,6 +154,35 @@ export default function SubmitExercisePage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Socket: Join Class and Listen for Grading
+  useEffect(() => {
+    const userId = getUserIdFromCookie();
+    if (!classId || !userId) return;
+
+    classSocketClient.connect();
+    classSocketClient.joinClass(classId);
+
+    // Listen for real-time grading event
+    const unsubscribe = classSocketClient.on("assignment:graded", (data: any) => {
+      // Only update if this is for current assignment and current user
+      if (
+        String(data.assignment_id) === String(exerciseId) &&
+        String(data.student_id) === String(userId)
+      ) {
+        console.log("Real-time grading received:", data);
+        setGradingInfo({
+          status: data.status,
+          score: data.score,
+        });
+        message.success(`Giáo viên đã chấm điểm: ${data.score}/10`);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [classId, exerciseId, message]);
 
   const handleUpload = async (options: any) => {
     const { file, onSuccess, onError } = options;
@@ -315,7 +362,9 @@ export default function SubmitExercisePage() {
 
   if (!assignment) return <div className="p-8 text-center text-gray-500">Bài tập không tồn tại</div>;
 
-  const canEdit = !isOverdue; // Allow edit if not overdue
+  // Allow edit if not overdue AND not already graded
+  const isGraded = gradingInfo?.status === 'graded';
+  const canEdit = !isOverdue && !isGraded;
 
   return (
     <div className="h-full bg-gray-50/50 ">
@@ -402,6 +451,37 @@ export default function SubmitExercisePage() {
                                  <Tag color="warning" className="font-bold border-0 bg-orange-100 text-orange-700 m-0">Chưa nộp</Tag>
                              )}
                          </div>
+                         
+                         {/* Grading Status Display */}
+                         {submission && gradingInfo && gradingInfo.status !== 'graded' && (
+                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
+                                 <ClockCircleOutlined className="text-2xl text-blue-500" />
+                                 <div>
+                                     <div className="font-semibold text-blue-700">Đang chờ chấm điểm</div>
+                                     <div className="text-xs text-blue-500">Giáo viên sẽ chấm điểm bài của bạn sớm</div>
+                                 </div>
+                             </div>
+                         )}
+                         
+                         {gradingInfo && gradingInfo.status === 'graded' && (
+                             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                 <div className="flex items-center justify-between">
+                                     <div className="flex items-center gap-3">
+                                         <CheckCircleOutlined className="text-2xl text-green-500" />
+                                         <div>
+                                             <div className="font-semibold text-green-700">Đã chấm điểm</div>
+                                             <div className="text-xs text-green-500">Giáo viên đã đánh giá bài của bạn</div>
+                                         </div>
+                                     </div>
+                                     <div className="text-right">
+                                         <div className="text-3xl font-bold text-green-600">
+                                             {gradingInfo.score !== undefined && gradingInfo.score !== null ? gradingInfo.score : "--"}
+                                         </div>
+                                         <div className="text-xs text-green-500">/10 điểm</div>
+                                     </div>
+                                 </div>
+                             </div>
+                         )}
 
                          {/* Submission Area */}
                          {!submission ? (
@@ -545,8 +625,10 @@ export default function SubmitExercisePage() {
                                  )}
 
                                  {!canEdit && (
-                                     <div className="bg-red-50 p-3 rounded-lg text-red-600 text-sm text-center">
-                                         Đã hết hạn nộp bài. Không thể chỉnh sửa.
+                                     <div className={`p-3 rounded-lg text-sm text-center ${isGraded ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'}`}>
+                                         {isGraded 
+                                           ? 'Bài tập đã được chấm điểm. Không thể chỉnh sửa.' 
+                                           : 'Đã hết hạn nộp bài. Không thể chỉnh sửa.'}
                                      </div>
                                  )}
 
