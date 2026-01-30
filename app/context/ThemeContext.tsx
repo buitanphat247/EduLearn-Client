@@ -20,11 +20,26 @@ function getInitialTheme(): Theme {
 
 import { flushSync } from "react-dom";
 
+// Get theme transition duration from environment variable (default: 1500ms)
+const getThemeTransitionDuration = (): number => {
+  if (typeof window !== "undefined") {
+    const envDuration = process.env.NEXT_PUBLIC_THEME_TRANSITION_DURATION;
+    if (envDuration) {
+      const parsed = parseInt(envDuration, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+  }
+  return 1500; // Default: 1.5 seconds
+};
+
 // ... (Theme type definition lines 4-19 remain same, not replacing them, just Context logic below)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [mounted, setMounted] = useState(false);
+  const transitionDuration = getThemeTransitionDuration();
 
   useEffect(() => {
     setMounted(true);
@@ -81,7 +96,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                 clipPath: clipPath,
             },
             {
-                duration: 1500,
+                duration: transitionDuration,
                 easing: "cubic-bezier(0.25, 1, 0.5, 1)", // Smoother quart-like easing
                 pseudoElement: "::view-transition-new(root)",
             }

@@ -108,6 +108,7 @@ input,
 textarea,
 select {
   /* Keep generic transitions for hover states, but maybe reduce for theme switch if View Transition is used */
+  /* Theme transition duration can be configured via NEXT_PUBLIC_THEME_TRANSITION_DURATION env variable */
   transition:
     background-color 0.3s ease,
     color 0.3s ease,
