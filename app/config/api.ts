@@ -1,13 +1,16 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { getCookie, clearCookieCache } from "@/lib/utils/cookies";
 
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = process.env.NODE_ENV === "development";
 
 const getBaseURL = (): string => {
   if (typeof window !== "undefined") return "/api-proxy";
   const envURL = process.env.NEXT_PUBLIC_API_URL;
   if (envURL?.trim()) {
-    try { new URL(envURL); return envURL; } catch { }
+    try {
+      new URL(envURL);
+      return envURL;
+    } catch {}
   }
   return "http://localhost:1611/api";
 };
@@ -30,7 +33,7 @@ const getCachedAuthHeader = (): string | null => {
   if (cachedAuthHeader && now - cachedAuthTimestamp < AUTH_CACHE_TTL) {
     return cachedAuthHeader;
   }
-  const atCookie = getCookie('_at');
+  const atCookie = getCookie("_at");
   if (atCookie) {
     cachedAuthHeader = `Bearer ${atCookie}`;
     cachedAuthTimestamp = now;
@@ -61,7 +64,7 @@ export const clearTokens = (): void => {
   try {
     sessionStorage.removeItem("edulearn_user_id");
     sessionStorage.removeItem("edulearn_user_data");
-  } catch { }
+  } catch {}
   document.cookie = "_at=; path=/; max-age=0";
   document.cookie = "_u=; path=/; max-age=0";
   clearAuthCache();
@@ -72,7 +75,7 @@ let isRefreshing = false;
 let failedQueue: Array<{ resolve: (v?: any) => void; reject: (e?: any) => void }> = [];
 
 const processQueue = (error: AxiosError | null, token: string | null = null) => {
-  failedQueue.forEach(p => error ? p.reject(error) : p.resolve(token));
+  failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token)));
   failedQueue = [];
 };
 
@@ -81,18 +84,18 @@ const responseCache = new Map<string, { data: any; ts: number }>();
 const CACHE_TTL = 30000;
 
 const getCacheKey = (config: InternalAxiosRequestConfig): string | null => {
-  if (config.method?.toLowerCase() !== 'get') return null;
-  const url = config.url || '';
-  if (url.includes('/auth/')) return null;
-  return `${url}?${config.params ? JSON.stringify(config.params) : ''}`;
+  if (config.method?.toLowerCase() !== "get") return null;
+  const url = config.url || "";
+  if (url.includes("/auth/")) return null;
+  return `${url}?${config.params ? JSON.stringify(config.params) : ""}`;
 };
 
 // Request interceptor
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig & { _retry?: boolean }) => {
-    const isRefreshReq = config.url?.includes('/auth/refresh');
+    const isRefreshReq = config.url?.includes("/auth/refresh");
     const isRetry = config._retry === true;
-    
+
     if (!isRefreshReq && !isRetry) {
       const auth = getCachedAuthHeader();
       if (auth) config.headers.Authorization = auth;
@@ -101,7 +104,7 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Response interceptor
@@ -132,16 +135,15 @@ apiClient.interceptors.response.use(
     }
 
     // 401 handling
-    const isAuthReq = originalRequest?.url?.includes("/auth/signin") || 
-                      originalRequest?.url?.includes("/auth/signup");
+    const isAuthReq = originalRequest?.url?.includes("/auth/signin") || originalRequest?.url?.includes("/auth/signup");
     if (isAuthReq) {
       return Promise.reject({ ...error, message: errorMessage, code: errorCode });
     }
 
     // Critical errors - logout immediately
-    const criticalErrors = ['REFRESH_TOKEN_EXPIRED', 'INVALID_REFRESH_TOKEN', 'USER_BANNED'];
+    const criticalErrors = ["REFRESH_TOKEN_EXPIRED", "INVALID_REFRESH_TOKEN", "USER_BANNED"];
     if (criticalErrors.includes(errorCode)) {
-      if (isDev) console.log('[API] Critical error:', errorCode);
+      if (isDev) console.log("[API] Critical error:", errorCode);
       clearTokens();
       processQueue(error, null);
       isRefreshing = false;
@@ -150,7 +152,7 @@ apiClient.interceptors.response.use(
     }
 
     // ACCESS_TOKEN_EXPIRED or no code - try refresh
-    if (errorCode === 'ACCESS_TOKEN_EXPIRED' || !errorCode) {
+    if (errorCode === "ACCESS_TOKEN_EXPIRED" || !errorCode) {
       if (originalRequest && !originalRequest._retry) {
         originalRequest._retry = true;
 
@@ -158,28 +160,33 @@ apiClient.interceptors.response.use(
         if (isRefreshing) {
           return new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject });
-          }).then(() => {
-            if (originalRequest.headers) delete originalRequest.headers.Authorization;
-            clearAuthCache();
-            return apiClient(originalRequest);
-          }).catch(err => Promise.reject(err));
+          })
+            .then(() => {
+              if (originalRequest.headers) delete originalRequest.headers.Authorization;
+              clearAuthCache();
+              return apiClient(originalRequest);
+            })
+            .catch((err) => Promise.reject(err));
         }
 
         // Start refresh
         isRefreshing = true;
-        if (isDev) console.log('[API] Refreshing token...');
+        if (isDev) console.log("[API] Refreshing token...");
 
         try {
-          const response = await axios.post("/api-proxy/auth/refresh", {}, {
-            headers: { "Content-Type": "application/json" },
-            withCredentials: true,
-          });
+          const response = await axios.post(
+            "/api-proxy/auth/refresh",
+            {},
+            {
+              headers: { "Content-Type": "application/json" },
+              withCredentials: true,
+            },
+          );
 
-          const accessToken = response.data?.access_token || 
-                              response.data?.data?.access_token || 
-                              response.data?.accessToken;
+          const accessToken =
+            response.data?.access_token || response.data?.data?.access_token || response.data?.accessToken || response.data?.cookies?._at?.value;
 
-          if (!accessToken) throw new Error("No access token received");
+          if (!accessToken) throw new Error("No access token received from server");
 
           // Set cookies from response body (fallback for proxy issues)
           const cookies = response.data?.cookies;
@@ -197,13 +204,12 @@ apiClient.interceptors.response.use(
           processQueue(null, accessToken);
           isRefreshing = false;
 
-          if (isDev) console.log('[API] Token refreshed successfully');
+          if (isDev) console.log("[API] Token refreshed successfully");
           return apiClient(originalRequest);
-
         } catch (refreshError: any) {
           const code = refreshError?.response?.data?.code;
-          if (isDev) console.log('[API] Refresh failed:', code);
-          
+          if (isDev) console.log("[API] Refresh failed:", code);
+
           clearTokens();
           processQueue(refreshError as AxiosError, null);
           isRefreshing = false;
@@ -212,7 +218,7 @@ apiClient.interceptors.response.use(
         }
       } else {
         // Already retried - check if critical
-        if (criticalErrors.includes(errorCode) || errorCode === 'ACCESS_TOKEN_EXPIRED') {
+        if (criticalErrors.includes(errorCode) || errorCode === "ACCESS_TOKEN_EXPIRED") {
           clearTokens();
           if (typeof window !== "undefined") window.location.href = "/auth";
         }
@@ -221,7 +227,7 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject({ ...error, code: errorCode, message: errorMessage });
-  }
+  },
 );
 
 export const getCachedResponse = (url: string, params?: any): any | null => {
@@ -233,9 +239,8 @@ export const getCachedResponse = (url: string, params?: any): any | null => {
 export const clearResponseCache = (): void => responseCache.clear();
 
 export const clearCacheByPattern = (pattern: string | RegExp): void => {
-  [...responseCache.keys()].forEach(key => {
-    if ((typeof pattern === 'string' && key.includes(pattern)) || 
-        (pattern instanceof RegExp && pattern.test(key))) {
+  [...responseCache.keys()].forEach((key) => {
+    if ((typeof pattern === "string" && key.includes(pattern)) || (pattern instanceof RegExp && pattern.test(key))) {
       responseCache.delete(key);
     }
   });
