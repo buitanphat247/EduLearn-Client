@@ -1,5 +1,8 @@
+"use client";
+
 import { PlayCircleOutlined, SoundOutlined, TrophyOutlined } from "@ant-design/icons";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface LessonCardProps {
   id: number;
@@ -20,6 +23,7 @@ export default function LessonCard({
   practiceCount,
   audioSrc,
 }: LessonCardProps) {
+  const router = useRouter();
   const getLevelColor = (level: string) => {
     const levelUpper = level.toUpperCase();
     if (levelUpper.startsWith("A1") || levelUpper.startsWith("A2")) {
@@ -44,7 +48,11 @@ export default function LessonCard({
   };
 
   return (
-    <Link href={`/features/listening/${id}`}>
+    <Link 
+      href={`/features/listening/${id}`}
+      prefetch={false}
+      onMouseEnter={() => router.prefetch(`/features/listening/${id}`)}
+    >
       <div className="group h-full bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-lg shadow-blue-500/5 dark:shadow-black/20 hover:shadow-2xl hover:shadow-blue-500/10 dark:hover:shadow-black/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer relative">
         <div className="p-6 flex flex-col h-full">
           {/* Header */}

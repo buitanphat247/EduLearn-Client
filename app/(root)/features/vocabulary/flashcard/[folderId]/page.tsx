@@ -28,26 +28,15 @@ export default function VocabularyFlashcard() {
   const fetchVocabularies = useCallback(async () => {
     if (!folderId) return;
 
-    const startTime = Date.now();
     setLoading(true);
     try {
       const data = await getVocabulariesByFolder(folderId);
-
-      const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 200;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
       setVocabularies(data);
       setCurrentIndex(0);
       setDifficulties({});
       setIsFlipped(false);
     } catch (error: any) {
-      const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 200;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
       console.error("Error fetching vocabularies:", error);
       message.error(error?.message || "Không thể tải danh sách từ vựng");
       setVocabularies([]);

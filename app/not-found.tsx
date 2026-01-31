@@ -3,7 +3,7 @@
 import { Button } from "antd";
 import { HomeOutlined, SearchOutlined, ArrowLeftOutlined, RocketOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import PrefetchLink from "@/app/components/common/PrefetchLink";
 
 export default function NotFound() {
   const router = useRouter();
@@ -70,24 +70,24 @@ export default function NotFound() {
             <span>Bạn có thể thử:</span>
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            <Link
+            <PrefetchLink
               href="/"
               className="px-5 py-2.5 text-sm font-medium text-blue-600 hover:text-white hover:bg-linear-to-r hover:from-blue-500 hover:to-blue-600 rounded-lg transition-all duration-200 border border-blue-200 hover:border-transparent"
             >
               Trang chủ
-            </Link>
-            <Link
+            </PrefetchLink>
+            <PrefetchLink
               href="/admin"
               className="px-5 py-2.5 text-sm font-medium text-purple-600 hover:text-white hover:bg-linear-to-r hover:from-purple-500 hover:to-purple-600 rounded-lg transition-all duration-200 border border-purple-200 hover:border-transparent"
             >
               Quản trị
-            </Link>
-            <Link
+            </PrefetchLink>
+            <PrefetchLink
               href="/user"
               className="px-5 py-2.5 text-sm font-medium text-pink-600 hover:text-white hover:bg-linear-to-r hover:from-pink-500 hover:to-pink-600 rounded-lg transition-all duration-200 border border-pink-200 hover:border-transparent"
             >
               Người dùng
-            </Link>
+            </PrefetchLink>
           </div>
         </div>
       </div>

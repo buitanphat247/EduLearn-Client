@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "antd";
 import { useState } from "react";
 import NewsCard from "@/app/components/news/NewsCard";
@@ -46,6 +47,7 @@ const events: EventDetail[] = [
 ];
 
 export default function Events() {
+  const router = useRouter();
   const [selectedEvent, setSelectedEvent] = useState<EventDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -75,7 +77,12 @@ export default function Events() {
             <p className="text-slate-400 text-lg">Đừng bỏ lỡ các hoạt động thú vị từ cộng đồng.</p>
           </div>
           
-          <Link href="/events" className="hidden md:block">
+          <Link 
+            href="/events" 
+            prefetch={false}
+            onMouseEnter={() => router.prefetch("/events")}
+            className="hidden md:block"
+          >
             <Button type="text" className="text-blue-400 hover:text-blue-300 flex items-center gap-2 group">
               Xem tất cả <span className="group-hover:translate-x-1 transition-transform">→</span>
             </Button>
@@ -104,7 +111,11 @@ export default function Events() {
         </div>
         
         <div className="mt-8 text-center md:hidden">
-            <Link href="/events">
+            <Link 
+              href="/events" 
+              prefetch={false}
+              onMouseEnter={() => router.prefetch("/events")}
+            >
                <Button className="bg-[#1e293b] text-white border-slate-700 w-full h-12 rounded-xl">Xem tất cả sự kiện</Button>
             </Link>
         </div>

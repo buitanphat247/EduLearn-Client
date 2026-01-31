@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRightOutlined, CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined } from "@ant-design/icons";
 
 interface NewsCardProps {
@@ -21,7 +22,7 @@ export default function NewsCard({
   id, title, excerpt, image, date, category, 
   time, location, type = 'news', accentColor, onClick
 }: NewsCardProps) {
-  
+  const router = useRouter();
   const href = type === 'event' ? `/events/${id}` : `/news/${id}`;
   const isEvent = type === 'event';
   
@@ -127,7 +128,12 @@ export default function NewsCard({
   }
 
   return (
-    <Link href={href} className="block h-full group">
+    <Link 
+      href={href} 
+      prefetch={false}
+      onMouseEnter={() => router.prefetch(href)}
+      className="block h-full group"
+    >
       {InnerContent}
     </Link>
   )

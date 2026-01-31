@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-
+import { useRouter } from 'next/navigation';
 import { RightOutlined } from '@ant-design/icons';
 
 interface GuideSidebarProps {
@@ -11,6 +11,7 @@ interface GuideSidebarProps {
 }
 
 export default function GuideSidebar({ menu, currentSlug, baseUrl = "/guide" }: GuideSidebarProps) {
+  const router = useRouter();
   return (
     <div className="space-y-8">
       {menu.map((section, idx) => (
@@ -25,6 +26,8 @@ export default function GuideSidebar({ menu, currentSlug, baseUrl = "/guide" }: 
                 <li key={item.slug} className="-ml-px">
                   <Link 
                     href={`${baseUrl}?doc=${item.slug}`}
+                    prefetch={false}
+                    onMouseEnter={() => router.prefetch(`${baseUrl}?doc=${item.slug}`)}
                     className={`
                       block py-1.5 pl-4 border-l-2 text-sm font-medium transition-all duration-200
                       ${isActive 

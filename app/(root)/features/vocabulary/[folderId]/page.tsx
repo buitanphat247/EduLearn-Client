@@ -29,30 +29,17 @@ export default function VocabularyDetail() {
   const fetchVocabularies = async () => {
     if (!folderId) return;
 
-    const startTime = Date.now();
     setLoading(true);
     setVocabularies([]); // Clear previous data
     setFolderName("");
     try {
       const data = await getVocabulariesByFolder(folderId);
 
-      // Ensure minimum loading time
-      const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 250;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
       setVocabularies(data);
       if (data.length > 0) {
         setFolderName(data[0].folder.folderName);
       }
     } catch (error: any) {
-      // Ensure minimum loading time even on error
-      const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 250;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
       console.error("Error fetching vocabularies:", error);
       message.error(error?.message || "Không thể tải danh sách từ vựng");
       setVocabularies([]);

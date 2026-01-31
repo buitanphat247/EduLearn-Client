@@ -2,6 +2,7 @@
 
 import { BookOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface VocabularyCardProps {
   folderId: number;
@@ -14,8 +15,14 @@ export default function VocabularyCard({
   folderName,
   href = "#",
 }: VocabularyCardProps) {
+  const router = useRouter();
   return (
-    <Link href={href} className="block h-full group">
+    <Link 
+      href={href} 
+      prefetch={false}
+      onMouseEnter={() => router.prefetch(href)}
+      className="block h-full group"
+    >
       <div className="bg-white dark:bg-[#1e293b] rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-700/50 h-full flex flex-col transition-all duration-300 group-hover:shadow-blue-500/20 group-hover:-translate-y-1 relative group-hover:border-blue-500/30">
 
         {/* Top Accent Line */}

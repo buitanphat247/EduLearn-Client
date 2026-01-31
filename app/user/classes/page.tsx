@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Table, Tag, Button, App, Modal, Form, Input } from "antd";
-import { EyeOutlined, UserOutlined, KeyOutlined } from "@ant-design/icons";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Table, Tag, Button, App, Modal, Form, Input, Tooltip, Select } from "antd";
+import { EyeOutlined, UserOutlined, KeyOutlined, StopOutlined, SearchOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { getClassStudentsByUser, joinClassByCode, type ClassStudentRecord } from "@/lib/api/classes";
 import { getCurrentUser } from "@/lib/api/users";
-import ClassesHeader from "@/app/components/classes/ClassesHeader";
 import type { ColumnsType } from "antd/es/table";
 import { classSocketClient } from "@/lib/socket/class-client";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
+
+type ClassStatusFilter = "all" | "online" | "banned";
 
 interface ClassTableItem {
   key: string;
@@ -18,6 +19,7 @@ interface ClassTableItem {
   students: number;
   status: string;
   classId: string;
+  studentStatus: "online" | "banned";
 }
 
 export default function UserClasses() {
@@ -38,6 +40,29 @@ export default function UserClasses() {
   const [joining, setJoining] = useState(false);
   const [form] = Form.useForm();
 
+  // Status filter
+  const [statusFilter, setStatusFilter] = useState<ClassStatusFilter>("all");
+
+  // Filter classes based on status - memoized
+  const filteredClasses = useMemo(() => {
+    if (statusFilter === "all") return classes;
+    return classes.filter((c) => c.studentStatus === statusFilter);
+  }, [classes, statusFilter]);
+
+  // Count for filter badges - memoized
+  const classCounts = useMemo(() => ({
+    all: classes.length,
+    online: classes.filter((c) => c.studentStatus === "online").length,
+    banned: classes.filter((c) => c.studentStatus === "banned").length,
+  }), [classes]);
+
+  // Filter options - memoized
+  const filterOptions = useMemo(() => [
+    { label: `Tất cả (${classCounts.all})`, value: "all" },
+    { label: `Đang học (${classCounts.online})`, value: "online" },
+    { label: `Bị chặn (${classCounts.banned})`, value: "banned" },
+  ], [classCounts]);
+
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -48,7 +73,7 @@ export default function UserClasses() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Map API response to table format
+  // Map API response to table format - stable callback
   const mapClassData = useCallback((record: ClassStudentRecord): ClassTableItem => {
     const classData = record.class;
     if (!classData) {
@@ -62,10 +87,11 @@ export default function UserClasses() {
       students: classData.student_count,
       status: classData.status === "active" ? "Đang hoạt động" : "Không hoạt động",
       classId: String(classData.class_id),
+      studentStatus: (record.status as "online" | "banned") || "online",
     };
   }, []);
 
-  // Fetch classes
+  // Fetch classes - stable callback
   const fetchClasses = useCallback(async () => {
     try {
       setLoading(true);
@@ -101,64 +127,124 @@ export default function UserClasses() {
     fetchClasses();
   }, [fetchClasses]);
 
-  // Real-time updates via Socket.io
+  // Refs to prevent duplicate socket connections on rerender
+  const classIdsRef = useRef<string[]>([]);
+  const isInitializedRef = useRef(false);
+  const unsubscribersRef = useRef<Array<() => void>>([]);
+  const globalSocketInitRef = useRef(false);
+
+  // Stable message ref to avoid dependency issues
+  const messageRef = useRef(message);
   useEffect(() => {
-    if (classes.length === 0) return;
+    messageRef.current = message;
+  }, [message]);
 
-    // Connect to socket
+  // Always connect socket for user-specific events (even without classes)
+  useEffect(() => {
+    if (globalSocketInitRef.current) return;
+    
     classSocketClient.connect();
-
-    // Lấy danh sách ID hiện tại
-    const currentClassIds = classes.map((c) => c.classId);
-
-    // Join all class rooms for this user
-    currentClassIds.forEach((id) => {
-      classSocketClient.joinClass(id);
+    globalSocketInitRef.current = true;
+    
+    // Listen for user-specific events - Update status and student count
+    const unsubscribeBanned = classSocketClient.on("student_banned", (data: any) => {
+      if (Number(data.class_id)) {
+        setClasses((prev) => prev.map((c) => 
+          Number(c.classId) === Number(data.class_id) 
+            ? { 
+                ...c, 
+                studentStatus: "banned" as const,
+                students: data.student_count !== undefined ? data.student_count : c.students,
+              }
+            : c
+        ));
+        messageRef.current.error({
+          content: data.message || "Bạn đã bị chặn khỏi lớp học này",
+          key: `banned_${data.class_id}`,
+          duration: 5,
+        });
+      }
     });
+    
+    const unsubscribeUnbanned = classSocketClient.on("student_unbanned", (data: any) => {
+      if (Number(data.class_id)) {
+        setClasses((prev) => prev.map((c) => 
+          Number(c.classId) === Number(data.class_id) 
+            ? { 
+                ...c, 
+                studentStatus: "online" as const,
+                students: data.student_count !== undefined ? data.student_count : c.students,
+              }
+            : c
+        ));
+        messageRef.current.success({
+          content: data.message || "Bạn đã được gỡ chặn khỏi lớp học!",
+          key: `unbanned_${data.class_id}`,
+          duration: 5,
+        });
+      }
+    });
+    
+    return () => {
+      if (typeof unsubscribeBanned === 'function') unsubscribeBanned();
+      if (typeof unsubscribeUnbanned === 'function') unsubscribeUnbanned();
+      globalSocketInitRef.current = false;
+    };
+  }, []);
 
-    // Listen for updates
-    const unsubscribe = classSocketClient.on("class_updated", (data: any) => {
-      setClasses((prev) => {
-        const index = prev.findIndex((c) => Number(c.classId) === Number(data.class_id));
-        if (index === -1) return prev;
+  // Memoize online class IDs to reduce dependency recalculation
+  const onlineClassIds = useMemo(() => 
+    classes.filter((c) => c.studentStatus === "online").map((c) => c.classId),
+    [classes]
+  );
+  const onlineClassIdsString = useMemo(() => 
+    JSON.stringify([...onlineClassIds].sort()),
+    [onlineClassIds]
+  );
 
-        const updatedList = [...prev];
-        updatedList[index] = {
-          ...updatedList[index],
-          name: data.name,
-          code: data.code,
-          status: data.status === "active" ? "Đang hoạt động" : "Không hoạt động",
-        };
+  // Real-time updates via Socket.io for class-specific events
+  useEffect(() => {
+    if (onlineClassIds.length === 0) {
+      // Cleanup class rooms if no online classes
+      if (classIdsRef.current && Array.isArray(classIdsRef.current)) {
+        classIdsRef.current.forEach((id) => {
+          if (id) classSocketClient.leaveClass(id);
+        });
+      }
+      classIdsRef.current = [];
+      return;
+    }
 
-        return updatedList;
+    // Only reconnect if class IDs changed or not initialized
+    const previousClassIdsString = classIdsRef.current && Array.isArray(classIdsRef.current) 
+      ? JSON.stringify([...classIdsRef.current].sort())
+      : "[]";
+
+    if (!isInitializedRef.current || previousClassIdsString !== onlineClassIdsString) {
+      // Cleanup previous class rooms safely
+      if (classIdsRef.current && Array.isArray(classIdsRef.current)) {
+        classIdsRef.current.forEach((id) => {
+          if (id) classSocketClient.leaveClass(id);
+        });
+      }
+      if (unsubscribersRef.current && Array.isArray(unsubscribersRef.current)) {
+        unsubscribersRef.current.forEach((unsub) => {
+          if (typeof unsub === 'function') {
+            try { unsub(); } catch (e) { /* ignore */ }
+          }
+        });
+      }
+      unsubscribersRef.current = [];
+
+      // Join all class rooms for this user
+      onlineClassIds.forEach((id) => {
+        classSocketClient.joinClass(id);
       });
-    });
 
-    // Listen for student joined (to update count)
-    const unsubscribeJoined = classSocketClient.on("student_joined", (data: any) => {
-      setClasses((prev) => {
-        const index = prev.findIndex((c) => Number(c.classId) === Number(data.class_id));
-        if (index === -1) return prev;
+      classIdsRef.current = onlineClassIds;
 
-        const updatedList = [...prev];
-        updatedList[index] = {
-          ...updatedList[index],
-          students: updatedList[index].students + 1,
-        };
-        return updatedList;
-      });
-    });
-
-    // Listen for student removed
-    const unsubscribeRemoved = classSocketClient.on("student_removed", (data: any) => {
-      const currentUserId = getUserIdFromCookie();
-      
-      if (Number(data.user_id) === Number(currentUserId)) {
-        // Current user was removed, remove class from list
-        setClasses((prev) => prev.filter((c) => Number(c.classId) !== Number(data.class_id)));
-        message.warning(`Bạn đã được mời khỏi lớp học`);
-      } else {
-        // Other student removed, update count
+      // Listen for updates
+      const unsubscribe = classSocketClient.on("class_updated", (data: any) => {
         setClasses((prev) => {
           const index = prev.findIndex((c) => Number(c.classId) === Number(data.class_id));
           if (index === -1) return prev;
@@ -166,23 +252,17 @@ export default function UserClasses() {
           const updatedList = [...prev];
           updatedList[index] = {
             ...updatedList[index],
-            students: Math.max(0, updatedList[index].students - 1),
+            name: data.name,
+            code: data.code,
+            status: data.status === "active" ? "Đang hoạt động" : "Không hoạt động",
           };
+
           return updatedList;
         });
-      }
-    });
+      });
 
-    // Listen for student status updated (banned)
-    const unsubscribeStatus = classSocketClient.on("student_status_updated", (data: any) => {
-      const currentUserId = getUserIdFromCookie();
-
-      if (Number(data.user_id) === Number(currentUserId) && data.status === "banned") {
-        // Current user was banned, remove class from list
-        setClasses((prev) => prev.filter((c) => Number(c.classId) !== Number(data.class_id)));
-        message.error(`Tài khoản của bạn đã bị chặn khỏi lớp học`);
-      } else if (data.status === "banned") {
-        // Other student banned, update count
+      // Listen for student joined (to update count)
+      const unsubscribeJoined = classSocketClient.on("student_joined", (data: any) => {
         setClasses((prev) => {
           const index = prev.findIndex((c) => Number(c.classId) === Number(data.class_id));
           if (index === -1) return prev;
@@ -190,41 +270,117 @@ export default function UserClasses() {
           const updatedList = [...prev];
           updatedList[index] = {
             ...updatedList[index],
-            students: Math.max(0, updatedList[index].students - 1),
+            students: data.student_count ?? updatedList[index].students + 1,
           };
           return updatedList;
         });
-      }
-    });
+      });
 
-    // Listen for class deleted
-    const unsubscribeDeleted = classSocketClient.on("class_deleted", (data: any) => {
-      setClasses((prev) => prev.filter((c) => Number(c.classId) !== Number(data.class_id)));
-      message.info(`Lớp học "${data.name}" đã bị giải tán bởi giáo viên`);
-    });
+      // Listen for student removed
+      const unsubscribeRemoved = classSocketClient.on("student_removed", (data: any) => {
+        const currentUserId = getUserIdFromCookie();
+        
+        if (Number(data.user_id) === Number(currentUserId)) {
+          // Current user was removed, remove class from list
+          setClasses((prev) => prev.filter((c) => Number(c.classId) !== Number(data.class_id)));
+          messageRef.current.warning(`Bạn đã được mời khỏi lớp học`);
+        } else {
+          // Other student removed, update count
+          setClasses((prev) => {
+            const index = prev.findIndex((c) => Number(c.classId) === Number(data.class_id));
+            if (index === -1) return prev;
+
+            const updatedList = [...prev];
+            updatedList[index] = {
+              ...updatedList[index],
+              students: data.student_count ?? Math.max(0, updatedList[index].students - 1),
+            };
+            return updatedList;
+          });
+        }
+      });
+
+      // Listen for student status updated (for other students - update count)
+      const unsubscribeStatus = classSocketClient.on("student_status_updated", (data: any) => {
+        const currentUserId = getUserIdFromCookie();
+        const isCurrentUser = Number(data.user_id) === Number(currentUserId);
+
+        // Current user banned/unbanned is handled by global socket listeners
+        if (isCurrentUser) return;
+
+        // Other student status changed, update count
+        if (data.student_count !== undefined) {
+          setClasses((prev) => {
+            const index = prev.findIndex((c) => Number(c.classId) === Number(data.class_id));
+            if (index === -1) return prev;
+
+            const updatedList = [...prev];
+            updatedList[index] = {
+              ...updatedList[index],
+              students: data.student_count,
+            };
+            return updatedList;
+          });
+        }
+      });
+
+      // Listen for class deleted
+      const unsubscribeDeleted = classSocketClient.on("class_deleted", (data: any) => {
+        setClasses((prev) => prev.filter((c) => Number(c.classId) !== Number(data.class_id)));
+        messageRef.current.info(`Lớp học "${data.name}" đã bị giải tán bởi giáo viên`);
+      });
+
+      unsubscribersRef.current = [
+        unsubscribe,
+        unsubscribeJoined,
+        unsubscribeRemoved,
+        unsubscribeStatus,
+        unsubscribeDeleted,
+      ];
+
+      isInitializedRef.current = true;
+    }
 
     return () => {
-      currentClassIds.forEach((id) => {
-        classSocketClient.leaveClass(id);
-      });
-      unsubscribe();
-      unsubscribeJoined();
-      unsubscribeRemoved();
-      unsubscribeStatus();
-      unsubscribeDeleted();
+      // Only cleanup on unmount, not on every rerender
+      if (isInitializedRef.current) {
+        if (classIdsRef.current && Array.isArray(classIdsRef.current)) {
+          classIdsRef.current.forEach((id) => {
+            if (id) classSocketClient.leaveClass(id);
+          });
+        }
+        if (unsubscribersRef.current && Array.isArray(unsubscribersRef.current)) {
+          unsubscribersRef.current.forEach((unsub) => {
+            if (typeof unsub === 'function') {
+              try { unsub(); } catch (e) { /* ignore */ }
+            }
+          });
+        }
+        unsubscribersRef.current = [];
+        isInitializedRef.current = false;
+      }
     };
-    // Re-run khi tập hợp các ID lớp thay đổi (ví dụ khi chuyển trang)
-  }, [JSON.stringify(classes.map((c) => c.classId)), message]);
+  }, [onlineClassIdsString, onlineClassIds]);
 
-  const handleTableChange = (page: number, pageSize: number) => {
+  // Stable handlers
+  const handleTableChange = useCallback((page: number, pageSize: number) => {
     setPagination((prev) => ({ ...prev, current: page, pageSize }));
-  };
+  }, []);
 
-  const handleView = (classId: string) => {
+  const handleView = useCallback((classId: string) => {
     router.push(`/user/classes/${classId}`);
-  };
+  }, [router]);
 
-  const handleJoinByCode = async (values: { code: string }) => {
+  const handleOpenJoinModal = useCallback(() => {
+    setIsJoinModalOpen(true);
+  }, []);
+
+  const handleCloseJoinModal = useCallback(() => {
+    setIsJoinModalOpen(false);
+    form.resetFields();
+  }, [form]);
+
+  const handleJoinByCode = useCallback(async (values: { code: string }) => {
     try {
       setJoining(true);
       const user = getCurrentUser();
@@ -241,20 +397,33 @@ export default function UserClasses() {
       message.success("Tham gia lớp học thành công!");
       setIsJoinModalOpen(false);
       form.resetFields();
-      fetchClasses(); // Tải lại danh sách
+      fetchClasses();
     } catch (error: any) {
       message.error(error?.message || "Mã code không hợp lệ hoặc bạn đã tham gia lớp này");
     } finally {
       setJoining(false);
     }
-  };
+  }, [message, form, fetchClasses]);
 
-  const columns: ColumnsType<ClassTableItem> = [
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  }, []);
+
+  const handleFilterChange = useCallback((value: string) => {
+    setStatusFilter(value as ClassStatusFilter);
+  }, []);
+
+  // Memoize columns to prevent re-render
+  const columns: ColumnsType<ClassTableItem> = useMemo(() => [
     {
       title: "Tên lớp",
       dataIndex: "name",
       key: "name",
-      render: (text: string) => <span className="font-semibold text-gray-800 dark:text-gray-200">{text}</span>,
+      render: (text: string, record: ClassTableItem) => (
+        <span className={`font-semibold ${record.studentStatus === "banned" ? "text-gray-400 dark:text-gray-500" : "text-gray-800 dark:text-gray-200"}`}>
+          {text}
+        </span>
+      ),
     },
     {
       title: "Mã lớp",
@@ -274,39 +443,92 @@ export default function UserClasses() {
       ),
     },
     {
+      title: "Trạng thái",
+      dataIndex: "studentStatus",
+      key: "studentStatus",
+      width: 130,
+      render: (status: string) => (
+        status === "banned" ? (
+          <Tag icon={<StopOutlined />} color="error">Bị chặn</Tag>
+        ) : (
+          <Tag color="success">Đang học</Tag>
+        )
+      ),
+    },
+    {
       title: "Hành động",
       key: "action",
       width: 120,
       render: (_: any, record: ClassTableItem) => (
-        <Button icon={<EyeOutlined />} size="small" type="primary" ghost onClick={() => handleView(record.classId)}>
-          Xem
-        </Button>
+        record.studentStatus === "banned" ? (
+          <Tooltip title="Bạn đã bị chặn khỏi lớp học này">
+            <Button icon={<StopOutlined />} size="small" disabled danger>
+              Bị chặn
+            </Button>
+          </Tooltip>
+        ) : (
+          <Button icon={<EyeOutlined />} size="small" type="primary" ghost onClick={() => handleView(record.classId)}>
+            Xem
+          </Button>
+        )
       ),
     },
-  ];
+  ], [handleView]);
+
+  // Memoize pagination config
+  const paginationConfig = useMemo(() => ({
+    current: pagination.current,
+    pageSize: pagination.pageSize,
+    total: filteredClasses.length,
+    onChange: handleTableChange,
+    showSizeChanger: false,
+    showTotal: (total: number) => <span className="text-gray-500 dark:text-gray-400">Tổng {total} lớp học</span>,
+  }), [pagination.current, pagination.pageSize, filteredClasses.length, handleTableChange]);
+
+  // Memoize empty text
+  const emptyText = useMemo(() => {
+    if (statusFilter === "banned") return "Không có lớp bị chặn";
+    if (statusFilter === "online") return "Không có lớp đang học";
+    return "Không có lớp học";
+  }, [statusFilter]);
 
   return (
     <div className="space-y-3">
-      <ClassesHeader searchValue={searchQuery} onSearchChange={setSearchQuery} onJoinClick={() => setIsJoinModalOpen(true)} />
+      {/* Search, Filter, Join Button */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <Input
+          prefix={<SearchOutlined className="text-gray-400" />}
+          placeholder="Tìm kiếm lớp học hoặc mã code... (Ctrl+K)"
+          size="middle"
+          className="flex-1 min-w-[200px] dark:bg-gray-700/50 dark:!border-slate-600 dark:text-white dark:placeholder-gray-500 hover:dark:!border-slate-500 focus:dark:!border-blue-500"
+          value={searchQuery}
+          onChange={handleSearchChange}
+          allowClear
+        />
+        <Select
+          value={statusFilter}
+          onChange={handleFilterChange}
+          style={{ width: 160 }}
+          options={filterOptions}
+          size="middle"
+        />
+        <Button type="primary" icon={<KeyOutlined />} size="middle" onClick={handleOpenJoinModal} className="shadow-sm">
+          Tham gia bằng code
+        </Button>
+      </div>
 
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm">
         <Table
           columns={columns}
-          dataSource={classes}
+          dataSource={filteredClasses}
           loading={loading}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            onChange: handleTableChange,
-            showSizeChanger: false,
-            showTotal: (total) => <span className="text-gray-500 dark:text-gray-400">Tổng {total} lớp học</span>,
-          }}
+          pagination={paginationConfig}
           scroll={{ x: "max-content" }}
           className="[&_.ant-pagination]:px-6 [&_.ant-pagination]:pb-4"
           rowClassName="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-200 cursor-pointer border-b border-gray-100 dark:border-gray-800"
           size="middle"
+          locale={{ emptyText }}
         />
       </div>
 
@@ -319,10 +541,7 @@ export default function UserClasses() {
           </div>
         }
         open={isJoinModalOpen}
-        onCancel={() => {
-          setIsJoinModalOpen(false);
-          form.resetFields();
-        }}
+        onCancel={handleCloseJoinModal}
         onOk={() => form.submit()}
         confirmLoading={joining}
         okText="Tham gia ngay"

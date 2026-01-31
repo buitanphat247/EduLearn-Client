@@ -52,46 +52,51 @@ export default function AdminSidebar() {
           return (
             <div
               key={item.path}
-              className={`group flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-300 ease-in-out ${
-                isActive 
-                  ? "bg-blue-100 dark:bg-blue-900/40" 
-                  : "hover:bg-blue-50/80 dark:hover:bg-blue-900/15 hover:opacity-100 opacity-90 cursor-pointer"
-              }`}
+              className={`group flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-300 ease-in-out ${isActive
+                ? "bg-blue-100 dark:bg-blue-900/40"
+                : "hover:bg-blue-50/80 dark:hover:bg-blue-900/15 hover:opacity-100 opacity-90 cursor-pointer"
+                }`}
             >
               {item.isComingSoon ? (
                 <div onClick={(e) => handleMenuItemClick(item, e)} className="flex items-center gap-4 w-full cursor-pointer">
                   <Icon
-                    className={`text-xl transition-all duration-300 ${
-                      isActive 
-                        ? "text-blue-600 dark:text-blue-400" 
-                        : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                    }`}
+                    className={`text-xl transition-all duration-300 ${isActive
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                      }`}
                   />
                   <span
-                    className={`text-[14px] transition-all duration-300 ${
-                      isActive 
-                        ? "font-bold text-blue-600 dark:text-blue-400" 
-                        : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
-                    }`}
+                    className={`text-[14px] transition-all duration-300 ${isActive
+                      ? "font-bold text-blue-600 dark:text-blue-400"
+                      : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
+                      }`}
                   >
                     {item.label}
                   </span>
                 </div>
               ) : (
-                <Link href={item.path} className="flex items-center gap-4 w-full">
+                <Link
+                  href={item.path}
+                  prefetch={false}
+                  onMouseEnter={() => {
+                    if (process.env.NODE_ENV === 'development') {
+                      console.log(`🚀 [Prefetch] Hovering over: ${item.path}`);
+                    }
+                    router.prefetch(item.path);
+                  }}
+                  className="flex items-center gap-4 w-full"
+                >
                   <Icon
-                    className={`text-xl transition-all duration-300 ${
-                      isActive 
-                        ? "text-blue-600 dark:text-blue-400" 
-                        : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                    }`}
+                    className={`text-xl transition-all duration-300 ${isActive
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                      }`}
                   />
                   <span
-                    className={`text-[14px] transition-all duration-300 ${
-                      isActive 
-                        ? "font-bold text-blue-600 dark:text-blue-400" 
-                        : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
-                    }`}
+                    className={`text-[14px] transition-all duration-300 ${isActive
+                      ? "font-bold text-blue-600 dark:text-blue-400"
+                      : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
+                      }`}
                   >
                     {item.label}
                   </span>

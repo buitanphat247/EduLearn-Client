@@ -78,7 +78,17 @@ export default function UserSidebar() {
                   </span>
                 </div>
               ) : (
-                <Link href={item.path} className="flex items-center gap-4 w-full">
+                <Link 
+                  href={item.path} 
+                  prefetch={false}
+                  onMouseEnter={() => {
+                    if (process.env.NODE_ENV === 'development') {
+                      console.log(`🚀 [Prefetch] Hovering over: ${item.path}`);
+                    }
+                    router.prefetch(item.path);
+                  }}
+                  className="flex items-center gap-4 w-full"
+                >
                   <Icon
                     className={`text-xl transition-all duration-300 ${
                       isActive 

@@ -3,8 +3,10 @@
 import React from "react";
 import { Button } from "antd";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function Hero() {
+  const router = useRouter();
   return (
     <section className="relative overflow-hidden bg-[#fafbfc] dark:bg-[#0f172a] pt-20 pb-32 transition-all duration-500 ease-in-out">
       {/* Background Decor */}
@@ -28,7 +30,11 @@ export default function Hero() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/news">
+            <Link 
+              href="/news" 
+              prefetch={false}
+              onMouseEnter={() => router.prefetch("/news")}
+            >
               <button className="h-14 px-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg shadow-lg shadow-blue-600/25 transition-all hover:scale-105 active:scale-95">
                 Bắt đầu ngay
               </button>

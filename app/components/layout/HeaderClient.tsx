@@ -170,7 +170,12 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
       <ScrollProgress />
       <header className="bg-white dark:bg-[#001529] shadow-md dark:shadow-xl shadow-slate-200 dark:shadow-slate-800 sticky top-0 z-50 transition-all duration-500 ease-in-out">
         <nav className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-3 group">
+          <Link 
+            href="/" 
+            prefetch={false}
+            onMouseEnter={() => router.prefetch("/")}
+            className="flex items-center space-x-3 group"
+          >
             <div className="w-12 h-12 relative flex items-center justify-center">
               <img src="/images/logo/1.png" alt="Thư viện số" width={48} height={48} className="object-contain" />
             </div>
@@ -184,6 +189,8 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
                 <Link
                   key={link.to}
                   href={link.to}
+                  prefetch={false}
+                  onMouseEnter={() => router.prefetch(link.to)}
                   className={`relative py-2 transition-colors duration-200 ${!isActive ? "nav-link" : ""}`}
                   style={{
                     color: isActive
@@ -306,20 +313,43 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
                     {
                       key: "profile",
                       icon: <UserOutlined className="text-slate-600 dark:text-slate-300" />,
-                      label: <Link href="/profile" className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white">Hồ sơ cá nhân</Link>,
+                      label: (
+                        <Link 
+                          href="/profile" 
+                          prefetch={false}
+                          onMouseEnter={() => router.prefetch("/profile")}
+                          className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white"
+                        >
+                          Hồ sơ cá nhân
+                        </Link>
+                      ),
                       style: { padding: '10px 16px' },
                     },
                     {
                       key: "chat",
                       icon: <MessageOutlined className="text-slate-600 dark:text-slate-300" />,
-                      label: <Link href="/social" className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white">Chat room</Link>,
+                      label: (
+                        <Link 
+                          href="/social" 
+                          prefetch={false}
+                          onMouseEnter={() => router.prefetch("/social")}
+                          className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white"
+                        >
+                          Chat room
+                        </Link>
+                      ),
                       style: { padding: '10px 16px' },
                     },
                     ...(roleDashboardPath ? [{
                       key: "dashboard",
                       icon: <AppstoreOutlined className="text-slate-600 dark:text-slate-300" />,
                       label: (
-                        <Link href={roleDashboardPath} className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white">
+                        <Link 
+                          href={roleDashboardPath} 
+                          prefetch={false}
+                          onMouseEnter={() => router.prefetch(roleDashboardPath)}
+                          className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white"
+                        >
                           {userRoleLabel}
                         </Link>
                       ),

@@ -1,12 +1,12 @@
 import fs from 'fs';
 import path from 'path';
-import Link from 'next/link';
 import { 
   LeftOutlined, 
   RightOutlined
 } from '@ant-design/icons';
 import GuideSidebar from '@/app/(root)/guide/GuideSidebar';
 import GuideContent from '@/app/(root)/guide/GuideContent';
+import PrefetchLink from '@/app/components/common/PrefetchLink';
 
 // Load menu configuration
 const getMenu = () => {
@@ -76,7 +76,7 @@ export default async function InnovationPage(props: any) {
             {/* Navigation Footer */}
             <div className="mt-8 flex flex-col sm:flex-row justify-between gap-4">
                 {prevDoc ? (
-                   <Link href={`/innovation?doc=${prevDoc.slug}`} className="flex-1 group">
+                   <PrefetchLink href={`/innovation?doc=${prevDoc.slug}`} className="flex-1 group">
                       <div className="border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 hover:border-blue-500 dark:hover:border-blue-500 transition-colors bg-white dark:bg-[#1e293b]">
                           <div className="text-xs text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1 group-hover:text-blue-500 transition-colors">
                               <LeftOutlined /> Trước
@@ -85,11 +85,11 @@ export default async function InnovationPage(props: any) {
                               {prevDoc.title}
                           </div>
                       </div>
-                   </Link>
+                   </PrefetchLink>
                 ) : <div className="flex-1"></div>}
 
                 {nextDoc ? (
-                   <Link href={`/innovation?doc=${nextDoc.slug}`} className="flex-1 group text-right">
+                   <PrefetchLink href={`/innovation?doc=${nextDoc.slug}`} className="flex-1 group text-right">
                       <div className="border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 hover:border-blue-500 dark:hover:border-blue-500 transition-colors bg-white dark:bg-[#1e293b]">
                           <div className="text-xs text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1 justify-end group-hover:text-blue-500 transition-colors">
                               Tiếp theo <RightOutlined />
@@ -98,7 +98,7 @@ export default async function InnovationPage(props: any) {
                               {nextDoc.title}
                           </div>
                       </div>
-                   </Link>
+                   </PrefetchLink>
                 ) : <div className="flex-1"></div>}
             </div>
           </div>

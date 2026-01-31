@@ -61,7 +61,12 @@ export default function SuperAdminSidebar() {
                   : "hover:bg-blue-50/80 dark:hover:bg-blue-900/15 hover:opacity-100 opacity-90 cursor-pointer"
               }`}
             >
-              <Link href={item.path} className="flex items-center gap-4 w-full">
+              <Link 
+                href={item.path} 
+                prefetch={false}
+                onMouseEnter={() => router.prefetch(item.path)}
+                className="flex items-center gap-4 w-full"
+              >
                 <Icon
                   className={`text-xl transition-all duration-300 ${
                     isActive

@@ -2,6 +2,7 @@
 
 import { Button } from "antd";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import NewsCard from "@/app/components/news/NewsCard";
 
 const news = [
@@ -32,6 +33,7 @@ const news = [
 ];
 
 export default function News() {
+  const router = useRouter();
   return (
     <section className="py-24 bg-[#0f172a] relative overflow-hidden">
       {/* Decorative Blob */}
@@ -47,7 +49,12 @@ export default function News() {
               <p className="text-slate-400 text-lg">Cập nhật xu hướng công nghệ và giáo dục mới nhất.</p>
            </div>
            
-           <Link href="/news" className="hidden md:block">
+           <Link 
+             href="/news" 
+             prefetch={false}
+             onMouseEnter={() => router.prefetch("/news")}
+             className="hidden md:block"
+           >
               <Button type="text" className="text-blue-400 hover:text-blue-300 flex items-center gap-2 group">
                 Xem tất cả <span className="group-hover:translate-x-1 transition-transform">→</span>
               </Button>
@@ -70,7 +77,11 @@ export default function News() {
         </div>
         
         <div className="mt-8 text-center md:hidden">
-            <Link href="/news">
+            <Link 
+              href="/news" 
+              prefetch={false}
+              onMouseEnter={() => router.prefetch("/news")}
+            >
                <Button className="bg-[#1e293b] text-white border-slate-700 w-full h-12 rounded-xl">Xem tất cả tin tức</Button>
             </Link>
         </div>

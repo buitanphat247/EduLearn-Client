@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { App } from "antd";
 import ClassesHeader from "@/app/components/classes/ClassesHeader";
 import ClassesTable from "@/app/components/classes/ClassesTable";
@@ -30,34 +30,35 @@ export default function AdminClasses() {
     total: 0,
   });
 
+  // Stable message ref to avoid dependency issues
+  const messageRef = useRef(message);
+  useEffect(() => {
+    messageRef.current = message;
+  }, [message]);
+
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-      setPagination((prev) => ({ ...prev, current: 1 })); // Reset to page 1 when search changes
+      setPagination((prev) => ({ ...prev, current: 1 }));
     }, 500);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Map API response to component format
-  const mapClassData = useCallback((apiClass: ClassResponse): ClassItem => {
-    return {
-      key: String(apiClass.class_id),
-      name: apiClass.name,
-      code: apiClass.code,
-      students: apiClass.student_count,
-      teacher: apiClass.creator?.fullname || apiClass.creator?.username || "Chưa có",
-      status: apiClass.status === "active" ? CLASS_STATUS_MAP.active : CLASS_STATUS_MAP.inactive,
-    };
-  }, []);
+  // Map API response to component format - stable
+  const mapClassData = useCallback((apiClass: ClassResponse): ClassItem => ({
+    key: String(apiClass.class_id),
+    name: apiClass.name,
+    code: apiClass.code,
+    students: apiClass.student_count,
+    teacher: apiClass.creator?.fullname || apiClass.creator?.username || "Chưa có",
+    status: apiClass.status === "active" ? CLASS_STATUS_MAP.active : CLASS_STATUS_MAP.inactive,
+  }), []);
 
-  // Fetch classes
+  // Fetch classes - stable callback
   const fetchClasses = useCallback(async () => {
-    // Đợi user_id decrypt xong
-    if (userIdLoading || !userId) {
-      return;
-    }
+    if (userIdLoading || !userId) return;
 
     const startTime = Date.now();
     try {
@@ -72,96 +73,72 @@ export default function AdminClasses() {
 
       const mappedClasses: ClassItem[] = result.classes.map(mapClassData);
 
-      // Ensure minimum loading time
       await ensureMinLoadingTime(startTime);
 
       setClasses(mappedClasses);
       setPagination((prev) => ({ ...prev, total: result.total }));
     } catch (error: any) {
-      message.error(error?.message || "Không thể tải danh sách lớp học");
+      messageRef.current.error(error?.message || "Không thể tải danh sách lớp học");
     } finally {
       setLoading(false);
     }
-  }, [userId, userIdLoading, pagination.current, pagination.pageSize, debouncedSearchQuery, message, mapClassData]);
+  }, [userId, userIdLoading, pagination.current, pagination.pageSize, debouncedSearchQuery, mapClassData]);
 
   // Fetch classes on mount and when dependencies change
   useEffect(() => {
     fetchClasses();
   }, [fetchClasses]);
 
-  // Hiển thị lỗi nếu không có user_id sau khi đợi decrypt
+  // Error display for missing userId
   useEffect(() => {
     if (!userIdLoading && !userId) {
-      message.error("Không tìm thấy thông tin người dùng");
+      messageRef.current.error("Không tìm thấy thông tin người dùng");
     }
-  }, [userId, userIdLoading, message]);
+  }, [userId, userIdLoading]);
+
+  // Refs for socket management
+  const classIdsRef = useRef<string[]>([]);
+  const isInitializedRef = useRef(false);
+  const unsubscribersRef = useRef<Array<() => void>>([]);
+
+  // Memoize class IDs string for dependency comparison
+  const classIdsString = useMemo(() =>
+    JSON.stringify([...classes.map((c) => c.key)].sort()),
+    [classes]
+  );
 
   // Real-time updates via Socket.io
   useEffect(() => {
-    if (classes.length === 0) return;
+    if (classes.length === 0 || userIdLoading || !userId) return;
 
-    // Connect to socket
-    classSocketClient.connect();
-
-    // Lấy danh sách ID hiện tại
     const currentClassIds = classes.map((c) => c.key);
+    const previousClassIdsString = classIdsRef.current?.length
+      ? JSON.stringify([...classIdsRef.current].sort())
+      : "[]";
 
-    // Join all class rooms for this admin
-    currentClassIds.forEach((id) => {
-      classSocketClient.joinClass(id);
-    });
+    if (!isInitializedRef.current || previousClassIdsString !== classIdsString) {
+      // Cleanup previous connections
+      if (classIdsRef.current?.length) {
+        classIdsRef.current.forEach((id) => {
+          if (id) classSocketClient.leaveClass(id);
+        });
+      }
+      if (unsubscribersRef.current?.length) {
+        unsubscribersRef.current.forEach((unsub) => {
+          if (typeof unsub === 'function') {
+            try { unsub(); } catch (e) { /* ignore */ }
+          }
+        });
+      }
+      unsubscribersRef.current = [];
 
-    // Listen for updates
-    const unsubscribeUpdated = classSocketClient.on("class_updated", (data: any) => {
-      setClasses((prev) => {
-        const index = prev.findIndex((c) => Number(c.key) === Number(data.class_id));
-        if (index === -1) return prev;
+      // Connect and join rooms
+      classSocketClient.connect();
+      currentClassIds.forEach((id) => classSocketClient.joinClass(id));
+      classIdsRef.current = currentClassIds;
 
-        const updatedList = [...prev];
-        updatedList[index] = {
-          ...updatedList[index],
-          name: data.name,
-          code: data.code,
-          status: data.status === "active" ? CLASS_STATUS_MAP.active : CLASS_STATUS_MAP.inactive,
-        };
-
-        return updatedList;
-      });
-    });
-
-    // Listen for student joined
-    const unsubscribeJoined = classSocketClient.on("student_joined", (data: any) => {
-      setClasses((prev) => {
-        const index = prev.findIndex((c) => Number(c.key) === Number(data.class_id));
-        if (index === -1) return prev;
-
-        const updatedList = [...prev];
-        updatedList[index] = {
-          ...updatedList[index],
-          students: updatedList[index].students + 1,
-        };
-        return updatedList;
-      });
-    });
-
-    // Listen for student removed
-    const unsubscribeRemoved = classSocketClient.on("student_removed", (data: any) => {
-      setClasses((prev) => {
-        const index = prev.findIndex((c) => Number(c.key) === Number(data.class_id));
-        if (index === -1) return prev;
-
-        const updatedList = [...prev];
-        updatedList[index] = {
-          ...updatedList[index],
-          students: Math.max(0, updatedList[index].students - 1),
-        };
-        return updatedList;
-      });
-    });
-
-    // Listen for student status updated (banned)
-    const unsubscribeStatus = classSocketClient.on("student_status_updated", (data: any) => {
-      if (data.status === "banned") {
+      // Socket listeners
+      const unsubscribeUpdated = classSocketClient.on("class_updated", (data: any) => {
         setClasses((prev) => {
           const index = prev.findIndex((c) => Number(c.key) === Number(data.class_id));
           if (index === -1) return prev;
@@ -169,58 +146,153 @@ export default function AdminClasses() {
           const updatedList = [...prev];
           updatedList[index] = {
             ...updatedList[index],
-            students: Math.max(0, updatedList[index].students - 1),
+            name: data.name,
+            code: data.code,
+            status: data.status === "active" ? CLASS_STATUS_MAP.active : CLASS_STATUS_MAP.inactive,
           };
           return updatedList;
         });
-      }
-    });
+      });
 
-    // Listen for class deleted
-    const unsubscribeDeleted = classSocketClient.on("class_deleted", (data: any) => {
-      setClasses((prev) => prev.filter((c) => Number(c.key) !== Number(data.class_id)));
-      setPagination((prev) => ({ ...prev, total: Math.max(0, prev.total - 1) }));
+      const unsubscribeJoined = classSocketClient.on("student_joined", (data: any) => {
+        setClasses((prev) => {
+          const index = prev.findIndex((c) => Number(c.key) === Number(data.class_id));
+          if (index === -1) return prev;
 
-      if (data.deleted_by && userId && Number(data.deleted_by) !== Number(userId)) {
-        message.info(`Lớp học "${data.name}" đã bị xóa`);
-      }
-    });
+          const updatedList = [...prev];
+          updatedList[index] = {
+            ...updatedList[index],
+            students: data.student_count ?? updatedList[index].students + 1,
+          };
+          return updatedList;
+        });
+      });
+
+      const unsubscribeRemoved = classSocketClient.on("student_removed", (data: any) => {
+        setClasses((prev) => {
+          const index = prev.findIndex((c) => Number(c.key) === Number(data.class_id));
+          if (index === -1) return prev;
+
+          const updatedList = [...prev];
+          updatedList[index] = {
+            ...updatedList[index],
+            students: data.student_count ?? Math.max(0, updatedList[index].students - 1),
+          };
+          return updatedList;
+        });
+      });
+
+      const unsubscribeStatus = classSocketClient.on("student_status_updated", (data: any) => {
+        // Update count from server
+        if (data.student_count !== undefined) {
+          setClasses((prev) => {
+            const index = prev.findIndex((c) => Number(c.key) === Number(data.class_id));
+            if (index === -1) return prev;
+
+            const updatedList = [...prev];
+            updatedList[index] = {
+              ...updatedList[index],
+              students: data.student_count,
+            };
+            return updatedList;
+          });
+        }
+      });
+
+      const unsubscribeDeleted = classSocketClient.on("class_deleted", (data: any) => {
+        setClasses((prev) => prev.filter((c) => Number(c.key) !== Number(data.class_id)));
+        setPagination((prev) => ({ ...prev, total: Math.max(0, prev.total - 1) }));
+
+        if (data.deleted_by && userId && Number(data.deleted_by) !== Number(userId)) {
+          messageRef.current.info(`Lớp học "${data.name}" đã bị xóa`);
+        }
+      });
+
+      const unsubscribeAccessDenied = classSocketClient.on("class:access_denied", (data: any) => {
+        if (data.reason === "banned") {
+          messageRef.current.error(data.message || "Bạn đã bị chặn khỏi lớp học này");
+        }
+      });
+
+      unsubscribersRef.current = [
+        unsubscribeUpdated,
+        unsubscribeJoined,
+        unsubscribeRemoved,
+        unsubscribeStatus,
+        unsubscribeDeleted,
+        unsubscribeAccessDenied,
+      ];
+
+      isInitializedRef.current = true;
+    }
 
     return () => {
-      currentClassIds.forEach((id) => {
-        classSocketClient.leaveClass(id);
-      });
-      unsubscribeUpdated();
-      unsubscribeJoined();
-      unsubscribeRemoved();
-      unsubscribeStatus();
-      unsubscribeDeleted();
+      if (isInitializedRef.current) {
+        classIdsRef.current?.forEach((id) => {
+          if (id) classSocketClient.leaveClass(id);
+        });
+        unsubscribersRef.current?.forEach((unsub) => {
+          if (typeof unsub === 'function') {
+            try { unsub(); } catch (e) { /* ignore */ }
+          }
+        });
+        unsubscribersRef.current = [];
+        isInitializedRef.current = false;
+      }
     };
-  }, [JSON.stringify(classes.map((c) => c.key)), userId, message]);
+  }, [classIdsString, userId, userIdLoading]);
 
-  const handleTableChange = (page: number, pageSize: number) => {
+  // Stable handlers
+  const handleTableChange = useCallback((page: number, pageSize: number) => {
     setPagination((prev) => ({ ...prev, current: page, pageSize }));
-  };
+  }, []);
 
-  const handleEdit = async (classItem: ClassItem) => {
+  const handleOpenCreateModal = useCallback(() => {
+    setIsCreateModalOpen(true);
+  }, []);
+
+  const handleCloseCreateModal = useCallback(() => {
+    setIsCreateModalOpen(false);
+  }, []);
+
+  const handleCreateSuccess = useCallback(() => {
+    setIsCreateModalOpen(false);
+    fetchClasses();
+  }, [fetchClasses]);
+
+  const handleEdit = useCallback(async (classItem: ClassItem) => {
     if (!userId) {
-      message.error("Không tìm thấy thông tin người dùng");
+      messageRef.current.error("Không tìm thấy thông tin người dùng");
       return;
     }
 
     try {
-      // Fetch class detail để lấy đầy đủ thông tin
       const numericUserId = typeof userId === "string" ? Number(userId) : userId;
       const classDetail = await getClassById(classItem.key, numericUserId);
       setOriginalClassData(classDetail);
       setSelectedClass(classItem);
       setIsEditModalOpen(true);
     } catch (error: any) {
-      message.error(error?.message || "Không thể tải thông tin lớp học");
+      messageRef.current.error(error?.message || "Không thể tải thông tin lớp học");
     }
-  };
+  }, [userId]);
 
-  const handleDelete = (classItem: ClassItem) => {
+  const handleCloseEditModal = useCallback(() => {
+    setIsEditModalOpen(false);
+    setSelectedClass(null);
+    setOriginalClassData(null);
+  }, []);
+
+  const handleEditSuccess = useCallback((updatedName: string) => {
+    setIsEditModalOpen(false);
+    setClasses((prev) => prev.map((c) =>
+      c.key === selectedClass?.key ? { ...c, name: updatedName } : c
+    ));
+    setSelectedClass(null);
+    setOriginalClassData(null);
+  }, [selectedClass?.key]);
+
+  const handleDelete = useCallback((classItem: ClassItem) => {
     modal.confirm({
       title: "Xác nhận xóa lớp học",
       content: `Bạn có chắc chắn muốn xóa lớp học "${classItem.name}"? Hành động này không thể hoàn tác.`,
@@ -229,30 +301,36 @@ export default function AdminClasses() {
       cancelText: "Hủy",
       onOk: async () => {
         try {
-          // 1. Xóa toàn bộ đề thi AI liên quan (Sequential cleanup)
           await deleteRagTestsByClass(classItem.key);
-
-          // 2. Xóa lớp học
           await deleteClass(classItem.key);
-          message.success(`Đã xóa lớp học "${classItem.name}" thành công`);
+          messageRef.current.success(`Đã xóa lớp học "${classItem.name}" thành công`);
         } catch (error: any) {
-          message.error(error?.message || "Không thể xóa lớp học");
+          messageRef.current.error(error?.message || "Không thể xóa lớp học");
         }
       },
     });
-  };
+  }, [modal]);
+
+  // Memoize pagination config
+  const paginationConfig = useMemo(() => ({
+    current: pagination.current,
+    pageSize: pagination.pageSize,
+    total: pagination.total,
+    onChange: handleTableChange,
+  }), [pagination.current, pagination.pageSize, pagination.total, handleTableChange]);
 
   return (
     <div className="space-y-3">
-      <ClassesHeader searchValue={searchQuery} onSearchChange={setSearchQuery} onAddClick={() => setIsCreateModalOpen(true)} />
+      <ClassesHeader
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        onAddClick={handleOpenCreateModal}
+      />
 
       <CreateClassModal
         open={isCreateModalOpen}
-        onCancel={() => setIsCreateModalOpen(false)}
-        onSuccess={() => {
-          setIsCreateModalOpen(false);
-          fetchClasses();
-        }}
+        onCancel={handleCloseCreateModal}
+        onSuccess={handleCreateSuccess}
       />
 
       {originalClassData && selectedClass && (
@@ -263,18 +341,8 @@ export default function AdminClasses() {
           currentCode={selectedClass.code}
           currentStudentCount={selectedClass.students}
           currentStatus={originalClassData.status}
-          onCancel={() => {
-            setIsEditModalOpen(false);
-            setSelectedClass(null);
-            setOriginalClassData(null);
-          }}
-          onSuccess={(updatedName) => {
-            setIsEditModalOpen(false);
-            // Cập nhật state trực tiếp
-            setClasses((prev) => prev.map((c) => (c.key === selectedClass.key ? { ...c, name: updatedName } : c)));
-            setSelectedClass(null);
-            setOriginalClassData(null);
-          }}
+          onCancel={handleCloseEditModal}
+          onSuccess={handleEditSuccess}
         />
       )}
 
@@ -282,12 +350,7 @@ export default function AdminClasses() {
         <ClassesTable
           data={classes}
           loading={loading}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            onChange: handleTableChange,
-          }}
+          pagination={paginationConfig}
           onEdit={handleEdit}
           onDelete={handleDelete}
         />
