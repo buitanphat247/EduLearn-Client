@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { App, Button, ConfigProvider, theme, Progress, Result } from "antd";
+import { App, Button, ConfigProvider, theme, Progress, Result, Spin } from "antd";
 import {
     CheckCircleOutlined,
     CloseCircleOutlined,
@@ -133,7 +133,7 @@ export default function VocabularyQuiz() {
             audioRef.current.pause();
             audioRef.current = null;
         }
-        
+
         const audioPath = isCorrect ? "/audio/true.mp3" : "/audio/false.mp3";
         const audio = new Audio(audioPath);
         audio.volume = 0.7; // Set volume to 70%
@@ -235,10 +235,7 @@ export default function VocabularyQuiz() {
             <main className="h-full bg-slate-50 dark:bg-[#0f172a] py-8 text-slate-800 dark:text-slate-200 transition-colors duration-500">
                 <div className="container mx-auto px-4">
                     <div className="flex items-center justify-center min-h-[60vh]">
-                        <div className="text-center">
-                            <div className="h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                            <p className="text-slate-500 dark:text-slate-400">Đang tải câu hỏi...</p>
-                        </div>
+                        <Spin size="large" tip="Đang tải câu hỏi..." />
                     </div>
                 </div>
             </main>
