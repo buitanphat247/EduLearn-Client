@@ -1,5 +1,13 @@
 /**
- * Utility functions for working with cookies
+ * Cookie utility functions
+ * @module lib/utils/cookies
+ * @description Provides optimized cookie operations with caching and session storage support
+ * 
+ * Features:
+ * - Double-layer caching (cookie string + parsed cookies)
+ * - LRU cache for parsed cookies to prevent memory leaks
+ * - Session storage integration for user ID caching
+ * - Async cookie decryption with promise caching
  */
 
 // Cache cookie string để tránh đọc document.cookie nhiều lần
@@ -7,13 +15,60 @@ let cachedCookieString: string | null = null;
 let cachedCookieTimestamp: number = 0;
 const COOKIE_CACHE_DURATION = 100; // 100ms cache
 
-// Cache parsed cookies để tránh parse lại nhiều lần
-let parsedCookiesCache: Map<string, string | null> = new Map();
+// ✅ LRU Cache for parsed cookies to prevent memory leaks
+const MAX_CACHE_SIZE = 100; // Max number of cached cookies
+
+class LRUCache<K, V> {
+  private cache: Map<K, V>;
+  private maxSize: number;
+
+  constructor(maxSize: number) {
+    this.cache = new Map();
+    this.maxSize = maxSize;
+  }
+
+  get(key: K): V | undefined {
+    if (!this.cache.has(key)) return undefined;
+    const value = this.cache.get(key)!;
+    // Move to end (most recently used)
+    this.cache.delete(key);
+    this.cache.set(key, value);
+    return value;
+  }
+
+  set(key: K, value: V): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.maxSize) {
+      // Remove oldest (first) entry
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+    this.cache.set(key, value);
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+
+  delete(key: K): boolean {
+    return this.cache.delete(key);
+  }
+}
+
+let parsedCookiesCache: LRUCache<string, string | null> = new LRUCache(MAX_CACHE_SIZE);
 let parsedCookiesTimestamp: number = 0;
 const PARSED_COOKIES_CACHE_DURATION = 50; // 50ms cache cho parsed cookies
 
 /**
  * Get a cookie value by name (optimized with double cache)
+ * @param {string} name - Cookie name to retrieve
+ * @returns {string | null} Cookie value or null if not found
+ * @description Uses LRU cache and cookie string cache for optimal performance
+ * @example
+ * ```typescript
+ * const userId = getCookie('_u');
+ * ```
  */
 export const getCookie = (name: string): string | null => {
   if (typeof document === "undefined") return null;
@@ -36,19 +91,14 @@ export const getCookie = (name: string): string | null => {
     parsedCookiesCache.clear();
   }
   
-  // Parse cookie string
-  const value = `; ${cachedCookieString}`;
-  const parts = value.split(`; ${name}=`);
-  
+  // ✅ Use regex for efficient cookie parsing
+  const match = cachedCookieString.match(new RegExp(`(?:^|; )${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=([^;]*)`));
   let result: string | null = null;
-  if (parts.length === 2) {
-    const cookieValue = parts.pop()?.split(";").shift() || null;
-    if (cookieValue) {
-      try {
-        result = decodeURIComponent(cookieValue);
-      } catch {
-        result = cookieValue;
-      }
+  if (match) {
+    try {
+      result = decodeURIComponent(match[1]);
+    } catch {
+      result = match[1];
     }
   }
   
@@ -61,6 +111,8 @@ export const getCookie = (name: string): string | null => {
 
 /**
  * Clear cookie cache (dùng khi cookie thay đổi)
+ * @description Clears both cookie string cache and parsed cookies cache
+ * Should be called when cookies are modified to ensure fresh data
  */
 export const clearCookieCache = (): void => {
   cachedCookieString = null;
@@ -75,11 +127,29 @@ const SESSION_USER_DATA_KEY = "edulearn_user_data";
 
 // Flag để tránh gọi async nhiều lần cùng lúc
 let isDecrypting = false;
-// Promise cache để tránh gọi API decrypt nhiều lần cùng lúc
+// ✅ Promise cache với timeout và cleanup
 let decryptPromise: Promise<number | string | null> | null = null;
+let decryptPromiseTimestamp = 0;
+const DECRYPT_PROMISE_TTL = 5000; // 5 seconds timeout for promise cache
+
+// ✅ Clear stale promise
+const clearStalePromise = (): void => {
+  const now = Date.now();
+  if (decryptPromise && (now - decryptPromiseTimestamp > DECRYPT_PROMISE_TTL)) {
+    decryptPromise = null;
+    isDecrypting = false;
+    decryptPromiseTimestamp = 0;
+  }
+};
 
 /**
  * Get user ID from sessionStorage (nhanh nhất, không cần decrypt)
+ * @returns {number | string | null} User ID from sessionStorage or null if not found
+ * @description Fastest method to get user ID, uses sessionStorage cache
+ * @example
+ * ```typescript
+ * const userId = getUserIdFromSession();
+ * ```
  */
 export const getUserIdFromSession = (): number | string | null => {
   if (typeof window === "undefined") return null;
@@ -117,6 +187,8 @@ const saveUserIdToSession = (userId: number | string): void => {
 
 /**
  * Get full user data from sessionStorage
+ * @returns {any | null} User data object or null if not found
+ * @description Retrieves complete user data from session storage
  */
 export const getUserDataFromSession = (): any | null => {
   if (typeof window === "undefined") return null;
@@ -137,6 +209,8 @@ export const getUserDataFromSession = (): any | null => {
 
 /**
  * Save full user data to sessionStorage
+ * @param {any} userData - User data object to save
+ * @description Saves user data to sessionStorage and automatically caches user ID
  */
 export const saveUserDataToSession = (userData: any): void => {
   if (typeof window === "undefined") return;
@@ -156,6 +230,8 @@ export const saveUserDataToSession = (userData: any): void => {
 /**
  * Get user ID from cookie (sync version - giải mã cookie "_u" đã mã hóa)
  * Ưu tiên sessionStorage, nếu không có thì trigger async decrypt
+ * @returns {number | string | null} User ID or null if not found
+ * @description Sync version that checks sessionStorage first, then triggers async decrypt if needed
  */
 export const getUserIdFromCookie = (): number | string | null => {
   if (typeof window === "undefined") return null;
@@ -168,24 +244,38 @@ export const getUserIdFromCookie = (): number | string | null => {
 
   // 2. Thử lấy từ cookie "_u" (đã mã hóa) - giải mã qua API
   const encryptedUserCookie = getCookie("_u");
-  if (encryptedUserCookie && !isDecrypting && !decryptPromise) {
-    isDecrypting = true;
-    // Sử dụng promise cache để tránh gọi API nhiều lần cùng lúc
-    decryptPromise = getUserIdFromCookieAsync()
-      .then((userId) => {
-        isDecrypting = false;
-        decryptPromise = null;
-        // Trigger event để các component biết đã có user_id
-        if (typeof window !== "undefined" && userId) {
-          window.dispatchEvent(new CustomEvent("user_id_cached"));
-        }
-        return userId;
-      })
-      .catch((error) => {
-        isDecrypting = false;
-        decryptPromise = null;
-        throw error;
-      });
+  
+  // ✅ Clear stale promise before checking
+  clearStalePromise();
+  
+  if (encryptedUserCookie) {
+    // ✅ Return existing promise if available
+    if (decryptPromise) {
+      return null; // Return null, but promise is already running
+    }
+    
+    if (!isDecrypting) {
+      isDecrypting = true;
+      decryptPromiseTimestamp = Date.now();
+      // Sử dụng promise cache để tránh gọi API nhiều lần cùng lúc
+      decryptPromise = getUserIdFromCookieAsync()
+        .then((userId) => {
+          isDecrypting = false;
+          decryptPromise = null;
+          decryptPromiseTimestamp = 0;
+          // Trigger event để các component biết đã có user_id
+          if (typeof window !== "undefined" && userId) {
+            window.dispatchEvent(new CustomEvent("user_id_cached", { detail: userId }));
+          }
+          return userId;
+        })
+        .catch((error) => {
+          isDecrypting = false;
+          decryptPromise = null;
+          decryptPromiseTimestamp = 0;
+          throw error;
+        });
+    }
   }
 
   return null;
@@ -194,6 +284,12 @@ export const getUserIdFromCookie = (): number | string | null => {
 /**
  * Get user ID from encrypted cookie (async version - giải mã cookie "_u")
  * Ưu tiên sessionStorage, nếu không có thì gọi API để giải mã và lưu vào sessionStorage
+ * @returns {Promise<number | string | null>} Promise resolving to user ID or null
+ * @description Async version that decrypts cookie via API and caches result in sessionStorage
+ * @example
+ * ```typescript
+ * const userId = await getUserIdFromCookieAsync();
+ * ```
  */
 export const getUserIdFromCookieAsync = async (): Promise<number | string | null> => {
   if (typeof window === "undefined") return null;
@@ -208,7 +304,16 @@ export const getUserIdFromCookieAsync = async (): Promise<number | string | null
   const encryptedUserCookie = getCookie("_u");
   if (encryptedUserCookie) {
     try {
-      const response = await fetch("/api-proxy/auth/decrypt-user");
+      // ✅ Add timeout to prevent stuck promises
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      
+      const response = await fetch("/api-proxy/auth/decrypt-user", {
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
       const data = await response.json();
       
       if (data.status && data.data && data.data.user_id) {
@@ -226,6 +331,11 @@ export const getUserIdFromCookieAsync = async (): Promise<number | string | null
         return userId;
       }
     } catch (error) {
+      // ✅ Clear promise on error to prevent stuck state
+      decryptPromise = null;
+      isDecrypting = false;
+      decryptPromiseTimestamp = 0;
+      
       if (process.env.NODE_ENV === 'development') {
         console.error("Error decrypting user cookie:", error);
       }
