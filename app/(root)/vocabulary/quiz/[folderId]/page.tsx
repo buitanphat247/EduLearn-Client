@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { App, Button, ConfigProvider, theme, Progress, Result, Spin } from "antd";
+import { App, Button, ConfigProvider, theme, Progress, Result } from "antd";
 import {
     CheckCircleOutlined,
     CloseCircleOutlined,
@@ -15,6 +15,7 @@ import {
 import { getVocabulariesByFolder, type VocabularyResponse } from "@/lib/api/vocabulary";
 import { IoArrowBackOutline } from "react-icons/io5";
 import { useTheme } from "@/app/context/ThemeContext";
+import VocabularyQuizSkeleton from "@/app/components/features/vocabulary/VocabularyQuizSkeleton";
 
 interface QuizQuestion {
     id: number;
@@ -231,15 +232,7 @@ export default function VocabularyQuiz() {
     }
 
     if (loading) {
-        return (
-            <main className="h-full bg-slate-50 dark:bg-[#0f172a] py-8 text-slate-800 dark:text-slate-200 transition-colors duration-500">
-                <div className="container mx-auto px-4">
-                    <div className="flex items-center justify-center min-h-[60vh]">
-                        <Spin size="large" tip="Đang tải câu hỏi..." />
-                    </div>
-                </div>
-            </main>
-        );
+        return <VocabularyQuizSkeleton />;
     }
 
     if (questions.length === 0) {
