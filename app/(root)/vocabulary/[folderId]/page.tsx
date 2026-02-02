@@ -200,6 +200,8 @@ export default function VocabularyDetail() {
                   const handleClick = () => {
                     if (mode.title === "Flashcard") {
                       router.push(`/vocabulary/flashcard/${folderId}`);
+                    } else if (mode.title === "Kiểm tra") {
+                      router.push(`/vocabulary/quiz/${folderId}`);
                     } else {
                       message.info("Tính năng này đang được phát triển");
                     }
