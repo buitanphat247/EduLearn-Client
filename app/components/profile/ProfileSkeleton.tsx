@@ -29,12 +29,6 @@ export default function ProfileSkeleton() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column Skeleton */}
           <div className="space-y-6">
-            {/* Settings Card Skeleton */}
-            <div className={`${cardClass} p-5`}>
-              <div className="h-7 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-4"></div>
-              <div className="h-14 w-full bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
-            </div>
-
             {/* Contact Card Skeleton */}
             <div className={`${cardClass} p-5`}>
               <div className="h-7 w-40 bg-slate-200 dark:bg-slate-700 rounded mb-4"></div>

@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { App, Spin, Button, Tag, ConfigProvider, theme } from "antd";
-import { LeftOutlined, RightOutlined, RollbackOutlined, SoundOutlined, SwapOutlined } from "@ant-design/icons";
+import { LeftOutlined, RightOutlined, RollbackOutlined, SoundOutlined, SwapOutlined, ReloadOutlined } from "@ant-design/icons";
 import { getVocabulariesByFolder, type VocabularyResponse } from "@/lib/api/vocabulary";
 import { IoArrowBackOutline } from "react-icons/io5";
 import VocabularyFlashcardSkeleton from "@/app/components/features/vocabulary/VocabularyFlashcardSkeleton";
@@ -24,6 +24,8 @@ export default function VocabularyFlashcard() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [difficulties, setDifficulties] = useState<Record<number, Difficulty>>({});
   const [isFlipped, setIsFlipped] = useState(false);
+  const [autoFlip, setAutoFlip] = useState(false);
+  const [autoFlipDelay] = useState(3000); // 3 giây
 
   const fetchVocabularies = useCallback(async () => {
     if (!folderId) return;
@@ -54,6 +56,28 @@ export default function VocabularyFlashcard() {
   const folderName = useMemo(() => vocabularies[0]?.folder?.folderName || "", [vocabularies]);
   const currentVocab = useMemo(() => (vocabularies.length > 0 ? vocabularies[currentIndex] : null), [vocabularies, currentIndex]);
 
+  // Auto-flip effect
+  useEffect(() => {
+    if (!autoFlip || !currentVocab || vocabularies.length === 0) return;
+
+    // Reset về mặt trước khi chuyển thẻ mới
+    setIsFlipped(false);
+
+    // Tự động lật sau delay
+    const timer = setTimeout(() => {
+      setIsFlipped(true);
+    }, autoFlipDelay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [autoFlip, currentIndex, currentVocab, vocabularies.length, autoFlipDelay]);
+
+  // Reset flip khi chuyển thẻ
+  useEffect(() => {
+    setIsFlipped(false);
+  }, [currentIndex]);
+
   const playAudio = useCallback(
     (audioUrl?: string) => {
       if (!audioUrl) {
@@ -83,6 +107,12 @@ export default function VocabularyFlashcard() {
 
   const handleFlip = useCallback(() => {
     setIsFlipped((prev) => !prev);
+  }, []);
+
+  const toggleAutoFlip = useCallback(() => {
+    setAutoFlip((prev) => !prev);
+    // Reset về mặt trước khi bật/tắt auto-flip
+    setIsFlipped(false);
   }, []);
 
   const handleSetDifficulty = useCallback(
@@ -194,20 +224,30 @@ export default function VocabularyFlashcard() {
             <div className="flex flex-col items-center">
               {/* Flashcard */}
               {currentVocab && (
-                <div className="w-full max-w-3xl mb-10 group" style={{ perspective: "1000px" }}>
+                <div
+                  className="w-full max-w-3xl mb-10"
+                  style={{
+                    perspective: "1000px",
+                    perspectiveOrigin: "center center"
+                  }}
+                >
                   <div
-                    className="relative w-full min-h-[450px]"
+                    className="relative w-full min-h-[450px] cursor-pointer"
                     style={{
                       transformStyle: "preserve-3d",
+                      transition: "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+                      transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
                     }}
+                    onClick={handleFlip}
                   >
                     {/* Front Face */}
                     <div
-                      className="absolute inset-0 bg-white dark:bg-[#1e293b] rounded-3xl shadow-2xl shadow-blue-900/5 dark:shadow-black/20 border border-slate-200 dark:border-slate-700 p-8 flex flex-col items-center justify-center text-center transition-all duration-300 ease-in-out"
+                      className="absolute inset-0 bg-white dark:bg-[#1e293b] rounded-3xl shadow-2xl shadow-blue-900/5 dark:shadow-black/20 border border-slate-200 dark:border-slate-700 p-8 flex flex-col items-center justify-center text-center hover:shadow-blue-900/10 dark:hover:shadow-black/30"
                       style={{
                         backfaceVisibility: "hidden",
                         WebkitBackfaceVisibility: "hidden",
-                        transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                        transform: "rotateY(0deg)",
+                        transformStyle: "preserve-3d",
                       }}
                     >
                       <div className="flex items-center gap-4 mb-4">
@@ -229,24 +269,20 @@ export default function VocabularyFlashcard() {
 
                       <p className="text-xl text-slate-500 dark:text-slate-400 font-mono mb-8 transition-colors">/{currentVocab.pronunciation}/</p>
 
-                      <Button
-                        type="primary"
-                        icon={<SwapOutlined />}
-                        size="large"
-                        onClick={handleFlip}
-                        className="bg-blue-600 h-12 px-8 rounded-full shadow-lg shadow-blue-500/30 hover:scale-105 transition-transform border-none font-semibold"
-                      >
-                        Lật thẻ xem nghĩa
-                      </Button>
+                      <div className="text-sm text-slate-400 dark:text-slate-500 mt-4 flex items-center gap-2">
+                        <SwapOutlined />
+                        <span>Click để lật thẻ</span>
+                      </div>
                     </div>
 
                     {/* Back Face */}
                     <div
-                      className="absolute inset-0 bg-white dark:bg-[#1e293b] rounded-3xl shadow-2xl shadow-blue-900/5 dark:shadow-black/20 border border-blue-200 dark:border-blue-500/30 p-8 flex flex-col text-center transition-all duration-300 ease-in-out"
+                      className="absolute inset-0 bg-white dark:bg-[#1e293b] rounded-3xl shadow-2xl shadow-blue-900/5 dark:shadow-black/20 border border-blue-200 dark:border-blue-500/30 p-8 flex flex-col text-center hover:shadow-blue-900/10 dark:hover:shadow-black/30"
                       style={{
                         backfaceVisibility: "hidden",
                         WebkitBackfaceVisibility: "hidden",
-                        transform: isFlipped ? "rotateY(0deg)" : "rotateY(180deg)",
+                        transform: "rotateY(180deg)",
+                        transformStyle: "preserve-3d",
                       }}
                     >
                       <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-slate-700 transition-colors">
@@ -255,7 +291,10 @@ export default function VocabularyFlashcard() {
                           <Button
                             type="text"
                             icon={<SoundOutlined />}
-                            onClick={() => playAudio(currentVocab.audioUrl![0].url)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playAudio(currentVocab.audioUrl![0].url);
+                            }}
                             className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"
                           />
                         )}
@@ -279,15 +318,10 @@ export default function VocabularyFlashcard() {
                         )}
                       </div>
 
-                      <Button
-                        type="default"
-                        icon={<SwapOutlined />}
-                        size="middle"
-                        onClick={handleFlip}
-                        className="mt-8 self-center bg-transparent border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-400 dark:hover:border-blue-400 transition-colors"
-                      >
-                        Xem mặt trước
-                      </Button>
+                      <div className="text-sm text-slate-400 dark:text-slate-500 mt-4 flex items-center gap-2">
+                        <SwapOutlined />
+                        <span>Click để lật lại</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -320,6 +354,21 @@ export default function VocabularyFlashcard() {
                       className="h-12 w-12 rounded-full flex items-center justify-center bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-400 shadow-sm transition-all"
                     />
                   </div>
+                </div>
+
+                {/* Auto-flip Toggle */}
+                <div className="flex justify-center mb-6">
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={toggleAutoFlip}
+                    size="middle"
+                    className={`h-10 px-6 rounded-full font-medium transition-all ${autoFlip
+                      ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700 shadow-lg shadow-blue-500/30"
+                      : "bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-400"
+                      }`}
+                  >
+                    {autoFlip ? "Tắt tự động lật" : "Bật tự động lật"}
+                  </Button>
                 </div>
 
                 {/* Difficulty Rating */}
