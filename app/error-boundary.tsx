@@ -21,8 +21,8 @@ interface State {
 export default class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { 
-      hasError: false, 
+    this.state = {
+      hasError: false,
       error: null,
       retryCount: 0,
       lastErrorTime: null,
@@ -36,7 +36,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     const retryCount = this.state.retryCount + 1;
     const lastErrorTime = Date.now();
-    
+
     // Get additional context
     const context = {
       pathname: typeof window !== 'undefined' ? window.location.pathname : undefined,
@@ -47,13 +47,13 @@ export default class ErrorBoundary extends Component<Props, State> {
     logError(error, errorInfo, context);
 
     // Update state
-    this.setState({ 
-      hasError: true, 
+    this.setState({
+      hasError: true,
       error,
       retryCount,
       lastErrorTime,
     });
-    
+
     // Auto-recover nếu retry count < 3 và error không nghiêm trọng
     if (retryCount < 3 && !this.isCriticalError(error)) {
       setTimeout(() => {
@@ -75,7 +75,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   handleReset = () => {
     const { retryCount } = this.state;
-    
+
     // Nếu retry quá nhiều lần, reload page
     if (retryCount >= 3) {
       // Clear storage nếu cần
@@ -83,22 +83,22 @@ export default class ErrorBoundary extends Component<Props, State> {
         const shouldClearStorage = confirm(
           'Đã xảy ra lỗi nhiều lần. Bạn có muốn xóa cache và reload trang?'
         );
-        
+
         if (shouldClearStorage) {
           localStorage.clear();
           sessionStorage.clear();
         }
       }
-      
+
       if (typeof window !== 'undefined') {
         window.location.reload();
       }
       return;
     }
-    
+
     // Reset state
-    this.setState({ 
-      hasError: false, 
+    this.setState({
+      hasError: false,
       error: null,
       // Giữ retryCount để track
     });
@@ -221,8 +221,8 @@ export default class ErrorBoundary extends Component<Props, State> {
                   disabled={this.state.retryCount >= 3}
                   className="flex items-center justify-center"
                 >
-                  {this.state.retryCount > 0 
-                    ? `Thử lại (${this.state.retryCount}/3)` 
+                  {this.state.retryCount > 0
+                    ? `Thử lại (${this.state.retryCount}/3)`
                     : 'Thử lại'
                   }
                 </Button>

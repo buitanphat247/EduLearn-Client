@@ -1,6 +1,6 @@
 "use client";
 
-import ListeningFeatureSkeleton from "@/app/components/features/listening/ListeningFeatureSkeleton";
+import ListeningDetailSkeleton from "@/app/components/features/listening/ListeningDetailSkeleton";
 
 import React, { useState, useRef, useEffect } from "react";
 import { FaPlay, FaPause, FaCheck, FaKeyboard, FaLanguage, FaListAlt, FaEllipsisV, FaVolumeUp, FaEye, FaEyeSlash, FaSpinner } from "react-icons/fa";
@@ -291,7 +291,7 @@ export default function ListeningPage() {
 
   // --- Render Loading ---
   if (loading) {
-    return <ListeningFeatureSkeleton />;
+    return <ListeningDetailSkeleton />;
   }
 
   // --- Render Empty ---
@@ -313,7 +313,7 @@ export default function ListeningPage() {
               Trang chủ
             </Link>
             <span className="text-slate-400 dark:text-slate-600">/</span>
-            <Link href="/features/listening" className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
+            <Link href="/listening" className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
               Học nghe
             </Link>
             {lessonInfo && (
@@ -333,7 +333,7 @@ export default function ListeningPage() {
             </div>
 
             <button
-              onClick={() => router.push("/features/listening")}
+              onClick={() => router.push("/listening")}
               className="group flex items-center gap-2 px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-500/50 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95"
             >
               <IoArrowBackOutline className="text-lg transition-transform group-hover:-translate-x-1" />
@@ -448,13 +448,12 @@ export default function ListeningPage() {
               <div className="relative group">
                 <textarea
                   className={`w-full p-5 text-lg bg-white dark:bg-[#1e293b] border-2 rounded-xl focus:outline-none transition-all resize-none shadow-inner
-                      ${
-                        feedback === "correct"
-                          ? "border-emerald-500/50 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-200"
-                          : feedback === "incorrect"
-                          ? "border-red-500/50 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-200"
-                          : "border-slate-200 dark:border-slate-700 focus:border-blue-500/50 focus:bg-slate-50 dark:focus:bg-[#253248] text-slate-800 dark:text-slate-200"
-                      }
+                      ${feedback === "correct"
+                      ? "border-emerald-500/50 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-200"
+                      : feedback === "incorrect"
+                        ? "border-red-500/50 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-200"
+                        : "border-slate-200 dark:border-slate-700 focus:border-blue-500/50 focus:bg-slate-50 dark:focus:bg-[#253248] text-slate-800 dark:text-slate-200"
+                    }
                     `}
                   rows={3}
                   placeholder="Nhập câu bạn nghe được..."
@@ -494,11 +493,10 @@ export default function ListeningPage() {
               <div
                 className={`
                       relative overflow-hidden rounded-2xl p-6 min-h-[100px] flex flex-col items-center justify-center border-2
-                      ${
-                        feedback === "correct"
-                          ? "bg-white dark:bg-[#1e293b] border-emerald-500/50 shadow-[0_0_30px_-5px_rgba(16,185,129,0.2)]"
-                          : "bg-white dark:bg-[#1e293b] border-slate-300 dark:border-slate-700 border-dashed"
-                      }
+                      ${feedback === "correct"
+                    ? "bg-white dark:bg-[#1e293b] border-emerald-500/50 shadow-[0_0_30px_-5px_rgba(16,185,129,0.2)]"
+                    : "bg-white dark:bg-[#1e293b] border-slate-300 dark:border-slate-700 border-dashed"
+                  }
                  `}
               >
                 <div className="text-xl md:text-2xl font-medium text-center tracking-wide relative z-10 transition-all">
@@ -529,21 +527,19 @@ export default function ListeningPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowAppTranscript(!showAppTranscript)}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 transition border ${
-                      showAppTranscript
-                        ? "bg-blue-600 border-blue-500 text-white"
-                        : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-800 dark:hover:text-white"
-                    }`}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 transition border ${showAppTranscript
+                      ? "bg-blue-600 border-blue-500 text-white"
+                      : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-800 dark:hover:text-white"
+                      }`}
                   >
                     {showAppTranscript ? <FaEyeSlash /> : <FaEye />} Transcript
                   </button>
                   <button
                     onClick={() => setShowAppTranslation(!showAppTranslation)}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 transition border ${
-                      showAppTranslation
-                        ? "bg-orange-600 border-orange-500 text-white"
-                        : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-800 dark:hover:text-white"
-                    }`}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 transition border ${showAppTranslation
+                      ? "bg-orange-600 border-orange-500 text-white"
+                      : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-800 dark:hover:text-white"
+                      }`}
                   >
                     <FaLanguage /> Dịch
                   </button>
@@ -560,11 +556,10 @@ export default function ListeningPage() {
                     <div
                       key={s.id_challenges}
                       className={`p-4 rounded-xl border transition-all relative overflow-hidden
-                                    ${
-                                      isCurrent
-                                        ? "border-blue-500/50 bg-blue-50 dark:bg-blue-900/20 shadow-[inset_0_0_20px_rgba(59,130,246,0.1)]"
-                                        : "border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-[#243146] opacity-90 dark:opacity-70"
-                                    }
+                                    ${isCurrent
+                          ? "border-blue-500/50 bg-blue-50 dark:bg-blue-900/20 shadow-[inset_0_0_20px_rgba(59,130,246,0.1)]"
+                          : "border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-[#243146] opacity-90 dark:opacity-70"
+                        }
                                 `}
                     >
                       {isCurrent && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>}

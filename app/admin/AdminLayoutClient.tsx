@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import AdminSidebar from "../components/layout/AdminSidebar";
 import { usePathname } from "next/navigation";
-import { Modal, Spin, message, Switch } from "antd";
+import { Spin, message, Modal } from "antd";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { useUserId } from "@/app/hooks/useUserId";
 import { useTheme } from "@/app/context/ThemeContext";
-import { MoonOutlined, SunOutlined, BulbOutlined, BulbFilled } from "@ant-design/icons";
+import { BulbOutlined, BulbFilled } from "@ant-design/icons";
 
 const pageTitles: Record<string, string> = {
   "/admin": "Dashboard",
@@ -47,30 +47,44 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
       return;
     }
 
+    let isMounted = true;
     if (showError) setLoadingProfile(true);
+    
     try {
       const user = await getUserInfo(userId);
-      setUserInfo(user);
-    } catch (error: any) {
-      if (showError) {
-        message.error(error?.message || "Không thể tải thông tin người dùng");
+      if (isMounted) {
+        setUserInfo(user);
       }
-      console.error("Error fetching user info:", error);
+    } catch (error: unknown) {
+      if (isMounted) {
+        const errorMessage = error instanceof Error 
+          ? error.message 
+          : "Không thể tải thông tin người dùng";
+        if (showError) {
+          message.error(errorMessage);
+        }
+        console.error("Error fetching user info:", error);
+      }
     } finally {
-      if (showError) setLoadingProfile(false);
+      if (isMounted && showError) {
+        setLoadingProfile(false);
+      }
     }
-  }, [userId, message]);
+  }, [userId]); // Remove message dependency
+
+  const fetchUserInfoRef = useRef(fetchUserInfo);
+  fetchUserInfoRef.current = fetchUserInfo;
 
   // Fetch user info on mount (silent)
   useEffect(() => {
-    fetchUserInfo(false);
-  }, [fetchUserInfo]);
+    fetchUserInfoRef.current(false);
+  }, []);
 
   // Fetch user info when modal opens (with loading state)
   useEffect(() => {
     if (!isProfileModalOpen || userInfo) return;
-    fetchUserInfo(true);
-  }, [isProfileModalOpen, userInfo, fetchUserInfo]);
+    fetchUserInfoRef.current(true);
+  }, [isProfileModalOpen, userInfo]);
 
   // Memoize getInitials function
   const getInitials = useCallback((name: string) => {
@@ -88,6 +102,16 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
 
   // Memoize initials for avatar
   const displayInitials = useMemo(() => getInitials(displayName), [displayName, getInitials]);
+
+  // ✅ Move useMemo to top level (before return)
+  const formattedCreatedAt = useMemo(() => {
+    if (!userInfo?.created_at) return "Chưa có thông tin";
+    const date = new Date(userInfo.created_at);
+    const day = date.getDate();
+    const month = date.toLocaleDateString("vi-VN", { month: "long" });
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  }, [userInfo?.created_at]);
 
   return (
     <>
@@ -152,7 +176,7 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
                 <div>
                   <span className="text-sm text-gray-500 dark:text-gray-400">Ngày tạo:</span>
                   <p className="text-gray-800 dark:text-gray-200 font-medium">
-                    {userInfo.created_at ? new Date(userInfo.created_at).toLocaleDateString("vi-VN") : "Chưa có thông tin"}
+                    {formattedCreatedAt}
                   </p>
                 </div>
               </div>

@@ -68,11 +68,17 @@ export default function SocialPage() {
     }
   };
 
+  // ✅ Fix: Add isSending state để prevent double send
+  const [isSending, setIsSending] = useState(false);
+
   // Local handler to wrap sendMessage
   const handleSendMessage = async () => {
     const content = message.trim();
-    if (!content) return;
+    if (!content || isSending) return; // ✅ Prevent double send
 
+    setIsSending(true);
+    const messageToSend = content; // ✅ Save before clearing
+    
     // Optimistic Clear to prevent duplicate sends/Enter spam
     setMessage("");
 
@@ -81,12 +87,13 @@ export default function SocialPage() {
     if (textarea) textarea.style.height = "auto"; // let it maintain default size (padding + 1 row)
 
     try {
-      await sendMessage(content);
+      await sendMessage(messageToSend);
     } catch (e) {
-      // If failed, restore message? Or just notify?
-      // Restoring might be annoying if user started typing next message.
-      // Just rely on SocialContext error notification.
+      // ✅ Restore message on error
+      setMessage(messageToSend);
       console.error("Failed to send", e);
+    } finally {
+      setIsSending(false);
     }
   };
 

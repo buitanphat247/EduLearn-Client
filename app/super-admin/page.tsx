@@ -12,10 +12,15 @@ import {
 } from "@ant-design/icons";
 import { Card } from "antd";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
-import CountUp from "react-countup";
+import { useState, useEffect, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { getStats } from "@/lib/api/stats";
 import { App } from "antd";
+
+// Dynamic import for CountUp - only load when needed (below the fold)
+const CountUp = dynamic(() => import("react-countup"), {
+  ssr: false, // CountUp is animation library, not needed for SSR
+});
 
 const dashboardItems = [
   {
@@ -124,7 +129,9 @@ function StatCard({
         <div>
           <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">{label}</p>
           <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">
-            <CountUp start={0} end={value} duration={2} separator="," decimals={0} />
+            <Suspense fallback={<span>{value.toLocaleString()}</span>}>
+              <CountUp start={0} end={value} duration={2} separator="," decimals={0} />
+            </Suspense>
           </p>
         </div>
         <div className={`${bgColor} ${darkBgColor || ""} p-4 rounded-lg`}>
@@ -138,8 +145,8 @@ function StatCard({
 function StatisticsCards({ stats }: { stats: any[] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {stats.map((stat, index) => (
-        <StatCard key={index} {...stat} />
+      {stats.map((stat) => (
+        <StatCard key={stat.label} {...stat} />
       ))}
     </div>
   );
@@ -157,20 +164,32 @@ export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchStats = async () => {
       try {
         setLoading(true);
         const data = await getStats();
-        setStats(data);
+        if (isMounted) {
+          setStats(data);
+        }
       } catch (error: any) {
-        message.error(error?.message || "Không thể tải thống kê");
+        if (isMounted) {
+          message.error(error?.message || "Không thể tải thống kê");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchStats();
-  }, [message]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Remove message dependency
 
   const statsCards = [
     {

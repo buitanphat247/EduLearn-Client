@@ -1,5 +1,6 @@
 import apiClient from "@/app/config/api";
 import type { SignUpUser } from "@/interface/auth";
+import { getUserDataFromSession } from "@/lib/utils/cookies";
 
 export interface UserInfoResponse {
   user_id: number | string;
@@ -30,11 +31,11 @@ interface UserInfoApiResponse {
 export const getUserInfo = async (userId: number | string): Promise<UserInfoResponse> => {
   try {
     const response = await apiClient.get<UserInfoApiResponse>(`/users/${userId}`);
-    
+
     if (response.data.status && response.data.data) {
       return response.data.data;
     }
-    
+
     return response.data as any;
   } catch (error: any) {
     const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy thông tin user";
@@ -44,16 +45,23 @@ export const getUserInfo = async (userId: number | string): Promise<UserInfoResp
 
 export const getCurrentUser = (): SignUpUser | null => {
   if (typeof window === "undefined") return null;
-  
+
   try {
+    // 1. Try LocalStorage (Legacy)
     const userStr = localStorage.getItem("user");
     if (userStr) {
       return JSON.parse(userStr);
     }
+
+    // 2. Try SessionStorage (New Auth Flow)
+    const sessionUser = getUserDataFromSession();
+    if (sessionUser) {
+      return sessionUser;
+    }
   } catch (error) {
-    console.error("Error parsing user from localStorage:", error);
+    console.error("Error parsing user from storage:", error);
   }
-  
+
   return null;
 };
 
@@ -82,29 +90,54 @@ export interface GetUsersResponse {
   updated_at: string;
 }
 
-const extractArrayFromResponse = (data: any): GetUsersResponse[] | null => {
+// ✅ Type-safe response structure
+interface ApiResponseStructure {
+  data?: GetUsersResponse[] | {
+    users?: GetUsersResponse[];
+    items?: GetUsersResponse[];
+    list?: GetUsersResponse[];
+    results?: GetUsersResponse[];
+    data?: GetUsersResponse[];
+  };
+  users?: GetUsersResponse[];
+  items?: GetUsersResponse[];
+  list?: GetUsersResponse[];
+  results?: GetUsersResponse[];
+}
+
+// ✅ Type-safe extraction with proper type guards
+const extractArrayFromResponse = (data: unknown): GetUsersResponse[] | null => {
+  if (!data || typeof data !== 'object') {
+    return null;
+  }
+
+  // Direct array
   if (Array.isArray(data)) {
     return data;
   }
 
-  if (data?.data) {
-    if (Array.isArray(data.data)) {
-      return data.data;
+  const response = data as ApiResponseStructure;
+
+  // Nested data structure
+  if (response.data) {
+    if (Array.isArray(response.data)) {
+      return response.data;
     }
-    if (data.data && typeof data.data === 'object') {
-      const arrayKeys = ['users', 'items', 'list', 'results', 'data'];
-      for (const key of arrayKeys) {
-        if (Array.isArray(data.data[key])) {
-          return data.data[key];
+    if (typeof response.data === 'object') {
+      const nestedKeys = ['users', 'items', 'list', 'results', 'data'] as const;
+      for (const key of nestedKeys) {
+        if (Array.isArray(response.data[key])) {
+          return response.data[key];
         }
       }
     }
   }
 
-  const directKeys = ['users', 'items', 'list', 'results'];
+  // Direct keys
+  const directKeys = ['users', 'items', 'list', 'results'] as const;
   for (const key of directKeys) {
-    if (Array.isArray(data?.[key])) {
-      return data[key];
+    if (Array.isArray(response[key])) {
+      return response[key];
     }
   }
 
@@ -134,19 +167,19 @@ export const getUsers = async (params?: GetUsersParams): Promise<GetUsersResult>
     });
 
     const users = extractArrayFromResponse(response.data);
-    
+
     // Extract pagination info from response.data.data (nested structure)
     const responseData = response.data;
     let total = 0;
     let page = params?.page || 1;
     let limit = params?.limit || 10;
 
-    if (responseData?.data && typeof responseData.data === 'object') {
+    if (responseData?.data && typeof responseData.data === "object") {
       // Check nested data.data structure
       total = responseData.data.total || responseData.data.totalCount || 0;
       page = responseData.data.page || params?.page || 1;
       limit = responseData.data.limit || params?.limit || 10;
-    } else if (responseData && typeof responseData === 'object') {
+    } else if (responseData && typeof responseData === "object") {
       // Check direct structure
       total = responseData.total || responseData.totalCount || responseData.pagination?.total || responseData.meta?.total || 0;
       page = responseData.page || responseData.pagination?.page || params?.page || 1;
@@ -160,9 +193,9 @@ export const getUsers = async (params?: GetUsersParams): Promise<GetUsersResult>
 
     return {
       users: users || [],
-      total: typeof total === 'number' ? total : parseInt(String(total), 10),
-      page: typeof page === 'number' ? page : parseInt(String(page), 10),
-      limit: typeof limit === 'number' ? limit : parseInt(String(limit), 10),
+      total: typeof total === "number" ? total : parseInt(String(total), 10),
+      page: typeof page === "number" ? page : parseInt(String(page), 10),
+      limit: typeof limit === "number" ? limit : parseInt(String(limit), 10),
     };
   } catch (error: any) {
     const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách users";
@@ -229,14 +262,11 @@ export interface UpdateUserStatusApiResponse {
   timestamp: string;
 }
 
-export const updateUserStatus = async (
-  userId: string | number,
-  status: string
-): Promise<UpdateUserStatusResponse> => {
+export const updateUserStatus = async (userId: string | number, status: string): Promise<UpdateUserStatusResponse> => {
   try {
     // Convert userId to number if it's a string
     const id = typeof userId === "string" ? parseInt(userId, 10) : userId;
-    
+
     if (isNaN(id)) {
       throw new Error("ID người dùng không hợp lệ");
     }
@@ -248,7 +278,7 @@ export const updateUserStatus = async (
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     if (response.data.status && response.data.data) {
@@ -257,8 +287,7 @@ export const updateUserStatus = async (
 
     throw new Error(response.data.message || "Không thể cập nhật trạng thái");
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể cập nhật trạng thái";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể cập nhật trạng thái";
     throw new Error(errorMessage);
   }
 };
@@ -368,10 +397,7 @@ export interface GetStudentsByUserIdApiResponse {
   timestamp: string;
 }
 
-export const getStudentsByUserId = async (
-  userId: number | string,
-  params?: GetStudentsByUserIdParams
-): Promise<GetStudentsByUserIdResult> => {
+export const getStudentsByUserId = async (userId: number | string, params?: GetStudentsByUserIdParams): Promise<GetStudentsByUserIdResult> => {
   try {
     const requestParams: Record<string, any> = {
       page: params?.page || 1,
@@ -382,12 +408,9 @@ export const getStudentsByUserId = async (
       requestParams.search = params.search.trim();
     }
 
-    const response = await apiClient.get<GetStudentsByUserIdApiResponse>(
-      `/users/${userId}/students`,
-      {
-        params: requestParams,
-      }
-    );
+    const response = await apiClient.get<GetStudentsByUserIdApiResponse>(`/users/${userId}/students`, {
+      params: requestParams,
+    });
 
     if (response.data.status && response.data.data) {
       const data = response.data.data;
@@ -401,9 +424,7 @@ export const getStudentsByUserId = async (
 
     throw new Error(response.data.message || "Không thể lấy danh sách học sinh");
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể lấy danh sách học sinh";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách học sinh";
     throw new Error(errorMessage);
   }
 };
-

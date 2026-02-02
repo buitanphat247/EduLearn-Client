@@ -48,10 +48,10 @@ export default function LessonCard({
   };
 
   return (
-    <Link 
-      href={`/features/listening/${id}`}
+    <Link
+      href={`/listening/${id}`}
       prefetch={false}
-      onMouseEnter={() => router.prefetch(`/features/listening/${id}`)}
+      onMouseEnter={() => router.prefetch(`/listening/${id}`)}
     >
       <div className="group h-full bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-lg shadow-blue-500/5 dark:shadow-black/20 hover:shadow-2xl hover:shadow-blue-500/10 dark:hover:shadow-black/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer relative">
         <div className="p-6 flex flex-col h-full">
@@ -101,10 +101,10 @@ export default function LessonCard({
           {/* Footer Action */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-sm font-semibold text-slate-900 dark:text-white mt-auto">
             <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Bắt đầu luyện nghe</span>
-            <svg 
-              className="w-5 h-5 text-slate-400 dark:text-slate-600 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:translate-x-1 transition-all duration-300" 
-              fill="none" 
-              stroke="currentColor" 
+            <svg
+              className="w-5 h-5 text-slate-400 dark:text-slate-600 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:translate-x-1 transition-all duration-300"
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />

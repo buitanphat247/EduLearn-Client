@@ -2,380 +2,565 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
-import { Button, Dropdown, Avatar, Switch } from "antd";
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, memo } from "react";
+import { Button, Dropdown } from "antd";
 import type { MenuProps } from "antd";
-import { UserOutlined, AppstoreOutlined, MessageOutlined, MoonOutlined, SunOutlined, BulbOutlined, BulbFilled } from "@ant-design/icons";
+// Icons import from registry to avoid HMR issues
+import {
+  UserOutlined,
+  AppstoreOutlined,
+  MessageOutlined,
+} from "@/app/components/common/iconRegistry";
 import { signOut } from "@/lib/api/auth";
 import type { AuthState } from "@/lib/utils/auth-server";
 import { useTheme } from "@/app/context/ThemeContext";
+import { saveUserDataToSession, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
 import ScrollProgress from "./ScrollProgress";
+import "./Header.css";
 
+/**
+ * HeaderClient - Main navigation header component
+ * 
+ * @description 
+ * Provides the main navigation header for the application with:
+ * - Logo and branding
+ * - Navigation links (Home, News, Events)
+ * - Feature dropdown menu
+ * - About dropdown menu
+ * - User menu with profile, chat, dashboard, and logout options
+ * - Theme-aware styling (light/dark mode)
+ * - Scroll progress indicator
+ * 
+ * @example
+ * ```tsx
+ * <HeaderClient
+ *   initialAuth={{
+ *     authenticated: true,
+ *     userData: { user_id: 1, fullname: "John Doe", role_id: 3 }
+ *   }}
+ *   initialTheme="dark"
+ * />
+ * ```
+ * 
+ * @param {HeaderClientProps} props - Component props
+ * @param {AuthState} props.initialAuth - Initial authentication state with user data
+ * @param {"light" | "dark"} [props.initialTheme] - Initial theme preference (optional)
+ * 
+ * @returns {JSX.Element} Rendered header component with navigation
+ * 
+ * @accessibility
+ * - Navigation links have proper ARIA labels
+ * - Dropdown menus support keyboard navigation
+ * - User menu is keyboard accessible
+ * - Logo link has descriptive alt text
+ */
 interface HeaderClientProps {
   initialAuth: AuthState;
+  initialTheme?: "light" | "dark";
 }
 
+// Helper: Fix UTF-8 encoding errors
+const fixUtf8 = (str: string | undefined | null): string => {
+  if (!str) return "";
+  try {
+    const bytes = new Uint8Array(str.split('').map(c => c.charCodeAt(0)));
+    const decoded = new TextDecoder('utf-8').decode(bytes);
+    if (decoded.includes('\uFFFD')) return str;
+    return decoded;
+  } catch {
+    return str;
+  }
+};
+
+// Navigation configuration
+const NAV_LINKS = [
+  { to: "/", label: "Trang chủ" },
+  { to: "/news", label: "Tin tức" },
+  { to: "/events", label: "Sự kiện" },
+] as const;
+
+const FEATURE_ITEMS: MenuProps["items"] = [
+  { key: "vocabulary", label: "Học từ vựng" },
+  { key: "writing", label: "Luyện viết" },
+  { key: "listening", label: "Luyện nghe" },
+];
+
+const ABOUT_ITEMS: MenuProps["items"] = [
+  { key: "about", label: "Giới thiệu" },
+  { key: "system", label: "Hệ thống" },
+  { key: "guide", label: "Hướng dẫn" },
+  { key: "innovation", label: "Công nghệ & Đổi mới" },
+  { key: "faq", label: "FAQ" },
+];
+
+const ABOUT_ROUTES: Record<string, string> = {
+  about: "/about",
+  system: "/system",
+  guide: "/guide",
+  innovation: "/innovation",
+  faq: "/faq",
+};
+
+// Helper function to apply color to element
+const applyColorToElement = (el: HTMLElement, color: string) => {
+  el.style.setProperty('color', color, 'important');
+  el.style.setProperty('-webkit-text-fill-color', color, 'important');
+  el.style.color = color;
+  const span = el.querySelector('span');
+  if (span) {
+    (span as HTMLElement).style.setProperty('color', 'inherit', 'important');
+    (span as HTMLElement).style.setProperty('-webkit-text-fill-color', 'inherit', 'important');
+    (span as HTMLElement).style.color = 'inherit';
+  }
+};
+
 export default function HeaderClient({ initialAuth }: HeaderClientProps) {
-  const [isFeatureDropdownOpen, setIsFeatureDropdownOpen] = useState(false);
-  const [isAboutDropdownOpen, setIsAboutDropdownOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
-
-  // Helper to fix common UTF-8 encoding errors (Mojibake)
-  const fixUtf8 = (str: string | undefined | null) => {
-    if (!str) return "";
-    try {
-      // If the string contains no high-bit characters, it doesn't need fixing
-      // But we can just try to decode.
-      // Revert if decoding produces replacement characters (indicating original was likely not Mojibake)
-      const bytes = new Uint8Array(str.split('').map(c => c.charCodeAt(0)));
-      const decoded = new TextDecoder('utf-8').decode(bytes);
-      if (decoded.includes('\uFFFD')) return str;
-      return decoded;
-    } catch {
-      return str;
-    }
-  };
-
-  // Chỉ dựa vào server-side auth state, không check localStorage
-  const [user, setUser] = useState<any>(() => {
-    if (initialAuth.authenticated && initialAuth.userData) {
-      return initialAuth.userData;
-    }
-    return null;
-  });
-
-  const [authenticated, setAuthenticated] = useState(initialAuth.authenticated);
-
   const router = useRouter();
   const pathname = usePathname();
+  const { theme } = useTheme();
 
-  // Chỉ listen storage event để sync khi đăng nhập/đăng xuất từ tab khác
-  // Không check localStorage, chỉ dựa vào server-side state
-  // Backend sẽ tự động giải mã cookie khi nhận request, không cần giải mã ở frontend
+  // Local state
+  const [isFeatureDropdownOpen, setIsFeatureDropdownOpen] = useState(false);
+  const [isAboutDropdownOpen, setIsAboutDropdownOpen] = useState(false);
+  const [user, setUser] = useState<any>(() => {
+    return initialAuth.authenticated && initialAuth.userData ? initialAuth.userData : null;
+  });
+
+  // Memoize colors
+  const linkColor = useMemo(() => theme === 'dark' ? '#ffffff' : '#475569', [theme]);
+  const underlineColor = useMemo(() => theme === 'dark' ? '#60a5fa' : '#2563eb', [theme]);
+
+  // Optimized force color effect - combined useLayoutEffect and useEffect
+  useLayoutEffect(() => {
+    const forceAllColors = () => {
+      const navLinks = document.querySelectorAll('header nav a');
+      const navButtons = document.querySelectorAll('header nav button');
+
+      navLinks.forEach((link) => applyColorToElement(link as HTMLElement, linkColor));
+      navButtons.forEach((button) => applyColorToElement(button as HTMLElement, linkColor));
+    };
+
+    forceAllColors();
+    // Single timeout instead of multiple
+    const timeout = setTimeout(forceAllColors, 50);
+    return () => clearTimeout(timeout);
+  }, [theme, pathname, linkColor]);
+
+  // Sync user data on mount
   useEffect(() => {
+    if (user && typeof window !== "undefined") {
+      localStorage.setItem("user", JSON.stringify(user));
+      saveUserDataToSession(user);
+      getUserIdFromCookieAsync().catch(() => { });
+    }
+
     const handleStorageChange = () => {
-      // Khi có storage event từ tab khác, reload page để server-side check lại
-      // Server-side sẽ tự động giải mã cookie và trả về auth state mới
       window.location.reload();
     };
 
     window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [user]);
 
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
+  // Navigation handlers - memoized with useCallback
+  const handleFeatureClick: MenuProps["onClick"] = useCallback(({ key }: { key: string }) => {
+    router.push(`/${key}`);
+    setIsFeatureDropdownOpen(false);
+  }, [router]);
+
+  const handleAboutClick: MenuProps["onClick"] = useCallback(({ key }: { key: string }) => {
+    const route = ABOUT_ROUTES[key];
+    if (route) {
+      router.push(route);
+      setIsAboutDropdownOpen(false);
+    }
+  }, [router]);
+
+  const handleLogout = useCallback(async () => {
+    const savedTheme = localStorage.getItem("theme");
+    await signOut();
+    localStorage.clear();
+    if (savedTheme) localStorage.setItem("theme", savedTheme);
+    router.replace("/auth");
+  }, [router]);
+
+  // Active state detection - memoized
+  const isFeatureActive = useMemo(() => {
+    return pathname === "/vocabulary" || pathname === "/writing" || pathname === "/listening" || pathname?.startsWith("/vocabulary/") || pathname?.startsWith("/writing/") || pathname?.startsWith("/listening/");
+  }, [pathname]);
+  const isAboutActive = useMemo(
+    () => pathname === "/about" || pathname === "/system" || pathname === "/guide" || pathname === "/faq",
+    [pathname]
+  );
+
+  // User role utilities - memoized
+  const userRoleLabel = useMemo(() => {
+    if (!user) return "Thành viên";
+    const roleId = user.role_id || user.role?.role_id;
+    const roleName = user.role?.role_name?.toLowerCase() || "";
+    if (roleId === 3 || roleName === "student" || roleName === "học sinh") return "Học sinh";
+    if (roleId === 2 || roleName === "teacher" || roleName === "giáo viên" || roleName === "giảng viên") return "Giáo viên";
+    if (roleId === 1 || roleName === "admin" || roleName === "super admin") return "Quản trị viên";
+    return "Thành viên";
+  }, [user]);
+
+  const roleDashboardPath = useMemo(() => {
+    if (!user) return null;
+    const roleId = user.role_id || user.role?.role_id;
+    const roleName = user.role?.role_name?.toLowerCase() || "";
+    if (roleId === 3 || roleName === "student" || roleName === "học sinh") return "/user";
+    if (roleId === 2 || roleName === "teacher" || roleName === "giáo viên" || roleName === "giảng viên") return "/admin";
+    if (roleId === 1 || roleName === "admin" || roleName === "super admin") return "/super-admin";
+    return null;
+  }, [user]);
+
+  // Optimized force color handler
+  const createForceColorHandler = useCallback((color: string) => {
+    return (e: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>) => {
+      applyColorToElement(e.currentTarget, color);
     };
   }, []);
 
-  const navLinks = [
-    { to: "/", label: "Trang chủ" },
-    { to: "/news", label: "Tin tức" },
-    { to: "/events", label: "Sự kiện" },
-  ];
+  // Navigation link component - memoized
+  const NavLink = memo(({ to, label }: { to: string; label: string }) => {
+    const isActive = pathname === to;
+    const forceColor = createForceColorHandler(linkColor);
 
-  const featureItems: MenuProps["items"] = [
-    { key: "vocabulary", label: "Học từ vựng" },
-    { key: "writing", label: "Luyện viết" },
-    { key: "listening", label: "Luyện nghe" },
-  ];
-
-  const aboutItems: MenuProps["items"] = [
-    { key: "about", label: "Giới thiệu" },
-    { key: "system", label: "Hệ thống" },
-    { key: "guide", label: "Hướng dẫn" },
-    { key: "innovation", label: "Công nghệ & Đổi mới" },
-    { key: "faq", label: "FAQ" },
-  ];
-
-  interface AuthItem {
-    key: string;
-    label: string;
-    onClick: () => void;
-  }
-
-  const handleFeatureClick: MenuProps["onClick"] = ({ key }) => {
-    router.push(`/features/${key}`);
-    setIsFeatureDropdownOpen(false);
-  };
-
-  const handleAboutClick: MenuProps["onClick"] = ({ key }) => {
-    const routes: Record<string, string> = {
-      about: "/about",
-      system: "/system",
-      guide: "/guide",
-      innovation: "/innovation",
-      faq: "/faq",
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLAnchorElement>) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        router.push(to);
+      }
     };
-    if (routes[key]) {
-      router.push(routes[key]);
-    }
-    setIsAboutDropdownOpen(false);
-  };
 
-  const isFeatureActive = pathname?.startsWith("/features") || false;
-  const isAboutActive = pathname === "/about" || pathname === "/system" || pathname === "/guide" || pathname === "/faq" || false;
+    return (
+      <Link
+        href={to}
+        prefetch={true}
+        onMouseEnter={(e) => {
+          router.prefetch(to);
+          forceColor(e);
+        }}
+        onMouseLeave={forceColor}
+        onFocus={forceColor}
+        onBlur={forceColor}
+        onClick={forceColor}
+        onKeyDown={handleKeyDown}
+        aria-current={isActive ? 'page' : undefined}
+        aria-label={`Điều hướng đến ${label}`}
+        ref={(el) => {
+          if (el) {
+            applyColorToElement(el, linkColor);
+            setTimeout(() => applyColorToElement(el, linkColor), 0);
+          }
+        }}
+        style={{
+          position: 'relative',
+          paddingTop: '0.5rem',
+          paddingBottom: '0.5rem',
+          fontWeight: '700',
+          fontSize: '1.125rem',
+          color: linkColor,
+          textDecoration: 'none',
+          display: 'inline-block',
+          WebkitTextFillColor: linkColor,
+          '--nav-link-color': linkColor,
+        } as React.CSSProperties & { '--nav-link-color': string }}
+      >
+        <span style={{
+          position: 'relative',
+          zIndex: 10,
+          color: 'inherit',
+          display: 'inline-block',
+        }}>
+          {label}
+        </span>
+        {isActive && (
+          <span
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              width: '100%',
+              height: '2px',
+              borderRadius: '9999px',
+              backgroundColor: underlineColor,
+            }}
+          />
+        )}
+      </Link>
+    );
+  });
+  NavLink.displayName = 'NavLink';
 
-  const handleLogout = async () => {
-    // signOut() đã tự động clear tokens, cache và redirect về /auth
-    // Không cần setUser/setAuthenticated vì sẽ redirect ngay
-    await signOut();
-  };
+  // Dropdown button component - memoized
+  const DropdownNavButton = memo(({
+    label,
+    isActive,
+    isOpen,
+    onOpenChange,
+    items,
+    onClick,
+  }: {
+    label: string;
+    isActive: boolean;
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+    items: MenuProps["items"];
+    onClick: MenuProps["onClick"];
+  }) => {
+    const showUnderline = isActive || isOpen;
+    const forceColor = createForceColorHandler(linkColor);
 
-  // Get user role label
-  const getUserRoleLabel = () => {
-    if (!user) return "Thành viên";
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onOpenChange(!isOpen);
+      } else if (e.key === 'Escape' && isOpen) {
+        e.preventDefault();
+        onOpenChange(false);
+      }
+    };
 
-    const roleId = user.role_id || user.role?.role_id;
-    const roleName = user.role?.role_name?.toLowerCase() || "";
+    return (
+      <Dropdown
+        menu={{
+          items: items as MenuProps["items"],
+          onClick,
+        }}
+        placement="bottom"
+        open={isOpen}
+        onOpenChange={onOpenChange}
+      >
+        <button
+          onMouseEnter={forceColor}
+          onMouseLeave={forceColor}
+          onFocus={forceColor}
+          onBlur={forceColor}
+          onClick={forceColor}
+          onKeyDown={handleKeyDown}
+          aria-label={`${label} menu`}
+          aria-expanded={isOpen}
+          aria-haspopup="true"
+          ref={(el) => {
+            if (el) {
+              applyColorToElement(el, linkColor);
+              setTimeout(() => applyColorToElement(el, linkColor), 0);
+            }
+          }}
+          style={{
+            position: 'relative',
+            paddingTop: '0.5rem',
+            paddingBottom: '0.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+            fontWeight: '700',
+            fontSize: '1.125rem',
+            color: linkColor,
+            textDecoration: 'none',
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            WebkitTextFillColor: linkColor,
+            '--nav-button-color': linkColor,
+          } as React.CSSProperties & { '--nav-button-color': string }}
+        >
+          <span style={{
+            position: 'relative',
+            zIndex: 10,
+            color: 'inherit',
+            display: 'inline-block',
+          }}>
+            {label}
+          </span>
+          {showUnderline && (
+            <span
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                width: '100%',
+                height: '2px',
+                borderRadius: '9999px',
+                backgroundColor: underlineColor,
+              }}
+            />
+          )}
+        </button>
+      </Dropdown>
+    );
+  });
+  DropdownNavButton.displayName = 'DropdownNavButton';
 
-    // Check by role_id
-    if (roleId === 3 || roleName === "student" || roleName === "học sinh") {
-      return "Học sinh";
-    }
-    if (roleId === 2 || roleName === "teacher" || roleName === "giáo viên" || roleName === "giảng viên") {
-      return "Giáo viên";
-    }
-    if (roleId === 1 || roleName === "admin" || roleName === "super admin") {
-      return "Quản trị viên";
-    }
-
-    return "Thành viên";
-  };
-
-  // Get role dashboard path
-  const getRoleDashboardPath = () => {
-    if (!user) return null;
-
-    const roleId = user.role_id || user.role?.role_id;
-    const roleName = user.role?.role_name?.toLowerCase() || "";
-
-    // Check by role_id
-    if (roleId === 3 || roleName === "student" || roleName === "học sinh") {
-      return "/user";
-    }
-    if (roleId === 2 || roleName === "teacher" || roleName === "giáo viên" || roleName === "giảng viên") {
-      return "/admin";
-    }
-    if (roleId === 1 || roleName === "admin" || roleName === "super admin") {
-      return "/super-admin";
-    }
-
-    return null;
-  };
-
-  const userRoleLabel = getUserRoleLabel();
-  const roleDashboardPath = getRoleDashboardPath();
+  // Memoize user menu items
+  const userMenuItems = useMemo<MenuProps["items"]>(() => {
+    if (!user) return [];
+    return [
+      {
+        key: "user-info",
+        label: (
+          <div className="flex flex-col cursor-default">
+            <span className="font-semibold text-slate-800 dark:text-white text-base leading-tight">
+              {fixUtf8(user.fullname || user.username)}
+            </span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{userRoleLabel}</span>
+          </div>
+        ),
+        style: { cursor: "default", backgroundColor: "transparent", padding: "8px 12px" },
+        disabled: true,
+      },
+      { type: "divider" },
+      {
+        key: "profile",
+        icon: <UserOutlined className="text-slate-600 dark:text-slate-300" />,
+        label: (
+          <Link
+            href="/profile"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/profile")}
+            className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white"
+          >
+            Hồ sơ cá nhân
+          </Link>
+        ),
+        style: { padding: "10px 16px" },
+      },
+      {
+        key: "chat",
+        icon: <MessageOutlined className="text-slate-600 dark:text-slate-300" />,
+        label: (
+          <Link
+            href="/social"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/social")}
+            className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white"
+          >
+            Chat room
+          </Link>
+        ),
+        style: { padding: "10px 16px" },
+      },
+      ...(roleDashboardPath
+        ? [
+          {
+            key: "dashboard",
+            icon: <AppstoreOutlined className="text-slate-600 dark:text-slate-300" />,
+            label: (
+              <Link
+                href={roleDashboardPath}
+                prefetch={true}
+                onMouseEnter={() => router.prefetch(roleDashboardPath)}
+                className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white"
+              >
+                {userRoleLabel}
+              </Link>
+            ),
+            style: { padding: "10px 16px" },
+          },
+        ]
+        : []),
+      {
+        key: "logout",
+        icon: (
+          <svg className="w-4 h-4 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+            />
+          </svg>
+        ),
+        label: <span className="text-red-500 dark:text-red-400 font-medium">Đăng xuất</span>,
+        onClick: handleLogout,
+        danger: true,
+        style: { padding: "10px 16px" },
+      },
+    ];
+  }, [user, userRoleLabel, roleDashboardPath, router, handleLogout]);
 
   return (
     <>
       <ScrollProgress />
-      <header className="bg-white dark:bg-[#001529] shadow-md dark:shadow-xl shadow-slate-200 dark:shadow-slate-800 sticky top-0 z-50 transition-all duration-500 ease-in-out">
+      <header className="bg-white dark:bg-[#001529] shadow-md dark:shadow-xl shadow-slate-200 dark:shadow-slate-800 sticky top-0 z-50">
         <nav className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link 
-            href="/" 
-            prefetch={false}
+          {/* Logo */}
+          <Link
+            href="/"
+            prefetch={true}
             onMouseEnter={() => router.prefetch("/")}
             className="flex items-center space-x-3 group"
+            aria-label="Trang chủ - Thư viện số"
           >
             <div className="w-12 h-12 relative flex items-center justify-center">
-              <img src="/images/logo/1.png" alt="Thư viện số" width={48} height={48} className="object-contain" />
+              <img
+                src="/images/logo/1.png"
+                alt="Logo Thư viện số"
+                width={48}
+                height={48}
+                className="object-contain"
+                aria-hidden="true"
+              />
             </div>
-            <span className="text-2xl font-bold text-slate-800 dark:text-white capitalize transition-colors duration-300">Thư viện số</span>
+            <span className="text-2xl font-bold text-slate-800 dark:text-white capitalize no-text-transition">Thư viện số</span>
           </Link>
 
+          {/* Navigation Links */}
           <div className="hidden md:flex items-center space-x-8">
-            {navLinks.slice(0, 3).map((link) => {
-              const isActive = pathname === link.to;
-              return (
-                <Link
-                  key={link.to}
-                  href={link.to}
-                  prefetch={false}
-                  onMouseEnter={() => router.prefetch(link.to)}
-                  className={`relative py-2 transition-colors duration-200 ${!isActive ? "nav-link" : ""}`}
-                  style={{
-                    color: isActive
-                      ? undefined
-                      : theme === "dark"
-                        ? "#ffffff"
-                        : "#475569",
-                  }}
-                >
-                  <span
-                    className={`font-bold text-lg relative z-10 ${isActive ? "text-blue-600 dark:text-blue-400" : ""
-                      }`}
-                    style={
-                      !isActive
-                        ? {
-                          color: theme === "dark" ? "#ffffff" : "#475569",
-                        }
-                        : undefined
-                    }
-                  >
-                    {link.label}
-                  </span>
-                  {/* Active underline */}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
-                  )}
-                </Link>
-              );
-            })}
+            {NAV_LINKS.map((link) => (
+              <NavLink key={link.to} to={link.to} label={link.label} />
+            ))}
 
-            <Dropdown
-              menu={{
-                items: featureItems,
-                onClick: handleFeatureClick,
-                className: "user-dropdown-menu"
-              }}
-              placement="bottom"
-              open={isFeatureDropdownOpen}
+            <DropdownNavButton
+              label="Tính năng"
+              isActive={isFeatureActive}
+              isOpen={isFeatureDropdownOpen}
               onOpenChange={setIsFeatureDropdownOpen}
-              overlayClassName="user-dropdown-overlay"
-            >
-              <button
-                className={`relative py-2 flex items-center gap-1 transition-colors duration-200 ${isFeatureActive || isFeatureDropdownOpen
-                  ? "text-blue-600 dark:text-blue-400"
-                  : "nav-link"
-                  }`}
-                style={
-                  !(isFeatureActive || isFeatureDropdownOpen)
-                    ? {
-                      color: theme === "dark" ? "#ffffff" : "#475569",
-                    }
-                    : undefined
-                }
-              >
-                <span className="font-bold text-lg relative z-10">Tính năng</span>
-                {/* Active underline */}
-                {(isFeatureActive || isFeatureDropdownOpen) && (
-                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
-                )}
-              </button>
-            </Dropdown>
+              items={FEATURE_ITEMS}
+              onClick={handleFeatureClick}
+            />
 
-            <Dropdown
-              menu={{
-                items: aboutItems,
-                onClick: handleAboutClick,
-                className: "user-dropdown-menu"
-              }}
-              placement="bottom"
-              open={isAboutDropdownOpen}
+            <DropdownNavButton
+              label="Về chúng tôi"
+              isActive={isAboutActive}
+              isOpen={isAboutDropdownOpen}
               onOpenChange={setIsAboutDropdownOpen}
-              overlayClassName="user-dropdown-overlay"
-            >
-              <button
-                className={`relative py-2 flex items-center gap-1 transition-colors duration-200 ${isAboutActive || isAboutDropdownOpen
-                  ? "text-blue-600 dark:text-blue-400"
-                  : "nav-link"
-                  }`}
-                style={
-                  !(isAboutActive || isAboutDropdownOpen)
-                    ? {
-                      color: theme === "dark" ? "#ffffff" : "#475569",
-                    }
-                    : undefined
-                }
-              >
-                <span className="font-bold text-lg relative z-10">Về chúng tôi</span>
-                {/* Active underline */}
-                {(isAboutActive || isAboutDropdownOpen) && (
-                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
-                )}
-              </button>
-            </Dropdown>
+              items={ABOUT_ITEMS}
+              onClick={handleAboutClick}
+            />
           </div>
 
+          {/* Right Side: User Menu */}
           <div className="flex items-center gap-5">
-            <button
-              onClick={(e) => toggleTheme(e)}
-              className="theme-toggle-btn"
-              aria-label="Toggle Theme"
-            >
-              {theme === "dark" ? <BulbFilled /> : <BulbOutlined />}
-            </button>
             {user ? (
               <Dropdown
                 menu={{
-                  items: [
-                    {
-                      key: 'user-info',
-                      label: (
-                        <div className="flex flex-col cursor-default">
-                          <span className="font-semibold text-slate-800 dark:text-white text-base leading-tight">{fixUtf8(user.fullname || user.username)}</span>
-                          <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{userRoleLabel}</span>
-                        </div>
-                      ),
-                      style: { cursor: 'default', backgroundColor: 'transparent', padding: '8px 12px' },
-                      disabled: true,
-                    },
-                    { type: 'divider' },
-                    {
-                      key: "profile",
-                      icon: <UserOutlined className="text-slate-600 dark:text-slate-300" />,
-                      label: (
-                        <Link 
-                          href="/profile" 
-                          prefetch={false}
-                          onMouseEnter={() => router.prefetch("/profile")}
-                          className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white"
-                        >
-                          Hồ sơ cá nhân
-                        </Link>
-                      ),
-                      style: { padding: '10px 16px' },
-                    },
-                    {
-                      key: "chat",
-                      icon: <MessageOutlined className="text-slate-600 dark:text-slate-300" />,
-                      label: (
-                        <Link 
-                          href="/social" 
-                          prefetch={false}
-                          onMouseEnter={() => router.prefetch("/social")}
-                          className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white"
-                        >
-                          Chat room
-                        </Link>
-                      ),
-                      style: { padding: '10px 16px' },
-                    },
-                    ...(roleDashboardPath ? [{
-                      key: "dashboard",
-                      icon: <AppstoreOutlined className="text-slate-600 dark:text-slate-300" />,
-                      label: (
-                        <Link 
-                          href={roleDashboardPath} 
-                          prefetch={false}
-                          onMouseEnter={() => router.prefetch(roleDashboardPath)}
-                          className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white"
-                        >
-                          {userRoleLabel}
-                        </Link>
-                      ),
-                      style: { padding: '10px 16px' },
-                    }] : []),
-                    {
-                      key: "logout",
-                      icon: (
-                        <svg className="w-4 h-4 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                      ),
-                      label: <span className="text-red-500 dark:text-red-400 font-medium">Đăng xuất</span>,
-                      onClick: handleLogout,
-                      danger: true,
-                      style: { padding: '10px 16px' },
-                    },
-                  ],
-                  className: "user-dropdown-menu"
+                  items: userMenuItems,
+                  className: "user-dropdown-menu",
                 }}
                 placement="bottomRight"
                 arrow={{ pointAtCenter: true }}
-                trigger={['click']}
-                overlayClassName="user-dropdown-overlay"
+                trigger={["click"]}
+                classNames={{ root: "user-dropdown-overlay" }}
               >
-                <div className="flex items-center gap-3 cursor-pointer group py-1">
+                <div
+                  className="flex items-center gap-3 cursor-pointer group py-1"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Menu người dùng"
+                  aria-haspopup="true"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      // Trigger dropdown click
+                      const button = e.currentTarget;
+                      button.click();
+                    }
+                  }}
+                >
                   <div className="w-10 h-10 rounded-full border-2 border-slate-200 dark:border-white/30 bg-slate-100 dark:bg-white/20 backdrop-blur-sm flex items-center justify-center text-slate-600 dark:text-white group-hover:bg-white group-hover:text-blue-600 group-hover:border-blue-500 transition-colors duration-300 shadow-sm relative overflow-hidden">
                     {user.avatar ? (
                       <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
@@ -386,24 +571,31 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
                     )}
                   </div>
                   <div className="hidden md:block text-right">
-                    <div className="text-sm font-bold text-slate-700 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
+                    <div className="text-sm font-bold text-slate-700 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400">
                       {fixUtf8(user.fullname || user.username)}
                     </div>
                     <div className="text-[10px] text-slate-500 dark:text-blue-100 font-medium opacity-80 uppercase tracking-widest group-hover:opacity-100 transition-opacity duration-300">
                       {userRoleLabel.toUpperCase()}
                     </div>
                   </div>
-                  <svg className="w-4 h-4 text-slate-500 dark:text-blue-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-4 h-4 text-slate-500 dark:text-blue-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 hidden md:block"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
               </Dropdown>
             ) : (
-              <>
-                <Button type="default" onClick={() => router.push("/auth")}>
-                  Đăng Nhập
-                </Button>
-              </>
+              <Button
+                type="default"
+                onClick={() => router.push("/auth")}
+                aria-label="Đăng nhập vào hệ thống"
+              >
+                Đăng Nhập
+              </Button>
             )}
           </div>
         </nav>

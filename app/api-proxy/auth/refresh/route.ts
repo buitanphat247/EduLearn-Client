@@ -1,4 +1,6 @@
 import { NextRequest } from 'next/server';
+import { TIMEOUTS } from '../../constants';
+import { createErrorResponse, handleFetchError, logError } from '../../utils/errorHandler';
 
 export const revalidate = 0;
 
@@ -15,7 +17,7 @@ export async function POST(request: NextRequest) {
     if (cookieHeader) headers['Cookie'] = cookieHeader;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.PROFILE);
 
     const backendResponse = await fetch(url, {
       method: 'POST',
@@ -27,10 +29,7 @@ export async function POST(request: NextRequest) {
     const contentType = backendResponse.headers.get('content-type');
     
     if (!contentType?.includes('application/json')) {
-      return new Response(
-        JSON.stringify({ status: false, message: 'Invalid response format', data: null }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
+      return createErrorResponse('Invalid response format', 500);
     }
 
     const data = await backendResponse.json();
@@ -57,11 +56,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    const status = error.name === 'AbortError' ? 504 : 
-                   error.message?.includes('ECONNREFUSED') ? 503 : 500;
-    return new Response(
-      JSON.stringify({ status: false, message: error?.message || 'Server error', data: null }),
-      { status, headers: { 'Content-Type': 'application/json' } }
-    );
+    return handleFetchError(error, '/auth/refresh', 'POST');
   }
 }

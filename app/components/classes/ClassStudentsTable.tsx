@@ -132,24 +132,24 @@ function ClassStudentsTable({ students, onViewStudent, onRemoveStudent, onBanStu
               )
             ) : (
               onBanStudent && (
-                <Button 
-                  icon={<StopOutlined />} 
-                  size="small" 
-                  danger
-                  onClick={() => onBanStudent(record)} 
-                  className="cursor-pointer"
-                >
-                  Cấm
-                </Button>
+              <Button 
+                icon={<StopOutlined />} 
+                size="small" 
+                danger 
+                onClick={() => onBanStudent(record)} 
+                className="cursor-pointer"
+              >
+                Cấm
+              </Button>
               )
             )}
-            <Button 
+              <Button 
               icon={<DeleteOutlined />} 
-              size="small" 
-              danger 
+                size="small" 
+                danger 
               onClick={() => onRemoveStudent(record)} 
-              className="cursor-pointer"
-            >
+                className="cursor-pointer"
+              >
               Xóa
             </Button>
           </Space>

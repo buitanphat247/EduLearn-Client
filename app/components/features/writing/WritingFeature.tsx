@@ -30,85 +30,84 @@ import WritingFeatureSkeleton from "./WritingFeatureSkeleton";
 // Memoized History Item Component with custom comparison
 const HistoryItem = memo(
   ({ item, onNavigate }: { item: WritingHistoryItem; onNavigate: (item: WritingHistoryItem) => void }) => {
-  const type = useMemo(() => {
-    if (item.practiceType === "IELTS") return "IELTS";
-    if (item.practiceType === "WORK") return "Công việc";
-    return "Giao tiếp";
-  }, [item.practiceType]);
+    const type = useMemo(() => {
+      if (item.practiceType === "IELTS") return "IELTS";
+      if (item.practiceType === "WORK") return "Công việc";
+      return "Giao tiếp";
+    }, [item.practiceType]);
 
-  const previewText = useMemo(() => {
-    if (item.vietnameseSentences && item.vietnameseSentences.length > 0) {
-      const firstSentence = item.vietnameseSentences[0];
-      const parts = firstSentence.split(":");
-      return parts.slice(1).join(":").trim();
-    }
-    return item.topic || "Chủ đề luyện viết";
-  }, [item.vietnameseSentences, item.topic]);
+    const previewText = useMemo(() => {
+      if (item.vietnameseSentences && item.vietnameseSentences.length > 0) {
+        const firstSentence = item.vietnameseSentences[0];
+        const parts = firstSentence.split(":");
+        return parts.slice(1).join(":").trim();
+      }
+      return item.topic || "Chủ đề luyện viết";
+    }, [item.vietnameseSentences, item.topic]);
 
-  const relativeTime = useMemo(() => {
-    if (!item.created_at) return "Vừa xong";
-    const date = new Date(item.created_at);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const relativeTime = useMemo(() => {
+      if (!item.created_at) return "Vừa xong";
+      const date = new Date(item.created_at);
+      const now = new Date();
+      const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-    if (diffInSeconds < 60) return "Vừa xong";
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút trước`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} ngày trước`;
-    return date.toLocaleDateString("vi-VN");
-  }, [item.created_at]);
+      if (diffInSeconds < 60) return "Vừa xong";
+      if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút trước`;
+      if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
+      if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} ngày trước`;
+      return date.toLocaleDateString("vi-VN");
+    }, [item.created_at]);
 
-  // Calculate progress: current_index / totalSentences
-  const progressInfo = useMemo(() => {
-    const currentIndex = typeof item.current_index === "number" ? item.current_index : 0;
-    const total = item.totalSentences || 0;
-    
-    if (total === 0) return null;
-    
-    // If current_index >= total, means completed
-    if (currentIndex >= total) {
-      return { text: "Hoàn thành", isCompleted: true };
-    }
-    
-    // Show current progress (current_index is 0-based, so display current_index + 1)
-    return { text: `Câu ${currentIndex + 1}/${total}`, isCompleted: false };
-  }, [item.current_index, item.totalSentences]);
+    // Calculate progress: current_index / totalSentences
+    const progressInfo = useMemo(() => {
+      const currentIndex = typeof item.current_index === "number" ? item.current_index : 0;
+      const total = item.totalSentences || 0;
 
-  return (
-    <div
-      onClick={() => onNavigate(item)}
-      className="group bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/50 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl p-4 transition-all cursor-pointer shadow-sm"
-    >
-      <div className="flex justify-between items-start mb-2">
-        <span className="text-xs font-medium px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">{type}</span>
-        <div className="flex items-center gap-2">
-          {progressInfo && (
-            <span
-              className={`text-xs font-bold px-2 py-0.5 rounded border ${
-                progressInfo.isCompleted
+      if (total === 0) return null;
+
+      // If current_index >= total, means completed
+      if (currentIndex >= total) {
+        return { text: "Hoàn thành", isCompleted: true };
+      }
+
+      // Show current progress (current_index is 0-based, so display current_index + 1)
+      return { text: `Câu ${currentIndex + 1}/${total}`, isCompleted: false };
+    }, [item.current_index, item.totalSentences]);
+
+    return (
+      <div
+        onClick={() => onNavigate(item)}
+        className="group bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/50 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl p-4 transition-all cursor-pointer shadow-sm"
+      >
+        <div className="flex justify-between items-start mb-2">
+          <span className="text-xs font-medium px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">{type}</span>
+          <div className="flex items-center gap-2">
+            {progressInfo && (
+              <span
+                className={`text-xs font-bold px-2 py-0.5 rounded border ${progressInfo.isCompleted
                   ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                   : "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
-              }`}
-            >
-              {progressInfo.text}
-            </span>
-          )}
-          {item.userPoints !== undefined && item.userPoints > 0 && (
-            <span className="text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center gap-1 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-              <StarFilled className="text-[10px]" /> {item.userPoints.toFixed(1)}
-            </span>
-          )}
+                  }`}
+              >
+                {progressInfo.text}
+              </span>
+            )}
+            {item.userPoints !== undefined && item.userPoints > 0 && (
+              <span className="text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center gap-1 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                <StarFilled className="text-[10px]" /> {item.userPoints.toFixed(1)}
+              </span>
+            )}
+          </div>
+        </div>
+        <h4 className="text-slate-900 dark:text-slate-200 text-sm font-medium mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{previewText}</h4>
+        <div className="flex items-center justify-between text-xs text-slate-500">
+          <span className="flex items-center gap-1">
+            <ClockCircleOutlined /> {relativeTime}
+          </span>
+          <RightOutlined className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-blue-600 dark:text-blue-400" />
         </div>
       </div>
-      <h4 className="text-slate-900 dark:text-slate-200 text-sm font-medium mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{previewText}</h4>
-      <div className="flex items-center justify-between text-xs text-slate-500">
-        <span className="flex items-center gap-1">
-          <ClockCircleOutlined /> {relativeTime}
-        </span>
-        <RightOutlined className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-blue-600 dark:text-blue-400" />
-      </div>
-    </div>
-  );
+    );
   },
   (prevProps, nextProps) => {
     // Custom comparison to prevent re-render if item data hasn't changed
@@ -241,14 +240,20 @@ export default function WritingFeature() {
     }
   }, []);
 
-  // Initial load
+  // Initial load - Load topics first, then history (non-blocking)
   useEffect(() => {
     const initData = async () => {
       try {
-        await Promise.all([fetchTopics("communication"), fetchHistory()]);
+        // Load topics first (required for form)
+        await fetchTopics("communication");
+        // Set loading to false after topics load (don't wait for history)
+        setIsInitialLoading(false);
+        // Load history in background (non-blocking)
+        fetchHistory().catch((error) => {
+          console.error("Error fetching history:", error);
+        });
       } catch (error) {
         console.error("Error initializing data:", error);
-      } finally {
         setIsInitialLoading(false);
       }
     };
@@ -280,7 +285,7 @@ export default function WritingFeature() {
       if (item.id) {
         // Navigate using history_id (number from database)
         // No need to save to sessionStorage - practice page will fetch from API
-        router.push(`/features/writing/${item.id}`);
+        router.push(`/writing/${item.id}`);
       } else {
         message.error("Không tìm thấy ID của bài luyện tập");
       }
@@ -339,7 +344,7 @@ export default function WritingFeature() {
         await fetchHistory();
 
         // Navigate to practice page with generated content ID
-        router.push(`/features/writing/${response.id}`);
+        router.push(`/writing/${response.id}`);
       } catch (error: any) {
         message.error(error?.message || "Không thể tạo bài luyện viết");
       } finally {
@@ -401,202 +406,225 @@ export default function WritingFeature() {
     });
   }, [topics]);
 
-  if (isInitialLoading) {
-    return <WritingFeatureSkeleton />;
-  }
 
   return (
     <div className="container mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
       {/* Left Column: Configuration Form */}
       <div className="lg:col-span-4">
-        <div className="bg-white dark:bg-[#1e293b] rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-xl relative overflow-hidden transition-colors duration-300">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none"></div>
+        {isInitialLoading ? (
+          <div className="bg-white dark:bg-[#1e293b] rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-xl animate-pulse">
+            <div className="h-8 w-48 bg-slate-200 dark:bg-slate-700/50 rounded-lg mx-auto mb-6" />
+            <div className="space-y-6">
+              <div className="h-10 w-full bg-slate-100 dark:bg-slate-700/30 rounded-lg" />
+              <div className="h-20 w-full bg-slate-100 dark:bg-slate-700/30 rounded-lg" />
+              <div className="h-20 w-full bg-slate-100 dark:bg-slate-700/30 rounded-lg" />
+              <div className="h-11 w-full bg-slate-200 dark:bg-slate-700/50 rounded-xl" />
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-[#1e293b] rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-xl relative overflow-hidden transition-colors duration-300">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none"></div>
 
-          <h2 className="text-xl font-bold text-center text-slate-900 dark:text-white mb-6 flex items-center justify-center gap-2">
-            <span className="text-yellow-500 dark:text-yellow-400 text-2xl animate-pulse">✨</span>
-            <span>Tạo bài luyện viết mới</span>
-          </h2>
+            <h2 className="text-xl font-bold text-center text-slate-900 dark:text-white mb-6 flex items-center justify-center gap-2">
+              <span className="text-yellow-500 dark:text-yellow-400 text-2xl animate-pulse">✨</span>
+              <span>Tạo bài luyện viết mới</span>
+            </h2>
 
-          <Form form={form} layout="vertical" className="relative z-10" onFinish={handleSubmit}>
-            {/* Row 1: Language */}
-            <Form.Item
-              label={
-                <span className="text-slate-600 dark:text-slate-300 font-medium text-sm">
-                  <span className="mr-2">🌍</span>Ngôn ngữ
-                </span>
-              }
-              name="language"
-              initialValue="en"
-              className="mb-4"
-            >
-              <Select
-                className="w-full text-sm"
-                disabled
-                size="middle"
-                popupClassName="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
-                options={languageOptions}
-              />
-            </Form.Item>
-
-            {/* Row 2: Learning Goal */}
-            <Form.Item
-              label={
-                <span className="text-slate-600 dark:text-slate-300 font-medium text-base">
-                  <span className="mr-2">🎯</span>Mục đích học
-                </span>
-              }
-              name="goal"
-              initialValue="communication"
-              className="mb-5"
-            >
-              <div className="grid grid-cols-3 gap-3">
-                {goalOptions.map((item) => (
-                  <Form.Item shouldUpdate noStyle key={item.value}>
-                    {({ getFieldValue, setFieldsValue }) => {
-                      const isSelected = getFieldValue("goal") === item.value;
-                      let activeClass = "";
-                      if (isSelected) {
-                        if (item.color === "red") activeClass = "bg-red-500/10 border-red-500 text-red-600 dark:text-red-500";
-                        if (item.color === "blue") activeClass = "bg-blue-500/10 border-blue-500 text-blue-600 dark:text-blue-500";
-                        if (item.color === "amber") activeClass = "bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-500";
-                      } else {
-                        activeClass = "bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800";
-                      }
-
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFieldsValue({ goal: item.value });
-                            handleGoalChange(item.value);
-                          }}
-                          className={`h-10 flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg border transition-all ${activeClass}`}
-                        >
-                          {item.icon} {item.label}
-                        </button>
-                      );
-                    }}
-                  </Form.Item>
-                ))}
-              </div>
-            </Form.Item>
-
-            {/* Row 3: Method */}
-            <Form.Item
-              label={
-                <span className="text-slate-600 dark:text-slate-300 font-medium text-sm">
-                  <span className="mr-2">📝</span>Cách tạo bài
-                </span>
-              }
-              name="method"
-              initialValue="ai"
-              className="mb-4"
-            >
-              <div className="grid grid-cols-2 gap-3">
-                {methodOptions.map((item) => (
-                  <Form.Item shouldUpdate noStyle key={item.value}>
-                    {({ getFieldValue, setFieldsValue }) => {
-                      const isSelected = getFieldValue("method") === item.value;
-                      let activeClass = "";
-                      if (isSelected) {
-                        if (item.color === "blue") activeClass = "bg-blue-500/10 border-blue-500 text-blue-600 dark:text-blue-500";
-                        if (item.color === "purple") activeClass = "bg-purple-500/10 border-purple-500 text-purple-600 dark:text-purple-500";
-                      } else {
-                        activeClass = "bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800";
-                      }
-
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => setFieldsValue({ method: item.value })}
-                          className={`h-10 flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg border transition-all ${activeClass}`}
-                        >
-                          {item.icon} {item.label}
-                        </button>
-                      );
-                    }}
-                  </Form.Item>
-                ))}
-              </div>
-            </Form.Item>
-
-            {/* Row 4: Topic */}
-            <div className="space-y-3 mb-6">
+            <Form form={form} layout="vertical" className="relative z-10" onFinish={handleSubmit}>
+              {/* Row 1: Language */}
               <Form.Item
                 label={
                   <span className="text-slate-600 dark:text-slate-300 font-medium text-sm">
-                    <span className="mr-2">📚</span>Chủ đề
+                    <span className="mr-2">🌍</span>Ngôn ngữ
                   </span>
                 }
-                name="topic_select"
-                className="mb-0"
+                name="language"
+                initialValue="en"
+                className="mb-4"
               >
                 <Select
                   className="w-full text-sm"
+                  disabled
                   size="middle"
                   popupClassName="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
-                  placeholder="Chọn chủ đề..."
-                  loading={loadingTopics}
-                  notFoundContent={loadingTopics ? <Spin size="small" /> : "Không có chủ đề nào"}
-                  options={topicOptions}
+                  options={languageOptions}
                 />
               </Form.Item>
-              <Form.Item name="topic_custom" className="mb-0">
-                <Input
-                  size="middle"
-                  placeholder="Hoặc nhập chủ đề bạn muốn viết..."
-                  className="text-sm bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-900/80"
-                />
-              </Form.Item>
-            </div>
 
-            <Button
-              type="primary"
-              htmlType="submit"
-              block
-              size="large"
-              loading={submitting}
-              className="bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none shadow-lg shadow-blue-500/20 text-base font-bold h-11 rounded-xl"
-              icon={<RocketOutlined />}
-            >
-              Bắt đầu luyện viết
-            </Button>
-          </Form>
-        </div>
+              {/* Row 2: Learning Goal */}
+              <Form.Item
+                label={
+                  <span className="text-slate-600 dark:text-slate-300 font-medium text-base">
+                    <span className="mr-2">🎯</span>Mục đích học
+                  </span>
+                }
+                name="goal"
+                initialValue="communication"
+                className="mb-5"
+              >
+                <div className="grid grid-cols-3 gap-3">
+                  {goalOptions.map((item) => (
+                    <Form.Item shouldUpdate noStyle key={item.value}>
+                      {({ getFieldValue, setFieldsValue }) => {
+                        const isSelected = getFieldValue("goal") === item.value;
+                        let activeClass = "";
+                        if (isSelected) {
+                          if (item.color === "red") activeClass = "bg-red-500/10 border-red-500 text-red-600 dark:text-red-500";
+                          if (item.color === "blue") activeClass = "bg-blue-500/10 border-blue-500 text-blue-600 dark:text-blue-500";
+                          if (item.color === "amber") activeClass = "bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-500";
+                        } else {
+                          activeClass = "bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800";
+                        }
+
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFieldsValue({ goal: item.value });
+                              handleGoalChange(item.value);
+                            }}
+                            className={`h-10 flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg border transition-all ${activeClass}`}
+                          >
+                            {item.icon} {item.label}
+                          </button>
+                        );
+                      }}
+                    </Form.Item>
+                  ))}
+                </div>
+              </Form.Item>
+
+              {/* Row 3: Method */}
+              <Form.Item
+                label={
+                  <span className="text-slate-600 dark:text-slate-300 font-medium text-sm">
+                    <span className="mr-2">📝</span>Cách tạo bài
+                  </span>
+                }
+                name="method"
+                initialValue="ai"
+                className="mb-4"
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  {methodOptions.map((item) => (
+                    <Form.Item shouldUpdate noStyle key={item.value}>
+                      {({ getFieldValue, setFieldsValue }) => {
+                        const isSelected = getFieldValue("method") === item.value;
+                        let activeClass = "";
+                        if (isSelected) {
+                          if (item.color === "blue") activeClass = "bg-blue-500/10 border-blue-500 text-blue-600 dark:text-blue-500";
+                          if (item.color === "purple") activeClass = "bg-purple-500/10 border-purple-500 text-purple-600 dark:text-purple-500";
+                        } else {
+                          activeClass = "bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800";
+                        }
+
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => setFieldsValue({ method: item.value })}
+                            className={`h-10 flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg border transition-all ${activeClass}`}
+                          >
+                            {item.icon} {item.label}
+                          </button>
+                        );
+                      }}
+                    </Form.Item>
+                  ))}
+                </div>
+              </Form.Item>
+
+              {/* Row 4: Topic */}
+              <div className="space-y-3 mb-6">
+                <Form.Item
+                  label={
+                    <span className="text-slate-600 dark:text-slate-300 font-medium text-sm">
+                      <span className="mr-2">📚</span>Chủ đề
+                    </span>
+                  }
+                  name="topic_select"
+                  className="mb-0"
+                >
+                  <Select
+                    className="w-full text-sm"
+                    size="middle"
+                    popupClassName="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                    placeholder="Chọn chủ đề..."
+                    loading={loadingTopics}
+                    notFoundContent={loadingTopics ? <Spin size="small" /> : "Không có chủ đề nào"}
+                    options={topicOptions}
+                  />
+                </Form.Item>
+                <Form.Item name="topic_custom" className="mb-0">
+                  <Input
+                    size="middle"
+                    placeholder="Hoặc nhập chủ đề bạn muốn viết..."
+                    className="text-sm bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-900/80"
+                  />
+                </Form.Item>
+              </div>
+
+              <Button
+                type="primary"
+                htmlType="submit"
+                block
+                size="large"
+                loading={submitting}
+                className="bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none shadow-lg shadow-blue-500/20 text-base font-bold h-11 rounded-xl"
+                icon={<RocketOutlined />}
+              >
+                Bắt đầu luyện viết
+              </Button>
+            </Form>
+          </div>
+        )}
       </div>
 
       {/* Right Column: Practice History */}
       <div className="lg:col-span-8">
-        <div className="bg-white dark:bg-[#1e293b] rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-xl sticky top-8 transition-colors duration-300">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <HistoryOutlined className="text-blue-600 dark:text-blue-400" />
-              Lịch sử luyện tập
-            </h3>
-            <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors border border-slate-200 dark:border-slate-700">
-              Xem tất cả
-            </span>
-          </div>
-
-          {loadingHistories ? (
-            <div className="flex justify-center py-8">
-              <Spin />
+        {isInitialLoading || loadingHistories ? (
+          <div className="bg-white dark:bg-[#1e293b] rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-xl">
+            <div className="flex items-center justify-between mb-6">
+              <div className="h-7 w-40 bg-slate-200 dark:bg-slate-700/50 rounded-lg animate-pulse" />
+              <div className="h-6 w-20 bg-slate-200 dark:bg-slate-700/50 rounded-full animate-pulse" />
             </div>
-          ) : histories.length > 0 ? (
             <div className="space-y-4">
-              {histories.map((item) => (
-                <HistoryItem key={item.id} item={item} onNavigate={handleHistoryNavigate} />
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-24 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700/30 rounded-xl animate-pulse" />
               ))}
             </div>
-          ) : (
-            <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm italic">Chưa có lịch sử luyện tập</div>
-          )}
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-[#1e293b] rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-xl sticky top-8 transition-colors duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <HistoryOutlined className="text-blue-600 dark:text-blue-400" />
+                Lịch sử luyện tập
+              </h3>
+              <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors border border-slate-200 dark:border-slate-700">
+                Xem tất cả
+              </span>
+            </div>
 
-          <button className="w-full mt-4 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 rounded-xl transition-all">
-            Xem lịch sử chi tiết
-          </button>
-        </div>
+            {loadingHistories ? (
+              <div className="flex justify-center py-8">
+                <Spin />
+              </div>
+            ) : histories.length > 0 ? (
+              <div className="space-y-4">
+                {histories.map((item) => (
+                  <HistoryItem key={item.id} item={item} onNavigate={handleHistoryNavigate} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm italic">Chưa có lịch sử luyện tập</div>
+            )}
+
+            <button className="w-full mt-4 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 rounded-xl transition-all">
+              Xem lịch sử chi tiết
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

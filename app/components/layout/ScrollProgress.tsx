@@ -1,9 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+
+// Throttle function để giới hạn số lần gọi callback
+const throttle = <T extends (...args: any[]) => void>(
+  func: T,
+  delay: number
+): ((...args: Parameters<T>) => void) => {
+  let lastCall = 0;
+  let timeoutId: NodeJS.Timeout | null = null;
+
+  return (...args: Parameters<T>) => {
+    const now = Date.now();
+    const timeSinceLastCall = now - lastCall;
+
+    if (timeSinceLastCall >= delay) {
+      lastCall = now;
+      func(...args);
+    } else {
+      // Clear existing timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      // Schedule call for remaining time
+      timeoutId = setTimeout(() => {
+        lastCall = Date.now();
+        func(...args);
+        timeoutId = null;
+      }, delay - timeSinceLastCall);
+    }
+  };
+};
+
+const THROTTLE_DELAY_MS = 16; // ~60fps (16ms per frame)
 
 export default function ScrollProgress() {
   const [scrollProgress, setScrollProgress] = useState(0);
+  const throttledCalculateRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const calculateScrollProgress = () => {
@@ -23,13 +56,18 @@ export default function ScrollProgress() {
     // Tính toán ban đầu
     calculateScrollProgress();
 
-    // Lắng nghe sự kiện scroll
-    window.addEventListener("scroll", calculateScrollProgress, { passive: true });
-    window.addEventListener("resize", calculateScrollProgress, { passive: true });
+    // Tạo throttled version của calculateScrollProgress
+    const throttledCalculate = throttle(calculateScrollProgress, THROTTLE_DELAY_MS);
+    throttledCalculateRef.current = throttledCalculate;
+
+    // Lắng nghe sự kiện scroll với throttling
+    window.addEventListener("scroll", throttledCalculate, { passive: true });
+    window.addEventListener("resize", throttledCalculate, { passive: true });
 
     return () => {
-      window.removeEventListener("scroll", calculateScrollProgress);
-      window.removeEventListener("resize", calculateScrollProgress);
+      window.removeEventListener("scroll", throttledCalculate);
+      window.removeEventListener("resize", throttledCalculate);
+      throttledCalculateRef.current = null;
     };
   }, []);
 

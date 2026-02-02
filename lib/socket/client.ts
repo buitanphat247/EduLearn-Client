@@ -32,26 +32,38 @@ class SocketClient {
   }
 
   /**
-   * Get access token from localStorage or cookie
+   * Get access token from cookie (more secure than localStorage)
+   * ✅ Removed localStorage fallback to prevent XSS risk
    */
   private getAccessToken(): string | null {
     if (typeof window === "undefined") return null;
     
-    // Try localStorage first
-    const token = localStorage.getItem("accessToken");
-    if (token) return token;
-
-    // Try to get from user cookie
+    // ✅ Try cookie first (more secure, httpOnly cookies are not accessible via JS)
+    // Note: If token is in httpOnly cookie, it won't be accessible here
+    // This method should be used for non-httpOnly tokens only
     try {
-      const userStr = localStorage.getItem("user");
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        return user.access_token || null;
+      const cookies = document.cookie.split(';');
+      for (const cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        // Check for common token cookie names
+        if ((name === '_at' || name === 'access_token') && value) {
+          try {
+            return decodeURIComponent(value);
+          } catch {
+            return value;
+          }
+        }
       }
     } catch (error) {
-      console.error("Error parsing user from localStorage:", error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Error getting token from cookie:", error);
+      }
     }
 
+    // ❌ Removed localStorage fallback (security risk - XSS vulnerability)
+    // If token is needed, it should be provided via httpOnly cookie or secure context
+    // Only use localStorage if absolutely necessary and document the security risk
+    
     return null;
   }
 

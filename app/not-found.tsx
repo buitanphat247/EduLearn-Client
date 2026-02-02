@@ -10,9 +10,9 @@ import { track404, trackEvent } from "@/lib/utils/analytics";
 // Popular pages to suggest
 const POPULAR_PAGES = [
   { href: "/", label: "Trang chủ", icon: <HomeOutlined /> },
-  { href: "/features/vocabulary", label: "Từ vựng", icon: <RocketOutlined /> },
-  { href: "/features/writing", label: "Luyện viết", icon: <RocketOutlined /> },
-  { href: "/features/listening", label: "Luyện nghe", icon: <RocketOutlined /> },
+  { href: "/vocabulary", label: "Từ vựng", icon: <RocketOutlined /> },
+  { href: "/writing", label: "Luyện viết", icon: <RocketOutlined /> },
+  { href: "/listening", label: "Luyện nghe", icon: <RocketOutlined /> },
   { href: "/news", label: "Tin tức", icon: <RocketOutlined /> },
   { href: "/events", label: "Sự kiện", icon: <RocketOutlined /> },
   { href: "/about", label: "Về chúng tôi", icon: <RocketOutlined /> },
@@ -50,7 +50,7 @@ export default function NotFound() {
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
-    
+
     // Track search event
     trackEvent({
       event_name: "404_search",

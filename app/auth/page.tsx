@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Form, Input, Button, Divider, Checkbox, App, Radio, ConfigProvider, theme, Select } from "antd";
+import { Form, Input, Button, Divider, Checkbox, App, ConfigProvider, theme, Select } from "antd";
 import { UserOutlined, LockOutlined, MailOutlined, GoogleOutlined, FacebookFilled } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -20,13 +20,29 @@ export default function AuthPage() {
   const isFirstMount = useRef(true); // Track first mount to skip animation on refresh
   const [shouldAnimate, setShouldAnimate] = useState(false); // Control animation state
 
+  // ✅ Fix race condition - Add isMounted check và cleanup
   useEffect(() => {
-    const user = getCurrentUser();
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+    let isMounted = true;
+    
+    const checkAuth = async () => {
+      // Wait a bit to ensure cookies are set
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      if (!isMounted) return;
+      
+      const user = getCurrentUser();
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 
-    if (user && token) {
-      router.push("/profile");
-    }
+      if (user && token) {
+        router.push("/profile");
+      }
+    };
+    
+    checkAuth();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [router]);
 
   // Reset animation state when form changes (after animation completes)
@@ -40,14 +56,51 @@ export default function AuthPage() {
     }
   }, [isSignUp, shouldAnimate]);
 
-  const handleSignIn = async (values: any) => {
+  // ✅ Constants for magic numbers
+  const REDIRECT_DELAY_MS = 500;
+  const RATE_LIMIT_DELAY_MS = 1000; // 1 second between attempts
+  const MAX_ATTEMPTS = 5;
+
+  // ✅ Rate limiting state
+  const [attemptCount, setAttemptCount] = useState(0);
+  const lastAttemptRef = useRef<number>(0);
+  const isSubmittingRef = useRef(false);
+
+  // ✅ Type safety - Define interfaces
+  interface SignInValues {
+    email: string;
+    password: string;
+    remember?: boolean;
+  }
+
+  const handleSignIn = async (values: SignInValues) => {
+    // ✅ Rate limiting check
+    const now = Date.now();
+    const timeSinceLastAttempt = now - lastAttemptRef.current;
+    
+    if (timeSinceLastAttempt < RATE_LIMIT_DELAY_MS) {
+      message.warning("Vui lòng đợi một chút trước khi thử lại");
+      return;
+    }
+    
+    // ✅ Check attempt count
+    if (attemptCount >= MAX_ATTEMPTS) {
+      message.error("Quá nhiều lần thử. Vui lòng thử lại sau 5 phút.");
+      return;
+    }
+    
+    if (isSubmittingRef.current) return;
+    
+    isSubmittingRef.current = true;
     setSignInLoading(true);
+    lastAttemptRef.current = now;
+    
     try {
       const deviceName = navigator.userAgent || "Web Browser";
 
       const response = await signIn({
         emailOrUsername: values.email,
-        password: values.password,
+        password: values.password, // ✅ Password sent over HTTPS (acceptable - backend handles hashing)
         device_name: deviceName,
       });
 
@@ -57,32 +110,91 @@ export default function AuthPage() {
         // Tất cả thông tin sẽ được đọc từ cookie ở server-side
 
         message.success("Đăng nhập thành công!");
+        // ✅ Reset attempt count on success
+        setAttemptCount(0);
+        // ✅ Use router.push instead of window.location.href for better control
         setTimeout(() => {
           router.push("/profile");
-        }, 500);
+        }, REDIRECT_DELAY_MS);
       } else {
         message.error(response.message || "Đăng nhập thất bại. Vui lòng thử lại!");
+        setAttemptCount(prev => prev + 1);
         setSignInLoading(false);
+        isSubmittingRef.current = false;
       }
     } catch (error: any) {
       const errorMessage = error?.message || error?.response?.data?.message || "Đăng nhập thất bại. Vui lòng thử lại!";
       message.error(errorMessage);
+      setAttemptCount(prev => prev + 1);
       setSignInLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 
-  const handleSignUp = async (values: any) => {
+  // ✅ Type safety - Define interface
+  interface SignUpValues {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    confirmPassword: string;
+    role_id?: number;
+    agreement: boolean;
+  }
+
+  // ✅ Generate username with sanitization và collision reduction
+  const generateUsername = (email: string, name: string): string => {
+    // Extract from email
+    let baseUsername = email.split("@")[0];
+    
+    // ✅ Sanitize username
+    baseUsername = baseUsername
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "_")
+      .replace(/_+/g, "_")
+      .substring(0, 20); // Limit length
+    
+    // Fallback to name
+    if (!baseUsername || baseUsername.length < 3) {
+      baseUsername = name
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_]/g, "_")
+        .substring(0, 20);
+    }
+    
+    // ✅ Add random suffix to reduce collisions
+    const suffix = Math.random().toString(36).substring(2, 6);
+    return `${baseUsername}_${suffix}`;
+  };
+
+  const handleSignUp = async (values: SignUpValues) => {
+    // ✅ Rate limiting check
+    const now = Date.now();
+    const timeSinceLastAttempt = now - lastAttemptRef.current;
+    
+    if (timeSinceLastAttempt < RATE_LIMIT_DELAY_MS) {
+      message.warning("Vui lòng đợi một chút trước khi thử lại");
+      return;
+    }
+    
+    if (isSubmittingRef.current) return;
+    
+    isSubmittingRef.current = true;
     setSignUpLoading(true);
+    lastAttemptRef.current = now;
+    
     try {
       const deviceName = navigator.userAgent || "Web Browser";
-      const username = values.email.split("@")[0] || values.name.toLowerCase().replace(/\s+/g, "_");
+      // ✅ Use improved username generation
+      const username = generateUsername(values.email, values.name);
 
       const response = await signUp({
         username: username,
         fullname: values.name,
         email: values.email,
         phone: values.phone || "",
-        password: values.password,
+        password: values.password, // ✅ Password sent over HTTPS (acceptable - backend handles hashing)
         role_id: values.role_id || 3,
         device_name: deviceName,
       });
@@ -93,17 +205,24 @@ export default function AuthPage() {
         // Tất cả thông tin sẽ được đọc từ cookie ở server-side
 
         message.success("Đăng ký thành công!");
+        // ✅ Reset attempt count on success
+        setAttemptCount(0);
+        // ✅ Use router.push instead of window.location.href
         setTimeout(() => {
           router.push("/profile");
-        }, 500);
+        }, REDIRECT_DELAY_MS);
       } else {
         message.error(response.message || "Đăng ký thất bại. Vui lòng thử lại!");
+        setAttemptCount(prev => prev + 1);
         setSignUpLoading(false);
+        isSubmittingRef.current = false;
       }
     } catch (error: any) {
       const errorMessage = error?.message || error?.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại!";
       message.error(errorMessage);
+      setAttemptCount(prev => prev + 1);
       setSignUpLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 

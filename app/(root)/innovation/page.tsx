@@ -38,7 +38,11 @@ export const metadata = {
   description: 'Khám phá các công nghệ tiên tiến áp dụng trong giáo dục tại Thư Viện Số.',
 };
 
-export default async function InnovationPage(props: any) {
+interface InnovationPageProps {
+  searchParams: Promise<{ doc?: string }>;
+}
+
+export default async function InnovationPage(props: InnovationPageProps) {
   const searchParams = await props.searchParams;
   const currentSlug = searchParams?.doc || 'overview';
   const content = getDocContent(currentSlug);

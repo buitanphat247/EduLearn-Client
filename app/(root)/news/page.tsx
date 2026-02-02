@@ -1,7 +1,7 @@
 "use client";
 
 import { Input, Select, ConfigProvider, theme } from "antd";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import NewsCard from "@/app/components/news/NewsCard";
 import { SearchOutlined } from "@ant-design/icons";
 import DarkPagination from "@/app/components/common/DarkPagination";
@@ -9,18 +9,23 @@ import ScrollAnimation from "@/app/components/common/ScrollAnimation";
 import { news } from "./mock_data";
 import { useTheme } from "@/app/context/ThemeContext";
 
+// Constants
+const DEFAULT_PAGE_SIZE = 18;
+const SCROLL_DELAY_MS = 500;
+
 export default function News() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isScrolling, setIsScrolling] = useState(false);
   const { theme: currentTheme } = useTheme();
-  const pageSize = 20;
+  const pageSize = DEFAULT_PAGE_SIZE;
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const filteredNews = useMemo(() => {
     return news.filter((item) => {
       const matchesSearch = item.title.toLowerCase().includes(searchText.toLowerCase()) ||
-                          item.excerpt.toLowerCase().includes(searchText.toLowerCase());
+        item.excerpt.toLowerCase().includes(searchText.toLowerCase());
       const matchesCategory = !selectedCategory || item.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
@@ -43,8 +48,37 @@ export default function News() {
     setCurrentPage(1);
   };
 
+  // Handle page change with proper cleanup
+  const handlePageChange = useCallback((page: number) => {
+    // Clear any existing timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+
+    setIsScrolling(true);
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Wait for scroll to complete before showing animation
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsScrolling(false);
+      scrollTimeoutRef.current = null;
+    }, SCROLL_DELAY_MS);
+  }, []);
+
+  // Cleanup timeout and state on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = null;
+      }
+      setIsScrolling(false); // Cleanup state on unmount
+    };
+  }, []);
+
   return (
-    <main className="min-h-screen bg-slate-50 dark:bg-[#0f172a] transition-colors duration-500">
+    <main className="h-full bg-slate-50 dark:bg-[#0f172a] transition-colors duration-500">
       <div className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-slate-800 dark:text-white mb-4 transition-colors duration-300">Tin tức & Sự kiện</h1>
@@ -91,7 +125,7 @@ export default function News() {
                 <Select
                   placeholder="Chọn danh mục"
                   allowClear
-                  className="w-full shadow-lg shadow-black/5 dark:shadow-black/20 h-12 text-base [&_.ant-select-selector]:!rounded-xl [&_.ant-select-selector]:!h-12 [&_.ant-select-selector]:!items-center"
+                  className="w-full shadow-lg shadow-black/5 dark:shadow-black/20 h-12 text-base [&_.ant-select-selector]:rounded-xl! [&_.ant-select-selector]:h-12! [&_.ant-select-selector]:items-center!"
                   onChange={handleCategoryChange}
                   options={categories.map((cat) => ({ label: cat, value: cat }))}
                 />
@@ -103,22 +137,25 @@ export default function News() {
         {currentNews.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {currentNews.map((item, index) => (
-                <ScrollAnimation
-                  key={`${item.id}-${currentPage}`}
-                  direction="up"
-                  delay={isScrolling ? 500 + (index * 50) : index * 50}
-                >
-                  <NewsCard
-                    id={item.id}
-                    title={item.title}
-                    excerpt={item.excerpt}
-                    image={item.image}
-                    date={item.date}
-                    category={item.category}
-                  />
-                </ScrollAnimation>
-              ))}
+              {useMemo(() => 
+                currentNews.map((item, index) => (
+                  <ScrollAnimation
+                    key={item.id}
+                    direction="up"
+                    delay={index * 50}
+                  >
+                    <NewsCard
+                      id={item.id}
+                      title={item.title}
+                      excerpt={item.excerpt}
+                      image={item.image}
+                      date={item.date}
+                      category={item.category}
+                    />
+                  </ScrollAnimation>
+                )),
+                [currentNews]
+              )}
             </div>
 
             {total > pageSize && (
@@ -126,15 +163,7 @@ export default function News() {
                 current={currentPage}
                 total={total}
                 pageSize={pageSize}
-                onChange={(page) => {
-                  setIsScrolling(true);
-                  setCurrentPage(page);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                  // Wait for scroll to complete before showing animation
-                  setTimeout(() => {
-                    setIsScrolling(false);
-                  }, 500);
-                }}
+                onChange={handlePageChange}
                 showTotal={(total, range) => (
                   <span className="text-slate-500 dark:text-slate-300">
                     {range[0]}-{range[1]} của {total} tin tức

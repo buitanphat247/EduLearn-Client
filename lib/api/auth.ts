@@ -36,7 +36,7 @@ export const signUp = async (data: SignUpRequest): Promise<SignUpResponse> => {
   }
 };
 
-export const signOut = async (): Promise<void> => {
+export  const signOut = async (): Promise<void> => {
   try {
     await apiClient.post("/auth/signout", {}, {
       withCredentials: true, // Cần để gửi cookie _at và _u
@@ -62,19 +62,36 @@ export const signOut = async (): Promise<void> => {
     clearAuthCache();
     clearResponseCache(); // Clear tất cả API response cache
     
-    // Force reload để đảm bảo tất cả state được reset
-    // Sử dụng window.location.replace để không lưu vào history
+    // ✅ Clear localStorage safely with error handling
     if (typeof window !== "undefined") {
-      // Chỉ xóa các keys liên quan đến authentication
-      // Giữ lại theme và các settings khác
-      const theme = localStorage.getItem("theme");
-      localStorage.clear();
-      // Khôi phục theme sau khi clear
-      if (theme) {
-        localStorage.setItem("theme", theme);
+      try {
+        // Chỉ xóa các keys liên quan đến authentication
+        // Giữ lại theme và các settings khác
+        const theme = localStorage.getItem("theme");
+        localStorage.clear();
+        // Khôi phục theme sau khi clear
+        if (theme) {
+          localStorage.setItem("theme", theme);
+        }
+      } catch (error) {
+        console.error("Error clearing localStorage:", error);
       }
-      // Force reload về trang auth
-      window.location.replace("/auth");
+      
+      // ✅ Use setTimeout to allow async operations to complete
+      // Or use router for better control (if available)
+      setTimeout(() => {
+        try {
+          window.location.replace("/auth");
+        } catch (error) {
+          console.error("Error redirecting to auth page:", error);
+          // Fallback: try window.location.href
+          try {
+            window.location.href = "/auth";
+          } catch (fallbackError) {
+            console.error("Fallback redirect also failed:", fallbackError);
+          }
+        }
+      }, 100);
     }
   }
 };

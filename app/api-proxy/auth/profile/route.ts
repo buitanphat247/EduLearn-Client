@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { TIMEOUTS } from '../../constants';
+import { createErrorResponse, handleFetchError, logError } from '../../utils/errorHandler';
 
 export const revalidate = 0;
 
@@ -13,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     // Forward request đến backend NestJS
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout (tối ưu cho profile request)
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.PROFILE);
 
     let backendResponse: Response;
     try {
@@ -41,26 +43,7 @@ export async function GET(request: NextRequest) {
       clearTimeout(timeoutId);
     } catch (fetchError: any) {
       clearTimeout(timeoutId);
-      if (fetchError.name === 'AbortError') {
-        return NextResponse.json(
-          { status: false, message: 'Request timeout: Backend không phản hồi sau 10 giây', data: null },
-          { status: 504 }
-        );
-      }
-      if (fetchError.message?.includes('Failed to fetch') || fetchError.message?.includes('ECONNREFUSED')) {
-        return NextResponse.json(
-          { status: false, message: 'Lỗi kết nối: Không thể kết nối đến backend server.', data: null },
-          { status: 503 }
-        );
-      }
-      return NextResponse.json(
-        {
-          status: false,
-          message: `Lỗi khi kết nối đến backend: ${fetchError.message || fetchError.toString()}`,
-          data: null,
-        },
-        { status: 500 }
-      );
+      return handleFetchError(fetchError, '/auth/profile', 'GET');
     }
 
     const contentType = backendResponse.headers.get('content-type');
@@ -86,19 +69,14 @@ export async function GET(request: NextRequest) {
       });
     } else {
       const text = await backendResponse.text();
-      return NextResponse.json(
-        { status: false, message: `Unexpected response format: ${text}`, data: null },
-        { status: 500 }
-      );
+      return createErrorResponse(`Unexpected response format: ${text}`, 500);
     }
   } catch (error: any) {
-    return NextResponse.json(
-      {
-        status: false,
-        message: error?.message || 'Lỗi không xác định khi xử lý request',
-        data: null,
-      },
-      { status: 500 }
+    logError(error, { route: '/auth/profile', method: 'GET' });
+    return createErrorResponse(
+      error?.message || 'Lỗi không xác định khi xử lý request',
+      500,
+      error
     );
   }
 }

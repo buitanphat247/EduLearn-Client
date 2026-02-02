@@ -1,15 +1,28 @@
 "use client";
 
-import Events from "@/app/components/home/Events";
+import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import Features from "@/app/components/home/Features";
 import Hero from "@/app/components/home/Hero";
-import News from "@/app/components/home/News";
 import Stats from "@/app/components/home/Stats";
-import Testimonials from "@/app/components/home/Testimonials";
-import Integrations from "@/app/components/home/Integrations";
-import ValueProps from "@/app/components/home/ValueProps";
-import CallToAction from "@/app/components/home/CallToAction";
 import ScrollAnimation from "@/app/components/common/ScrollAnimation";
+
+// Dynamic imports for below-the-fold components to reduce initial bundle size
+const Testimonials = dynamic(() => import("@/app/components/home/Testimonials"), {
+  ssr: true, // Keep SSR for SEO
+});
+
+const Integrations = dynamic(() => import("@/app/components/home/Integrations"), {
+  ssr: true,
+});
+
+const ValueProps = dynamic(() => import("@/app/components/home/ValueProps"), {
+  ssr: true,
+});
+
+const CallToAction = dynamic(() => import("@/app/components/home/CallToAction"), {
+  ssr: true,
+});
 
 export default function Home() {
   return (
@@ -25,29 +38,27 @@ export default function Home() {
           <Features />
         </div>
       </ScrollAnimation>
-      {/* <ScrollAnimation direction="up" delay={200}>
-        <div className="border-b border-slate-200/60 dark:border-slate-800 transition-colors duration-500">
-          <Events />
-        </div>
-      </ScrollAnimation> */}
       <ScrollAnimation direction="up" delay={200}>
         <div className="border-b border-slate-200/60 dark:border-slate-800 transition-colors duration-500">
-          <Testimonials />
+          <Suspense fallback={<div className="h-64" />}>
+            <Testimonials />
+          </Suspense>
         </div>
       </ScrollAnimation>
-      {/* <ScrollAnimation direction="up" delay={300}>
-        <div className="border-b border-slate-200/60 dark:border-slate-800 transition-colors duration-500">
-          <News />
-        </div>
-      </ScrollAnimation> */}
       <ScrollAnimation direction="up" delay={300}>
-        <Integrations />
+        <Suspense fallback={<div className="h-64" />}>
+          <Integrations />
+        </Suspense>
       </ScrollAnimation>
       <ScrollAnimation direction="up" delay={400}>
-        <ValueProps />
+        <Suspense fallback={<div className="h-64" />}>
+          <ValueProps />
+        </Suspense>
       </ScrollAnimation>
       <ScrollAnimation direction="up" delay={500}>
-        <CallToAction />
+        <Suspense fallback={<div className="h-64" />}>
+          <CallToAction />
+        </Suspense>
       </ScrollAnimation>
     </div>
   );

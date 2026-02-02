@@ -49,7 +49,10 @@ export interface GetEventsResult {
   limit: number;
 }
 
-export const getEvents = async (params?: GetEventsParams): Promise<GetEventsResult> => {
+export const getEvents = async (
+  params?: GetEventsParams,
+  config?: { signal?: AbortSignal }
+): Promise<GetEventsResult> => {
   try {
     const requestParams: Record<string, any> = {
       page: params?.page || 1,
@@ -62,6 +65,7 @@ export const getEvents = async (params?: GetEventsParams): Promise<GetEventsResu
 
     const response = await apiClient.get("/events", {
       params: requestParams,
+      signal: config?.signal,
     });
 
     const data = response.data.data || response.data;

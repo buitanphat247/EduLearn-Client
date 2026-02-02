@@ -138,7 +138,7 @@ export default function VocabularyFlashcard() {
         },
       }}
     >
-      <main className="min-h-screen bg-slate-50 dark:bg-[#0f172a] py-8 md:py-12 text-slate-800 dark:text-slate-200 transition-colors duration-500">
+      <main className="h-full bg-slate-50 dark:bg-[#0f172a] py-8 text-slate-800 dark:text-slate-200 transition-colors duration-500">
         <div className="container mx-auto px-4">
           {/* Header & Breadcrumb */}
           <div className="mb-8">
@@ -147,13 +147,13 @@ export default function VocabularyFlashcard() {
                 Trang chủ
               </Link>
               <span className="text-slate-400 dark:text-slate-600">/</span>
-              <Link href="/features/vocabulary" className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
+              <Link href="/vocabulary" className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
                 Học từ vựng
               </Link>
               {folderName && (
                 <>
                   <span className="text-slate-400 dark:text-slate-600">/</span>
-                  <Link href={`/features/vocabulary/${folderId}`} className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
+                  <Link href={`/vocabulary/${folderId}`} className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
                     {folderName}
                   </Link>
                   <span className="text-slate-400 dark:text-slate-600">/</span>
@@ -174,7 +174,7 @@ export default function VocabularyFlashcard() {
 
               <Button
                 icon={<IoArrowBackOutline />}
-                onClick={() => router.push(`/features/vocabulary/${folderId}`)}
+                onClick={() => router.push(`/vocabulary/${folderId}`)}
                 size="middle"
                 className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 border-0 text-white font-medium shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105"
               >
@@ -186,7 +186,7 @@ export default function VocabularyFlashcard() {
           {vocabularies.length === 0 ? (
             <div className="text-center py-24 bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-700 transition-colors">
               <p className="text-slate-500 dark:text-slate-400 mb-4">Chưa có từ vựng nào trong folder này.</p>
-              <Button type="primary" onClick={() => router.push(`/features/vocabulary/${folderId}`)}>
+              <Button type="primary" onClick={() => router.push(`/vocabulary/${folderId}`)}>
                 Thêm từ vựng ngay
               </Button>
             </div>

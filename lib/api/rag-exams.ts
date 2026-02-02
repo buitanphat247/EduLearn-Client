@@ -1,7 +1,17 @@
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
 
 // AI Python Tool URL
 const AI_API_URL = (process.env.NEXT_PUBLIC_FLASK_API_URL || "http://localhost:5000") + "/ai-exam";
+
+// Create dedicated axios instance for AI API to optimize bundle size
+// This prevents bundling unnecessary interceptors from main apiClient
+const aiApiClient: AxiosInstance = axios.create({
+  baseURL: AI_API_URL,
+  timeout: 60000, // 60 seconds for AI operations
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
 export interface RagTestOverview {
   id: string;
@@ -40,7 +50,7 @@ export const getRagTestsByClass = async (classId: string | number, studentId?: n
     const endpoint = isTeacher ? "teacher" : "published";
 
     // Explicitly call specialized endpoints to ensure correct data (especially drafts for teachers)
-    const response = await axios.get(`${AI_API_URL}/tests/class/${classId}/${endpoint}?${params}${params ? "&" : ""}_ts=${ts}`);
+    const response = await aiApiClient.get(`/tests/class/${classId}/${endpoint}?${params}${params ? "&" : ""}_ts=${ts}`);
     return response.data.data;
   } catch (error) {
     console.error("Error fetching RAG tests:", error);
@@ -51,7 +61,7 @@ export const getRagTestsByClass = async (classId: string | number, studentId?: n
 export const getRagTestDetail = async (testId: string, studentId?: number): Promise<RagTestDetail | null> => {
   try {
     const params = studentId ? `?student_id=${studentId}` : "";
-    const response = await axios.get(`${AI_API_URL}/test/${testId}${params}`);
+    const response = await aiApiClient.get(`/test/${testId}${params}`);
     return response.data.data;
   } catch (error: any) {
     if (error.response?.status === 403) {
@@ -65,7 +75,7 @@ export const getRagTestDetail = async (testId: string, studentId?: number): Prom
 
 export const deleteRagTest = async (testId: string): Promise<boolean> => {
   try {
-    const response = await axios.delete(`${AI_API_URL}/test/${testId}`);
+    const response = await aiApiClient.delete(`/test/${testId}`);
     return response.data.status === "success";
   } catch (error) {
     console.error("Error deleting RAG test:", error);
@@ -75,7 +85,7 @@ export const deleteRagTest = async (testId: string): Promise<boolean> => {
 
 export const deleteRagTestsByClass = async (classId: string | number): Promise<boolean> => {
   try {
-    const response = await axios.delete(`${AI_API_URL}/tests/class/${classId}`);
+    const response = await aiApiClient.delete(`/tests/class/${classId}`);
     return response.data.status === "success";
   } catch (error) {
     console.error("Error deleting class RAG tests:", error);
@@ -96,7 +106,7 @@ export interface UpdateTestData {
 
 export const updateRagTest = async (testId: string, data: UpdateTestData): Promise<boolean> => {
   try {
-    const response = await axios.put(`${AI_API_URL}/test/${testId}`, data, {
+    const response = await aiApiClient.put(`/test/${testId}`, data, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -110,8 +120,8 @@ export const updateRagTest = async (testId: string, data: UpdateTestData): Promi
 
 export const publishRagTest = async (testId: string, isPublished: boolean): Promise<boolean> => {
   try {
-    const response = await axios.post(
-      `${AI_API_URL}/test/${testId}/publish`,
+    const response = await aiApiClient.post(
+      `/test/${testId}/publish`,
       { is_published: isPublished },
       {
         headers: {
@@ -138,7 +148,7 @@ export interface UpdateQuestionData {
 
 export const updateRagQuestion = async (questionId: string, data: UpdateQuestionData): Promise<boolean> => {
   try {
-    const response = await axios.put(`${AI_API_URL}/question/${questionId}`, data, {
+    const response = await aiApiClient.put(`/question/${questionId}`, data, {
       headers: {
         "Content-Type": "application/json",
       },

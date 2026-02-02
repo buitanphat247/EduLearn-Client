@@ -36,10 +36,12 @@ export const metadata = {
   description: "Tài liệu hướng dẫn chi tiết về cách sử dụng nền tảng Thư Viện Số.",
 };
 
-export default async function GuidePage(props: any) {
-  // Parsing searchParams manually to avoid Type errors if the interface isn't 100% standard in this repo setup
-  // In Next.js 15+, props.searchParams is a promise
+interface GuidePageProps {
+  searchParams: Promise<{ doc?: string }>;
+}
 
+export default async function GuidePage(props: GuidePageProps) {
+  // In Next.js 15+, props.searchParams is a promise
   const searchParams = await props.searchParams;
   const currentSlug = searchParams?.doc || "overview";
   const content = getDocContent(currentSlug);

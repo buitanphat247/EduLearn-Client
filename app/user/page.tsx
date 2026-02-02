@@ -49,17 +49,28 @@ const userDashboardItems = [
   },
 ];
 
-function QuickActionsGrid({ items }: { items: any[] }) {
+interface DashboardItem {
+  icon: React.ComponentType;
+  title: string;
+  description: string;
+  gradient: string;
+  iconBg: string;
+  iconColor: string;
+  path: string;
+  isComingSoon?: boolean;
+}
+
+function QuickActionsGrid({ items }: { items: DashboardItem[] }) {
   const router = useRouter();
   const { message } = App.useApp();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-      {items.map((item, index) => {
+      {items.map((item) => {
         const Icon = item.icon;
         return (
           <Card
-            key={index}
+            key={item.path}
             hoverable
             onClick={() => {
               if (item.isComingSoon) {
@@ -109,20 +120,38 @@ export default function UserDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // ✅ Add isMounted check to prevent state updates after unmount
+    let isMounted = true;
+    const abortController = new AbortController();
+
     const fetchStats = async () => {
       try {
         setLoading(true);
         const data = await getStats();
-        setStats(data);
+        // ✅ Only update state if component is still mounted
+        if (isMounted && !abortController.signal.aborted) {
+          setStats(data);
+        }
       } catch (error: any) {
-        message.error(error?.message || "Không thể tải thống kê");
+        // ✅ Only show error if component is still mounted
+        if (isMounted && !abortController.signal.aborted) {
+          message.error(error?.message || "Không thể tải thống kê");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted && !abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchStats();
-  }, [message]);
+
+    // ✅ Cleanup function
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, []); // ✅ Removed message dependency - message is stable from App.useApp()
 
   const userStats = [
     {

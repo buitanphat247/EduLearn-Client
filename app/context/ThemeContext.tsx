@@ -1,14 +1,21 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { flushSync } from "react-dom";
+import { setThemeCookie } from "../actions/theme";
 
 type Theme = "light" | "dark";
 
 interface ThemeContextType {
   theme: Theme;
-  toggleTheme: (e?: React.MouseEvent) => void;
+  toggleTheme: (e?: React.MouseEvent) => Promise<void>;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+interface ThemeRequest {
+  id: number;
+  abortController: AbortController;
+}
+
+export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 // Get initial theme from document class (set by inline script in layout.tsx)
 function getInitialTheme(): Theme {
@@ -17,8 +24,6 @@ function getInitialTheme(): Theme {
   }
   return "light";
 }
-
-import { flushSync } from "react-dom";
 
 // Get theme transition duration from environment variable (default: 1500ms)
 const getThemeTransitionDuration = (): number => {
@@ -34,12 +39,14 @@ const getThemeTransitionDuration = (): number => {
   return 1500; // Default: 1.5 seconds
 };
 
-// ... (Theme type definition lines 4-19 remain same, not replacing them, just Context logic below)
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [mounted, setMounted] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
   const transitionDuration = getThemeTransitionDuration();
+  // Track the latest request to prevent race conditions
+  const requestRef = React.useRef<ThemeRequest | null>(null);
+  const requestIdRef = React.useRef<number>(0);
 
   useEffect(() => {
     setMounted(true);
@@ -49,66 +56,162 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggleTheme = async (e?: React.MouseEvent) => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    
-    // Check if View Transition API is supported
-    if (!(document as any).startViewTransition) {
-      setTheme(newTheme);
-      localStorage.setItem("theme", newTheme);
-      document.documentElement.classList.toggle("dark", newTheme === "dark");
+    // Prevent double-click / race condition
+    if (isToggling) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[ThemeContext] Toggle ignored - already toggling");
+      }
       return;
     }
 
-    // Get click position or default to top-right corner
-    const x = e?.clientX ?? window.innerWidth;
-    const y = e?.clientY ?? 0;
+    // Cancel previous request if exists
+    if (requestRef.current) {
+      requestRef.current.abortController.abort();
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[ThemeContext] Cancelled previous request");
+      }
+    }
+
+    setIsToggling(true);
+    const newTheme = theme === "light" ? "dark" : "light";
     
-    const endRadius = Math.hypot(
+    // Generate unique request ID
+    const currentRequestId = ++requestIdRef.current;
+    const abortController = new AbortController();
+    
+    // Track this request to prevent race conditions
+    requestRef.current = { id: currentRequestId, abortController };
+
+    try {
+      // Check if View Transition API is supported
+      if (!(document as any).startViewTransition) {
+        setTheme(newTheme);
+        // Remove localStorage setting to rely on cookie
+        const result = await setThemeCookie(newTheme);
+        
+        // Check if this request is still the latest (prevent race condition)
+        if (requestRef.current?.id !== currentRequestId || abortController.signal.aborted) {
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("[ThemeContext] Request cancelled - newer request in progress");
+          }
+          return;
+        }
+        
+        if (!result.success) {
+          console.warn("[ThemeContext] Server action failed, using client-side fallback:", result.error);
+          // Fallback to client-side cookie if server action fails
+          document.cookie = `theme=${newTheme}; path=/; max-age=31536000; SameSite=Lax`;
+        }
+        document.documentElement.classList.toggle("dark", newTheme === "dark");
+        return;
+      }
+
+      // Get click position or default to top-right corner
+      const x = e?.clientX ?? window.innerWidth;
+      const y = e?.clientY ?? 0;
+
+      const endRadius = Math.hypot(
         Math.max(x, innerWidth - x),
         Math.max(y, innerHeight - y)
-    );
+      );
 
-    // Disable transitions during the capture phase to ensure the new snapshot is the final state
-    document.documentElement.classList.add('no-transitions');
+      // Disable transitions during the capture phase to ensure the new snapshot is the final state
+      document.documentElement.classList.add('no-transitions');
 
-    const transition = (document as any).startViewTransition(() => {
-         // Flush updates to ensure React components are fully rendered in the new state
-         // before the snapshot is taken
-         flushSync(() => {
-            setTheme(newTheme);
-         });
-         localStorage.setItem("theme", newTheme);
-         document.documentElement.classList.toggle("dark", newTheme === "dark");
-    });
-    
-    // waiting for the transition to catch the "new" image
-    try {
+      const transition = (document as any).startViewTransition(() => {
+        // Flush updates to ensure React components are fully rendered in the new state
+        // before the snapshot is taken
+        flushSync(() => {
+          setTheme(newTheme);
+        });
+
+        // Set theme cookie with proper error handling (non-blocking)
+        // Capture request ID to check if request is still valid
+        const cookieRequestId = currentRequestId;
+        setThemeCookie(newTheme).then((result) => {
+          // Check if this request is still the latest (prevent race condition)
+          if (requestRef.current?.id !== cookieRequestId || abortController.signal.aborted) {
+            if (process.env.NODE_ENV !== "production") {
+              console.warn("[ThemeContext] Cookie request cancelled - newer request in progress");
+            }
+            return;
+          }
+          
+          if (!result.success) {
+            console.warn("[ThemeContext] Server action failed, using client-side fallback:", result.error);
+            // Fallback to client-side cookie if server action fails
+            document.cookie = `theme=${newTheme}; path=/; max-age=31536000; SameSite=Lax`;
+          }
+        }).catch((error) => {
+          // Only handle error if this is still the latest request and not aborted
+          if (requestRef.current?.id === cookieRequestId && !abortController.signal.aborted) {
+            console.error("[ThemeContext] Error setting theme cookie:", error);
+          // Fallback to client-side cookie
+          document.cookie = `theme=${newTheme}; path=/; max-age=31536000; SameSite=Lax`;
+          }
+        });
+        document.documentElement.classList.toggle("dark", newTheme === "dark");
+      });
+
+      // waiting for the transition to catch the "new" image
+      try {
         await transition.ready;
-        
+
         const clipPath = [
-            `circle(0px at ${x}px ${y}px)`,
-            `circle(${endRadius}px at ${x}px ${y}px)`,
+          `circle(0px at ${x}px ${y}px)`,
+          `circle(${endRadius}px at ${x}px ${y}px)`,
         ];
-        
+
         // Animate the new view expanding from the click position
         document.documentElement.animate(
-            {
-                clipPath: clipPath,
-            },
-            {
-                duration: transitionDuration,
-                easing: "cubic-bezier(0.25, 1, 0.5, 1)", // Smoother quart-like easing
-                pseudoElement: "::view-transition-new(root)",
-            }
+          {
+            clipPath: clipPath,
+          },
+          {
+            duration: transitionDuration,
+            easing: "cubic-bezier(0.25, 1, 0.5, 1)", // Smoother quart-like easing
+            pseudoElement: "::view-transition-new(root)",
+          }
         );
+      } catch (error) {
+        // Only handle error if this is still the latest request and not aborted
+        if (requestRef.current?.id === currentRequestId && !abortController.signal.aborted) {
+          console.error("[ThemeContext] Error during theme transition:", error);
+        // Fallback: ensure theme is set even if transition fails
+        setTheme(newTheme);
+        document.documentElement.classList.toggle("dark", newTheme === "dark");
+        }
+      } finally {
+        // Only clean up if this is still the latest request
+        if (requestRef.current?.id === currentRequestId && !abortController.signal.aborted) {
+        // Re-enable transitions after the view transition is starting/ready
+        // effectively we can remove it once the "new" snapshot is captured, 
+        // which happens when .ready resolves. 
+        // But keeping it off until animation finishes is also fine, 
+        // though we usually want hover effects to work during the 1.5s animation?
+        // Let's remove it when ready resolves.
+        document.documentElement.classList.remove('no-transitions');
+        }
+      }
+    } catch (error) {
+      // Only handle error if this is still the latest request and not aborted
+      if (requestRef.current?.id === currentRequestId && !abortController.signal.aborted) {
+        console.error("[ThemeContext] Error during theme toggle:", error);
+      // Fallback: ensure theme is set even if toggle fails
+      setTheme(newTheme);
+      document.documentElement.classList.toggle("dark", newTheme === "dark");
+      }
     } finally {
-         // Re-enable transitions after the view transition is starting/ready
-         // effectively we can remove it once the "new" snapshot is captured, 
-         // which happens when .ready resolves. 
-         // But keeping it off until animation finishes is also fine, 
-         // though we usually want hover effects to work during the 1.5s animation?
-         // Let's remove it when ready resolves.
-         document.documentElement.classList.remove('no-transitions');
+      // Only reset toggling state if this is still the latest request
+      if (requestRef.current?.id === currentRequestId) {
+      setIsToggling(false);
+        requestRef.current = null;
+      } else {
+        // If a newer request is in progress, don't reset isToggling
+        if (process.env.NODE_ENV !== "production") {
+          console.log("[ThemeContext] Skipping state reset - newer request in progress");
+        }
+      }
     }
   };
 

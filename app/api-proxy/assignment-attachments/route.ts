@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { TIMEOUTS } from '../constants';
+import { createErrorResponse, handleFetchError, logError } from '../utils/errorHandler';
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes for large file uploads
@@ -11,10 +13,7 @@ export async function POST(request: NextRequest) {
     const userId = searchParams.get("userId");
 
     if (!userId) {
-      return NextResponse.json(
-        { message: "userId is required" },
-        { status: 400 }
-      );
+      return createErrorResponse("userId is required", 400);
     }
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611/api";
@@ -22,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     // Forward the request to the backend API with timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout for large files
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.FILE_UPLOAD);
 
     let backendResponse: Response;
     try {
@@ -35,26 +34,7 @@ export async function POST(request: NextRequest) {
       clearTimeout(timeoutId);
     } catch (fetchError: any) {
       clearTimeout(timeoutId);
-      if (fetchError.name === "AbortError") {
-        return NextResponse.json(
-          { message: "Request timeout: Backend không phản hồi sau 5 phút" },
-          { status: 504 }
-        );
-      }
-      // Handle network errors
-      if (fetchError.message?.includes("Failed to fetch") || fetchError.message?.includes("ECONNREFUSED") || fetchError.code === "ECONNREFUSED") {
-        return NextResponse.json(
-          { message: "Lỗi kết nối: Không thể kết nối đến backend server. Vui lòng kiểm tra cấu hình API URL." },
-          { status: 503 }
-        );
-      }
-      return NextResponse.json(
-        { 
-          message: `Lỗi khi kết nối đến backend: ${fetchError.message || fetchError.toString()}`,
-          error: process.env.NODE_ENV === "development" ? fetchError?.stack : undefined
-        },
-        { status: 500 }
-      );
+      return handleFetchError(fetchError, '/assignment-attachments', 'POST');
     }
 
     const contentType = backendResponse.headers.get("content-type");
@@ -82,9 +62,11 @@ export async function POST(request: NextRequest) {
       status: backendResponse.status,
     });
   } catch (error: any) {
-    return NextResponse.json(
-      { message: error?.message || "Internal server error" },
-      { status: 500 }
+    logError(error, { route: '/assignment-attachments', method: 'POST' });
+    return createErrorResponse(
+      error?.message || "Internal server error",
+      500,
+      error
     );
   }
 }

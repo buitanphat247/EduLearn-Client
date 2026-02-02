@@ -18,8 +18,8 @@ export default function ScrollAnimation({
   const [isVisible, setIsVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  // ✅ Fix memory leak - Remove delay from dependencies, handle it in callback
   useEffect(() => {
-    // Reset visibility when delay changes (e.g., after pagination)
     setIsVisible(false);
     
     const currentRef = ref.current;
@@ -29,6 +29,7 @@ export default function ScrollAnimation({
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
+            // ✅ Use delay from closure instead of dependency
             setTimeout(() => {
               setIsVisible(true);
             }, delay);
@@ -47,7 +48,7 @@ export default function ScrollAnimation({
     return () => {
       observer.disconnect();
     };
-  }, [delay]);
+  }, []); // ✅ Remove delay from dependencies to prevent observer recreation
 
   const getTransform = () => {
     switch (direction) {

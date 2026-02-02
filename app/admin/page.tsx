@@ -1,14 +1,41 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { AppstoreOutlined, UserOutlined, ArrowRightOutlined, CloudDownloadOutlined, FileTextOutlined, SettingOutlined, ReadOutlined } from "@ant-design/icons";
 import { IoBookOutline } from "react-icons/io5";
 import { Card, App } from "antd";
 import { useRouter } from "next/navigation";
 import { getStats, type StatsResponse } from "@/lib/api/stats";
-import CountUp from "react-countup";
+import dynamic from "next/dynamic";
+import type { ComponentType } from "react";
 
-const dashboardItems = [
+// Dynamic import for CountUp - only load when needed (below the fold)
+const CountUp = dynamic(() => import("react-countup"), {
+  ssr: false, // CountUp is animation library, not needed for SSR
+});
+
+// Type definitions
+interface StatCard {
+  label: string;
+  value: string;
+  icon: ComponentType;
+  color: string;
+  bgColor: string;
+  numericValue?: number;
+}
+
+interface QuickActionItem {
+  icon: ComponentType;
+  title: string;
+  description: string;
+  gradient: string;
+  iconBg: string;
+  iconColor: string;
+  path: string;
+  isComingSoon?: boolean;
+}
+
+const dashboardItems: QuickActionItem[] = [
   {
     icon: ReadOutlined,
     title: "Quản lý lớp học",
@@ -57,11 +84,15 @@ const dashboardItems = [
   },
 ];
 
+// Constants
+const MORNING_HOUR = 12;
+const EVENING_HOUR = 18;
+
 function WelcomeBanner() {
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Chào buổi sáng";
-    if (hour < 18) return "Chào buổi chiều";
+    if (hour < MORNING_HOUR) return "Chào buổi sáng";
+    if (hour < EVENING_HOUR) return "Chào buổi chiều";
     return "Chào buổi tối";
   };
 
@@ -73,15 +104,22 @@ function WelcomeBanner() {
   );
 }
 
-function StatisticsCards({ stats }: { stats: any[] }) {
+function StatisticsCards({ stats }: { stats: StatCard[] }) {
+  const statsCards = useMemo(() => 
+    stats.map((stat) => ({
+      ...stat,
+      numericValue: parseInt(stat.value.replace(/,/g, "")) || 0,
+    })),
+    [stats]
+  );
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-      {stats.map((stat, index) => {
+      {statsCards.map((stat) => {
         const Icon = stat.icon;
-        const numericValue = parseInt(stat.value.replace(/,/g, "")) || 0;
         return (
           <Card
-            key={index}
+            key={stat.label}
             className="border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm transition-all duration-300 cursor-default bg-white dark:bg-gray-800"
             styles={{
               body: { padding: "24px" },
@@ -91,7 +129,9 @@ function StatisticsCards({ stats }: { stats: any[] }) {
               <div>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{stat.label}</p>
                 <p className={`text-3xl font-bold ${stat.color} dark:brightness-110`}>
-                  <CountUp start={0} end={numericValue} duration={2} separator="," decimals={0} />
+                  <Suspense fallback={<span>{stat.value}</span>}>
+                    <CountUp start={0} end={stat.numericValue} duration={2} separator="," decimals={0} />
+                  </Suspense>
                 </p>
               </div>
               <div className={`${stat.bgColor} p-4 rounded-xl`}>
@@ -105,17 +145,17 @@ function StatisticsCards({ stats }: { stats: any[] }) {
   );
 }
 
-function QuickActionsGrid({ items }: { items: any[] }) {
+function QuickActionsGrid({ items }: { items: QuickActionItem[] }) {
   const router = useRouter();
   const { message } = App.useApp();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-      {items.map((item, index) => {
+      {items.map((item) => {
         const Icon = item.icon;
         return (
           <Card
-            key={index}
+            key={item.path}
             hoverable
             onClick={() => {
               if (item.isComingSoon) {
@@ -163,20 +203,32 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchStats = async () => {
       try {
         setLoading(true);
         const data = await getStats();
-        setStats(data);
+        if (isMounted) {
+          setStats(data);
+        }
       } catch (error: any) {
-        message.error(error?.message || "Không thể tải thống kê");
+        if (isMounted) {
+          message.error(error?.message || "Không thể tải thống kê");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchStats();
-  }, [message]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Remove message dependency
 
   const statsCards = [
     {

@@ -8,7 +8,7 @@ import { getClassStudentsByUser, joinClassByCode, type ClassStudentRecord } from
 import { getCurrentUser } from "@/lib/api/users";
 import type { ColumnsType } from "antd/es/table";
 import { classSocketClient } from "@/lib/socket/class-client";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { getUserIdFromCookie, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
 
 type ClassStatusFilter = "all" | "online" | "banned";
 
@@ -96,15 +96,33 @@ export default function UserClasses() {
     try {
       setLoading(true);
 
-      const user = getCurrentUser();
-      if (!user || !user.user_id) {
-        message.error("Không tìm thấy thông tin người dùng");
+      let userId: string | number | null | undefined = getCurrentUser()?.user_id;
+
+      // Fallback 1: Try sync cookie/session if localStorage is missing
+      if (!userId) {
+        userId = getUserIdFromCookie();
+      }
+
+      // Fallback 2: Try async cookie decrypt if still missing
+      if (!userId) {
+        try {
+          userId = await getUserIdFromCookieAsync();
+        } catch (e) {
+          console.error("Failed to decrypt user cookie:", e);
+        }
+      }
+
+      if (!userId) {
+        message.warning("Đang tải thông tin người dùng...");
+        // Cho phép thử lại 1 lần nữa sau 1s nếu cần, hoặc dừng lại
+        // Ở đây ta set loading false và return thông báo
+        message.error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
         setLoading(false);
         return;
       }
 
       const result = await getClassStudentsByUser({
-        userId: user.user_id,
+        userId: userId,
         page: pagination.current,
         limit: pagination.pageSize,
         search: debouncedSearchQuery.trim() || undefined,
@@ -142,20 +160,20 @@ export default function UserClasses() {
   // Always connect socket for user-specific events (even without classes)
   useEffect(() => {
     if (globalSocketInitRef.current) return;
-    
+
     classSocketClient.connect();
     globalSocketInitRef.current = true;
-    
+
     // Listen for user-specific events - Update status and student count
     const unsubscribeBanned = classSocketClient.on("student_banned", (data: any) => {
       if (Number(data.class_id)) {
-        setClasses((prev) => prev.map((c) => 
-          Number(c.classId) === Number(data.class_id) 
-            ? { 
-                ...c, 
-                studentStatus: "banned" as const,
-                students: data.student_count !== undefined ? data.student_count : c.students,
-              }
+        setClasses((prev) => prev.map((c) =>
+          Number(c.classId) === Number(data.class_id)
+            ? {
+              ...c,
+              studentStatus: "banned" as const,
+              students: data.student_count !== undefined ? data.student_count : c.students,
+            }
             : c
         ));
         messageRef.current.error({
@@ -165,16 +183,16 @@ export default function UserClasses() {
         });
       }
     });
-    
+
     const unsubscribeUnbanned = classSocketClient.on("student_unbanned", (data: any) => {
       if (Number(data.class_id)) {
-        setClasses((prev) => prev.map((c) => 
-          Number(c.classId) === Number(data.class_id) 
-            ? { 
-                ...c, 
-                studentStatus: "online" as const,
-                students: data.student_count !== undefined ? data.student_count : c.students,
-              }
+        setClasses((prev) => prev.map((c) =>
+          Number(c.classId) === Number(data.class_id)
+            ? {
+              ...c,
+              studentStatus: "online" as const,
+              students: data.student_count !== undefined ? data.student_count : c.students,
+            }
             : c
         ));
         messageRef.current.success({
@@ -184,7 +202,7 @@ export default function UserClasses() {
         });
       }
     });
-    
+
     return () => {
       if (typeof unsubscribeBanned === 'function') unsubscribeBanned();
       if (typeof unsubscribeUnbanned === 'function') unsubscribeUnbanned();
@@ -193,11 +211,11 @@ export default function UserClasses() {
   }, []);
 
   // Memoize online class IDs to reduce dependency recalculation
-  const onlineClassIds = useMemo(() => 
+  const onlineClassIds = useMemo(() =>
     classes.filter((c) => c.studentStatus === "online").map((c) => c.classId),
     [classes]
   );
-  const onlineClassIdsString = useMemo(() => 
+  const onlineClassIdsString = useMemo(() =>
     JSON.stringify([...onlineClassIds].sort()),
     [onlineClassIds]
   );
@@ -216,7 +234,7 @@ export default function UserClasses() {
     }
 
     // Only reconnect if class IDs changed or not initialized
-    const previousClassIdsString = classIdsRef.current && Array.isArray(classIdsRef.current) 
+    const previousClassIdsString = classIdsRef.current && Array.isArray(classIdsRef.current)
       ? JSON.stringify([...classIdsRef.current].sort())
       : "[]";
 
@@ -279,7 +297,7 @@ export default function UserClasses() {
       // Listen for student removed
       const unsubscribeRemoved = classSocketClient.on("student_removed", (data: any) => {
         const currentUserId = getUserIdFromCookie();
-        
+
         if (Number(data.user_id) === Number(currentUserId)) {
           // Current user was removed, remove class from list
           setClasses((prev) => prev.filter((c) => Number(c.classId) !== Number(data.class_id)));

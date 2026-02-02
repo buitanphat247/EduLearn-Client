@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Avatar, Button, Spin, message, Switch, ConfigProvider } from "antd";
+import { useState, useEffect, useMemo } from "react";
+import { Avatar, Button, Spin, message } from "antd";
 import {
   UserOutlined,
   MailOutlined,
@@ -22,28 +22,63 @@ import ProfileSkeleton from "@/app/components/profile/ProfileSkeleton";
 export default function Profile() {
   const [user, setUser] = useState<UserInfoResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const hasFetched = useRef(false);
   const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
-    if (hasFetched.current) return;
+    let isMounted = true;
 
     const fetchUserInfo = async () => {
-      hasFetched.current = true;
       try {
         // Lấy thông tin profile từ API (đọc từ cookie đã mã hóa)
         const userInfo = await getProfile();
-        setUser(userInfo as UserInfoResponse);
+        
+        if (isMounted) {
+          setUser(userInfo as UserInfoResponse);
+          // Sync với localStorage
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem("user", JSON.stringify(userInfo));
+            } catch (error) {
+              console.error("Error saving user to localStorage:", error);
+            }
+          }
+        }
       } catch (error: any) {
-        message.error(error.message || "Không thể tải thông tin user");
-        setLoading(false);
+        if (isMounted) {
+          message.error(error.message || "Không thể tải thông tin user");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchUserInfo();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  // ✅ Move useMemo hooks to top level (before early returns)
+  const formattedCreatedAt = useMemo(() => {
+    if (!user?.created_at) return "";
+    const date = new Date(user.created_at);
+    const day = date.getDate();
+    const month = date.toLocaleDateString("vi-VN", { month: "long" });
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  }, [user?.created_at]);
+
+  const formattedUpdatedAt = useMemo(() => {
+    if (!user?.updated_at) return "";
+    const date = new Date(user.updated_at);
+    const day = date.getDate();
+    const month = date.toLocaleDateString("vi-VN", { month: "long" });
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  }, [user?.updated_at]);
 
   if (loading) {
     return <ProfileSkeleton />;
@@ -120,8 +155,8 @@ export default function Profile() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column */}
           <div className="space-y-6">
-            {/* Settings Card */}
-            <div className={`${cardClass} p-5`}>
+            {/* Settings Card - Commented out */}
+            {/* <div className={`${cardClass} p-5`}>
               <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-3 pb-3 border-b border-slate-200 dark:border-slate-700/50 transition-colors duration-300">
                 <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
                   <SettingOutlined />
@@ -148,7 +183,7 @@ export default function Profile() {
                   </ConfigProvider>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Contact Card */}
             <div className={`${cardClass} p-5`}>
@@ -247,11 +282,7 @@ export default function Profile() {
                   </p>
                   <p className="text-slate-900 dark:text-white text-lg font-medium border-b border-slate-200 dark:border-slate-700/50 pb-2 flex items-center gap-2 transition-colors duration-300">
                     <CalendarOutlined className="text-slate-400 dark:text-slate-500" />
-                    {new Date(user.created_at).toLocaleDateString("vi-VN", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    {formattedCreatedAt}
                   </p>
                 </div>
 
@@ -261,11 +292,7 @@ export default function Profile() {
                   </p>
                   <p className="text-slate-900 dark:text-white text-lg font-medium border-b border-slate-200 dark:border-slate-700/50 pb-2 flex items-center gap-2 transition-colors duration-300">
                     <CalendarOutlined className="text-slate-400 dark:text-slate-500" />
-                    {new Date(user.updated_at).toLocaleDateString("vi-VN", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    {formattedUpdatedAt}
                   </p>
                 </div>
               </div>

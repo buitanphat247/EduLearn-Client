@@ -43,6 +43,17 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
     return null;
   }
 
+  // ✅ URL validation to prevent XSS
+  const isValidUrl = (url: string): boolean => {
+    try {
+      const parsed = new URL(url);
+      // ✅ Only allow http, https protocols
+      return ['http:', 'https:'].includes(parsed.protocol);
+    } catch {
+      return false;
+    }
+  };
+
   const toggleLink = () => {
     const previousUrl = editor.getAttributes("link").href;
     const url = window.prompt("URL:", previousUrl);
@@ -58,15 +69,29 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
       return;
     }
 
+    // ✅ Validate URL to prevent XSS
+    if (!isValidUrl(url)) {
+      // Note: message is not available here, but we can use console or return early
+      // For better UX, consider using a modal instead of prompt
+      alert("URL không hợp lệ. Chỉ chấp nhận http:// hoặc https://");
+      return;
+    }
+
     // update
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   };
 
   const addImage = () => {
     const url = window.prompt("URL hình ảnh:");
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
+    if (!url) return;
+    
+    // ✅ Validate URL to prevent XSS
+    if (!isValidUrl(url)) {
+      alert("URL không hợp lệ. Chỉ chấp nhận http:// hoặc https://");
+      return;
     }
+    
+    editor.chain().focus().setImage({ src: url }).run();
   };
 
   return (
@@ -378,6 +403,15 @@ export default function RichTextEditor({
       }, 100);
       return () => clearTimeout(timer);
     }
+  }, [editor]);
+
+  // ✅ Cleanup editor when component unmounts
+  useEffect(() => {
+    return () => {
+      if (editor) {
+        editor.destroy();
+      }
+    };
   }, [editor]);
 
   if (!editor) {

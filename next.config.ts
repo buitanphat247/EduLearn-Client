@@ -213,7 +213,9 @@ const nextConfig: NextConfig = {
   },
 
   experimental: {
-    optimizePackageImports: ["@ant-design/icons", "antd", "react-quill-new"],
+    // Disable optimizePackageImports for antd to avoid HMR issues with rc-overflow
+    // optimizePackageImports: ["@ant-design/icons", "antd", "react-quill-new"],
+    optimizePackageImports: ["@ant-design/icons", "react-quill-new"],
     serverActions: {
       bodySizeLimit: "500MB", // Increase body size limit for large file uploads (must be uppercase MB)
     },

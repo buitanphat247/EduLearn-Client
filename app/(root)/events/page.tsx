@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { App } from "antd";
 import { getEvents, type EventResponse } from "@/lib/api/events";
 import EventCard from "@/app/components/events/EventCard";
@@ -21,7 +21,10 @@ export default function EventsPage() {
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
   const [selectedEvent, setSelectedEvent] = useState<EventDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isChangingPage, setIsChangingPage] = useState(false);
   const pageSize = 18;
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const pageChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Debounce search
   useEffect(() => {
@@ -35,26 +38,61 @@ export default function EventsPage() {
 
   // Fetch events
   const fetchEvents = useCallback(async () => {
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       setLoading(true);
       setEvents([]); // Clear events to prevent overlap
-      const result = await getEvents({
-        page: currentPage,
-        limit: pageSize,
-        search: debouncedSearchText || undefined,
-      });
 
-      setEvents(result.events);
-      setTotal(result.total);
+      const result = await getEvents(
+        {
+          page: currentPage,
+          limit: pageSize,
+          search: debouncedSearchText || undefined,
+        },
+        { signal: controller.signal }
+      );
+
+      // Only update state if request wasn't aborted
+      if (!controller.signal.aborted) {
+        setEvents(result.events);
+        setTotal(result.total);
+      }
     } catch (error: any) {
-      message.error(error.message || "Không thể tải danh sách sự kiện");
+      // Don't show error for aborted requests
+      if (error.name !== "AbortError" && !controller.signal.aborted) {
+        message.error(error.message || "Không thể tải danh sách sự kiện");
+      }
     } finally {
-      setLoading(false);
+      // Only update loading state if request wasn't aborted
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [currentPage, debouncedSearchText, message]);
 
   useEffect(() => {
     fetchEvents();
+
+    // Cleanup: abort request when component unmounts or dependencies change
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      // Cleanup page change timeout
+      if (pageChangeTimeoutRef.current) {
+        clearTimeout(pageChangeTimeoutRef.current);
+        pageChangeTimeoutRef.current = null;
+      }
+    };
   }, [fetchEvents]);
 
   // Get event status
@@ -143,8 +181,23 @@ export default function EventsPage() {
 
   // Handle page change
   const handlePageChange = (page: number) => {
+    // Prevent double click / rapid page changes
+    if (isChangingPage) return;
+
+    // Clear any existing timeout
+    if (pageChangeTimeoutRef.current) {
+      clearTimeout(pageChangeTimeoutRef.current);
+    }
+
+    setIsChangingPage(true);
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Reset flag after a short delay to allow request to complete
+    pageChangeTimeoutRef.current = setTimeout(() => {
+      setIsChangingPage(false);
+      pageChangeTimeoutRef.current = null;
+    }, 500);
   };
 
   return (

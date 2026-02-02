@@ -3,11 +3,11 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import UserSidebar from "../components/layout/UserSidebar";
 import { usePathname } from "next/navigation";
-import { Modal, Spin, message, Switch } from "antd";
+import { Modal, Spin, message } from "antd";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
 import { useTheme } from "@/app/context/ThemeContext";
-import { MoonOutlined, SunOutlined, BulbOutlined, BulbFilled } from "@ant-design/icons";
+import { BulbOutlined, BulbFilled } from "@ant-design/icons";
 
 const pageTitles: Record<string, string> = {
   "/user": "Trang chủ",
@@ -39,37 +39,55 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
     return undefined;
   }, [pathname]);
 
-  // Memoize fetch function
-  const fetchUserInfo = useCallback(async (showError = false) => {
+  // ✅ Memoize fetch function with cleanup
+  const fetchUserInfo = useCallback(async (showError = false, signal?: AbortSignal) => {
     const userId = getUserIdFromCookie();
     if (!userId) {
-      if (showError) message.error("Không tìm thấy thông tin người dùng");
+      if (showError && !signal?.aborted) {
+        message.error("Không tìm thấy thông tin người dùng");
+      }
       return;
     }
 
-    if (showError) setLoadingProfile(true);
+    if (showError && !signal?.aborted) setLoadingProfile(true);
     try {
       const user = await getUserInfo(userId);
+      // ✅ Only update state if not aborted
+      if (!signal?.aborted) {
       setUserInfo(user);
+      }
     } catch (error: any) {
-      if (showError) {
+      // ✅ Only show error if not aborted
+      if (showError && !signal?.aborted) {
         message.error(error?.message || "Không thể tải thông tin người dùng");
       }
+      if (!signal?.aborted) {
       console.error("Error fetching user info:", error);
+      }
     } finally {
-      if (showError) setLoadingProfile(false);
+      if (showError && !signal?.aborted) {
+        setLoadingProfile(false);
+      }
     }
-  }, []);
+  }, [message]);
 
-  // Fetch user info on mount (silent)
+  // ✅ Fetch user info on mount (silent) with cleanup
   useEffect(() => {
-    fetchUserInfo(false);
+    const abortController = new AbortController();
+    fetchUserInfo(false, abortController.signal);
+    return () => {
+      abortController.abort();
+    };
   }, [fetchUserInfo]);
 
-  // Fetch user info when modal opens (with loading state)
+  // ✅ Fetch user info when modal opens (with loading state) with cleanup
   useEffect(() => {
     if (!isProfileModalOpen || userInfo) return;
-    fetchUserInfo(true);
+    const abortController = new AbortController();
+    fetchUserInfo(true, abortController.signal);
+    return () => {
+      abortController.abort();
+    };
   }, [isProfileModalOpen, userInfo, fetchUserInfo]);
 
   // Memoize getInitials function
@@ -152,7 +170,14 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
                 <div>
                   <span className="text-sm text-gray-500 dark:text-gray-400">Ngày tạo:</span>
                   <p className="text-gray-800 dark:text-gray-200 font-medium">
-                    {userInfo.created_at ? new Date(userInfo.created_at).toLocaleDateString("vi-VN") : "Chưa có thông tin"}
+                    {userInfo.created_at 
+                      ? new Date(userInfo.created_at).toLocaleDateString("vi-VN", {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          timeZone: 'Asia/Ho_Chi_Minh' // ✅ Consistent timezone
+                        })
+                      : "Chưa có thông tin"}
                   </p>
                 </div>
               </div>

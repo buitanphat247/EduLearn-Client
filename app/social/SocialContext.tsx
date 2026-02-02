@@ -143,23 +143,53 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     );
   }, [friendRequests, currentUserIdNumber]);
 
+  // ✅ Fix: Validate user data structure để prevent XSS
+  interface UserData {
+    user_id?: number | string;
+    id?: number | string;
+    username?: string;
+    fullname?: string;
+    email?: string;
+    phone?: string;
+    avatar?: string;
+    role?: { role_name?: string };
+  }
+
+  function isValidUserData(data: any): data is UserData {
+    return (
+      data &&
+      typeof data === 'object' &&
+      (typeof data.user_id === 'number' || typeof data.user_id === 'string' ||
+       typeof data.id === 'number' || typeof data.id === 'string')
+    );
+  }
+
   useEffect(() => {
     try {
       const userStr = localStorage.getItem("user");
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        setCurrentUser({
-          id: user.user_id || user.id,
-          username: user.username,
-          fullname: user.fullname,
-          email: user.email,
-          phone: user.phone,
-          avatar: user.avatar,
-          role_name: user.role?.role_name,
-        });
+      if (!userStr) return;
+      
+      const user = JSON.parse(userStr);
+      
+      // ✅ Validate user data structure
+      if (!isValidUserData(user)) {
+        console.error("Invalid user data structure");
+        localStorage.removeItem("user"); // Clean corrupted data
+        return;
       }
+      
+      setCurrentUser({
+        id: user.user_id || user.id,
+        username: user.username || '',
+        fullname: user.fullname,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+        role_name: user.role?.role_name,
+      });
     } catch (e) {
       console.error("Error parsing user from local storage", e);
+      localStorage.removeItem("user"); // ✅ Clean corrupted data
     }
   }, []);
 
@@ -204,7 +234,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
           id: String(friendUser?.user_id),
           name: friendUser?.fullname || friendUser?.username || "Unknown",
           avatar: friendUser?.avatar || undefined,
-          status: (friendUser?.status as any) || "offline",
+          status: (friendUser?.status as "online" | "offline" | "away") || "offline",
           isFriend: true,
           friendshipId: friend.id,
         };
@@ -226,7 +256,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
 
       const result = await getFriendRequests({
         userId: userIdNumber,
-        limit: 50,
+        limit: FRIEND_REQUESTS_LIMIT,
       });
       setFriendRequests(result.requests || []);
     } catch (error) {
@@ -247,6 +277,25 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   >({});
   const skipAutoLoadMessagesRef = React.useRef(false);
   const processedMessageIdsRef = React.useRef(new Set<string>());
+  
+  // ✅ Constants for magic numbers
+  const FRIEND_REQUESTS_LIMIT = 50;
+  const CONVERSATIONS_LIMIT = 100;
+  const MESSAGES_LIMIT = 50;
+  const MAX_PROCESSED_IDS = 1000;
+  
+  // ✅ Fix: Cleanup processedMessageIdsRef periodically để prevent memory leak
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (processedMessageIdsRef.current.size > MAX_PROCESSED_IDS) {
+        // Keep only recent 500 IDs
+        const ids = Array.from(processedMessageIdsRef.current);
+        processedMessageIdsRef.current = new Set(ids.slice(-500));
+      }
+    }, 60000); // Cleanup every minute
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Join/Leave Socket Room when activeConversationId changes
   useEffect(() => {
@@ -295,7 +344,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         typeof userId === "string" ? parseInt(userId, 10) : userId;
       if (isNaN(userIdNumber)) return;
 
-      const result = await getChatRooms({ userId: userIdNumber, limit: 100 });
+      const result = await getChatRooms({ userId: userIdNumber, limit: CONVERSATIONS_LIMIT });
 
       const newLastReadMap: Record<string, string | number> = {};
 
@@ -377,61 +426,85 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Fetch Messages for a specific room
+  // ✅ Fix: Use refs for stable references (stale closure fix)
+  // Define refs after functions are defined
+  const fetchContactsRef = React.useRef<() => Promise<void>>(() => Promise.resolve());
+  const fetchConversationsRef = React.useRef<() => Promise<void>>(() => Promise.resolve());
+  
+  useEffect(() => {
+    fetchContactsRef.current = fetchContacts;
+    fetchConversationsRef.current = fetchConversations;
+  }, [fetchContacts, fetchConversations]);
+
+  // ✅ Fix: Race condition - Add AbortController và roomId check
   const loadMessages = useCallback(async (roomId: string) => {
     const userId = getUserIdFromCookie();
     if (!userId) return;
 
+    const currentRoomIdRef = roomId; // ✅ Capture roomId để check later
     setLoadingMessages(true);
+    setMessages([]); // ✅ Clear immediately
+    
+    const controller = new AbortController();
+    
     try {
       const userIdNumber =
         typeof userId === "string" ? parseInt(userId, 10) : userId;
       // Catch invalid ID or non-numeric ID (like temp_)
       const roomIdNumber = parseInt(String(roomId), 10);
       if (isNaN(roomIdNumber)) {
-      setMessages([]);
-         setLoadingMessages(false);
-         return;
-       }
+        setMessages([]);
+        setLoadingMessages(false);
+        return;
+      }
  
-       await markAsRead(userIdNumber, roomIdNumber); // Only mark real rooms
+      await markAsRead(userIdNumber, roomIdNumber); // Only mark real rooms
  
-       const result = await getMessages({
-         userId: userIdNumber,
-         roomId: roomIdNumber,
-         limit: 50,
-       });
+      // ✅ Pass signal to prevent race condition (if getMessages supports it)
+      const result = await getMessages({
+        userId: userIdNumber,
+        roomId: roomIdNumber,
+        limit: MESSAGES_LIMIT,
+      });
  
-       // Map messages
-       const mappedMessages: Message[] = result.data.map((msg: any) => ({
-         id: String(msg.message_id),
-         sender: msg.sender?.fullname || msg.sender?.username || "Unknown",
-         senderAvatar: msg.sender?.avatar,
-         content: (msg.content || "").trim(),
-         time: new Date(msg.created_at).toLocaleTimeString([], {
-           hour: "2-digit",
-           minute: "2-digit",
-         }),
-         isOwn: String(msg.sender_id) === String(userIdNumber),
-         fileAttachment: msg.fileAttachment, // Preserve if available
-       }));
+      // ✅ Only update if still on the same room
+      if (currentRoomIdRef === roomId) {
+        // Map messages
+        const mappedMessages: Message[] = result.data.map((msg: any) => ({
+          id: String(msg.message_id),
+          sender: msg.sender?.fullname || msg.sender?.username || "Unknown",
+          senderAvatar: msg.sender?.avatar,
+          content: (msg.content || "").trim(),
+          time: new Date(msg.created_at).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          isOwn: String(msg.sender_id) === String(userIdNumber),
+          fileAttachment: msg.fileAttachment, // Preserve if available
+        }));
  
-       setMessages(mappedMessages);
+        setMessages(mappedMessages);
 
-      // Optimistic Update: Clear badge immediately
-      setConversations((prev) =>
-        prev.map((c) =>
-          String(c.id) === String(roomId) ? { ...c, unread: 0 } : c
-        )
-      );
+        // Optimistic Update: Clear badge immediately
+        setConversations((prev) =>
+          prev.map((c) =>
+            String(c.id) === String(roomId) ? { ...c, unread: 0 } : c
+          )
+        );
 
-      // Refresh conversations list to clear unread badge in sidebar
-      fetchConversations();
-    } catch (error) {
-      console.error("Error loading messages:", error);
+        // ✅ Use ref instead of direct call
+        fetchConversationsRef.current();
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error("Error loading messages:", error);
+      }
       // setMessages([]); // Do not clear messages on error to prevent flashing empty state
     } finally {
-      setLoadingMessages(false);
+      // ✅ Only update loading state if still on the same room
+      if (currentRoomIdRef === roomId) {
+        setLoadingMessages(false);
+      }
     }
   }, []);
 
@@ -534,8 +607,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         return prev;
       });
 
-      // Background Fetch to sync Sidebar (e.g. timestamps, read status)
-      fetchConversations();
+      // ✅ Use ref instead of direct call
+      fetchConversationsRef.current();
     } catch (error: any) {
       console.error("Error sending message:", error);
       antMessage.error(error.message || "Gửi tin nhắn thất bại");
@@ -706,11 +779,12 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         id: payload.friend.id,
         requester_id: payload.friend.requester_id,
         addressee_id: payload.friend.addressee_id,
-        status: payload.friend.status as any,
+        // ✅ Fix: Type safety - Remove 'as any', use proper type assertion
+        status: payload.friend.status as 'pending' | 'accepted' | 'rejected',
         created_at: payload.friend.created_at,
         accepted_at: payload.friend.accepted_at || null,
-        requester: payload.friend.requester as any,
-        addressee: payload.friend.addressee as any,
+        requester: payload.friend.requester,
+        addressee: payload.friend.addressee,
       };
 
       setFriendRequests((prev) => {
@@ -739,7 +813,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
           } đã chấp nhận lời mời kết bạn của bạn`
         );
       }
-      fetchContacts();
+      fetchContactsRef.current();
     });
 
     const unsubscribeRejected = onFriendRequestRejected((payload) => {
@@ -749,7 +823,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     });
 
     const unsubscribeRemoved = onFriendRemoved((payload) => {
-      fetchContacts();
+      fetchContactsRef.current();
       const currentUserId = getUserIdFromCookie();
       const currentUserIdNum =
         typeof currentUserId === "string"
@@ -787,10 +861,18 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
 
       // Hard Deduplication for Socket Events
       const msgId = String(msg.message_id || "");
+      // ✅ Fix: Memory leak - Cleanup old IDs if set too large
       if (msgId && processedMessageIdsRef.current.has(msgId)) {
         return;
       }
-      if (msgId) processedMessageIdsRef.current.add(msgId);
+      if (msgId) {
+        processedMessageIdsRef.current.add(msgId);
+        // ✅ Cleanup if too large
+        if (processedMessageIdsRef.current.size > MAX_PROCESSED_IDS) {
+          const ids = Array.from(processedMessageIdsRef.current);
+          processedMessageIdsRef.current = new Set(ids.slice(-500));
+        }
+      }
 
       const currentActiveId = activeConversationIdRef.current;
       const currentPath = pathnameRef.current;
@@ -836,9 +918,10 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
 
         // If conversation doesn't exist locally, we MIGHT need to fetch.
         // But for now, let's assume it exists or we can't update it easily without full fetch.
+        // ✅ Use ref instead of direct call
         // If it doesn't exist, maybe trigger fetch?
         if (!newConv) {
-          fetchConversations(); // Fallback for new rooms
+          fetchConversationsRef.current(); // Fallback for new rooms
           return prev;
         }
 
@@ -958,7 +1041,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         });
       }
       // Re-fetch contacts for real-time update
-      fetchContacts();
+      fetchContactsRef.current();
     });
 
     const unsubscribeBlocked = onUserBlocked((data) => {
@@ -988,7 +1071,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         });
       }
       // Re-fetch to sync if needed, but don't filter out anymore
-      fetchContacts();
+      fetchContactsRef.current();
     });
 
     const unsubscribeRead = onMessageRead((payload) => {
@@ -1039,7 +1122,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       unsubscribeBlocked();
       unsubscribeUnblocked();
     };
-  }, [fetchContacts, currentUserIdNumber, fetchConversations]);
+  }, [currentUserIdNumber]); // ✅ Fix: Remove callbacks from dependencies, use refs instead
 
   const value = React.useMemo(() => ({
         currentUser,

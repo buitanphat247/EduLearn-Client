@@ -5,6 +5,44 @@ import { useState, useEffect } from "react";
 import { createClass, type CreateClassParams } from "@/lib/api/classes";
 import { getCurrentUser } from "@/lib/api/users";
 
+/**
+ * CreateClassModal - Modal component for creating a new class
+ * 
+ * @description 
+ * A modal form component for creating new classes with:
+ * - Class name input (required, max 255 characters)
+ * - Auto-generated class code (read-only)
+ * - Form validation
+ * - Loading states
+ * - Error handling
+ * - Success callback
+ * 
+ * @example
+ * ```tsx
+ * <CreateClassModal
+ *   open={isOpen}
+ *   onCancel={() => setIsOpen(false)}
+ *   onSuccess={() => {
+ *     setIsOpen(false);
+ *     refetchClasses();
+ *   }}
+ * />
+ * ```
+ * 
+ * @param {CreateClassModalProps} props - Component props
+ * @param {boolean} props.open - Whether the modal is open
+ * @param {() => void} props.onCancel - Callback when modal is cancelled
+ * @param {() => void} props.onSuccess - Callback when class is created successfully
+ * 
+ * @returns {JSX.Element} Rendered modal component
+ * 
+ * @accessibility
+ * - Modal has proper ARIA labels and roles
+ * - Form fields have labels and descriptions
+ * - Keyboard navigation (Escape to close, Tab to navigate)
+ * - Focus management
+ * - Screen reader support
+ */
 interface CreateClassModalProps {
   open: boolean;
   onCancel: () => void;
@@ -87,7 +125,12 @@ export default function CreateClassModal({ open, onCancel, onSuccess }: CreateCl
       maskClosable={!submitting}
       closable={!submitting}
       destroyOnClose={true}
+      aria-labelledby="create-class-modal-title"
+      aria-describedby="create-class-modal-description"
     >
+      <div id="create-class-modal-description" className="sr-only">
+        Form tạo lớp học mới với tên lớp và mã lớp tự động
+      </div>
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           name="name"
@@ -97,7 +140,17 @@ export default function CreateClassModal({ open, onCancel, onSuccess }: CreateCl
             { max: 255, message: "Tên lớp không được vượt quá 255 ký tự" },
           ]}
         >
-          <Input placeholder="Nhập tên lớp học" disabled={submitting} size="middle" />
+          <Input 
+            placeholder="Nhập tên lớp học" 
+            disabled={submitting} 
+            size="middle"
+            aria-label="Tên lớp học"
+            aria-required="true"
+            aria-describedby="class-name-help"
+          />
+          <div id="class-name-help" className="sr-only">
+            Nhập tên lớp học, tối đa 255 ký tự
+          </div>
         </Form.Item>
 
         <Form.Item
@@ -105,7 +158,18 @@ export default function CreateClassModal({ open, onCancel, onSuccess }: CreateCl
           label="Mã lớp (tự động)"
           tooltip="Mã lớp được tạo tự động để tránh trùng lặp"
         >
-          <Input placeholder="Mã lớp sẽ được tạo tự động" disabled size="middle" className="bg-gray-50" />
+          <Input 
+            placeholder="Mã lớp sẽ được tạo tự động" 
+            disabled 
+            size="middle" 
+            className="bg-gray-50"
+            aria-label="Mã lớp tự động"
+            aria-readonly="true"
+            aria-describedby="class-code-help"
+          />
+          <div id="class-code-help" className="sr-only">
+            Mã lớp được tạo tự động, không thể chỉnh sửa
+          </div>
         </Form.Item>
 
         <Form.Item className="mb-0">

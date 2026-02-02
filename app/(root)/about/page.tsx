@@ -2,77 +2,17 @@
 
 import React from "react";
 import { 
-  RocketOutlined, 
-  GlobalOutlined, 
-  HeartOutlined, 
-  SafetyCertificateOutlined,
-  ExperimentOutlined,
-  ThunderboltOutlined,
   EyeOutlined,
   FlagOutlined,
   CheckCircleOutlined,
   DashboardOutlined,
   ApiOutlined,
-  ToolOutlined,
-  SunOutlined,
-  UserAddOutlined
 } from "@ant-design/icons";
 import ScrollAnimation from "@/app/components/common/ScrollAnimation";
 import Image from "next/image";
 import DarkConfigProvider from "@/app/components/common/DarkConfigProvider";
-
-const stats = [
-  { title: "Học viên", value: "15,000+", icon: <HeartOutlined /> },
-  { title: "Khóa học", value: "500+", icon: <RocketOutlined /> },
-  { title: "Chuyên gia", value: "100+", icon: <ExperimentOutlined /> },
-  { title: "Đánh giá 5*", value: "98%", icon: <SafetyCertificateOutlined /> },
-];
-
-const values = [
-  {
-    icon: <ToolOutlined />,
-    title: "Công nghệ",
-    description: "Đổi mới liên tục để luôn đi đầu trong nhu cầu giáo dục.",
-  },
-  {
-    icon: <SunOutlined />,
-    title: "Minh bạch",
-    description: "Dữ liệu rõ ràng và giao tiếp cởi mở cho tất cả các bên liên quan.",
-  },
-  {
-    icon: <ThunderboltOutlined />,
-    title: "Hiệu quả",
-    description: "Tối ưu hóa quy trình làm việc để tập trung vào điều quan trọng: giảng dạy.",
-  },
-  {
-    icon: <UserAddOutlined />,
-    title: "Lấy người học làm trung tâm",
-    description: "Đặt trải nghiệm học sinh vào trọng tâm của thiết kế.",
-  },
-];
-
-const targetAudiences = [
-  {
-    title: "Trường học",
-    description: "Chuyển đổi số cho giáo dục phổ thông.",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAx9EgMRS3-kDHGtorC-r7NL95AVYF7U1bUWBSdzC0aqsNwzKHV2EuiSq7b-4lqUfO7xlv13Ky9P06s2eu5wDUilLTG4r32B0UujrTLpYJO4sW3zEqBuf-wlFw0EusXYNLLenivEo-w93AJPQsRjyXyTN1MZF9orTICunsFutMcseTtHI2TSLzjjZMK68-UrhcrQBSu-hct7eUuUPIvPEfUEcpE6H59HAo29laPd5yM7RoPZgeTZk_I-LxeYmJCkewRzSSuJUsyJTQ",
-  },
-  {
-    title: "Trung tâm đào tạo",
-    description: "Quản lý linh hoạt cho các khóa học chuyên biệt.",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuC_13-JU4yJLCcS0kKH6thRSH1UXkMZIDiQjyPb7eB_uyj6n6DSjR_uVQdQme23F06ebM0NVMuVXDr-MX2Xej64DT2xgiRG1H70nKp6fS-_hMRE7sBgfVkJfX8HpZGk8Dm_RHJ-Y1Ef5b9nK8T8kGYMAdCwlcV7aDqL_o7y_fqMct5erIPqvQmJ3mQAp4oEydlwGQaHRdZmzWZ54pf0lcKYqb5E9Xv8p1sAUjG21clS5Pxrf4fyftooexi0JZT2hZqxeTSHFiV_98w",
-  },
-  {
-    title: "Giáo viên",
-    description: "Công cụ tự động hóa chấm điểm và theo dõi tiến độ.",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBSQgngMJ9WYFv_aSt6zt7oXhAmjXe6DQ1LUrUUy8byPveUNSJEZX3rIIs_rLgQ5kNc9nQal_Aax08V2FOM21z57v3VoHMQn5Wz-dS7uMsHpUTWZtNCjF6llJc5P5scGl2bi864bxID0J-9HuHSjBbOr3iHDXWb9J-ssYuP0fYOsq8lOXQfgTY4gvv-gTNVPzp1nzd55wiKHMcm0t3rw7FORUQ-sbHvO1Q8ei0kUlgaY003-iPceayYE35bU9AgFDrZp6XUJoByOek",
-  },
-  {
-    title: "Học sinh",
-    description: "Lộ trình học tập cá nhân hóa để đạt kết quả tốt hơn.",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCMaRSQNpeyJbVhXsNNNTcAytC8f_sUSxOB0oP5HtbHZiY-Xi-MSzYZQaCjxsHTrFTui3VrSHctveRij-brueIQxuNSbxG4Y29k7PDpxUV6_ZVI-aOn5FsrAXE5wZGzYX7XXdQor6SI1oVaXwvyxqw0x7b_h2hN2hoQBzBwpJACriCJgsuylvMkSFxppKhuPjfknYaFddf_EkQsrB22QKnfZUE-LJ_uR5Y26ckWb94rUivsuIDS4DRmlZd7DE4fEcx-hwLh-ZSoG50",
-  },
-];
+// ✅ Extracted hardcoded arrays to constants file
+import { ABOUT_STATS, ABOUT_VALUES, TARGET_AUDIENCES } from "./constants";
 
 export default function About() {
   return (
@@ -111,10 +51,13 @@ export default function About() {
               
               {/* Right Image */}
               <div className="w-full md:w-1/2 lg:w-3/5 aspect-video md:aspect-4/3 lg:aspect-video rounded-xl overflow-hidden shadow-2xl shadow-slate-200/50 dark:shadow-black/50 bg-slate-200 dark:bg-slate-800 transition-all duration-300">
-                <img
+                <Image
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFmUDfLwpFXm7tBnSg2ymj5N0YD-RRys7iyg-HzEHNAeQRZdAP7f2eYisPzkFGRmZaFPB2yss1pt8AYvIQKjLXCGVxt4dQErmcZpmM0uceSPNM91iuUp0EAJWvbjZAQFNsvxuJeWfuXTz_Ga5gDHoUYzHlVU0cPIR-1pCcJGbLHDPKV7favVKZLC63VjNyG4m8Xw38yoBJMyNaXDHWOVtnybHlugDJq2mj8X-8lPQPUM6n4neU5wq-DLVX0ai7E3ETVffz6zQI8Bg"
                   alt="Modern digital classroom with students using laptops"
+                  width={1200}
+                  height={675}
                   className="w-full h-full object-cover"
+                  priority
                 />
               </div>
             </div>
@@ -127,8 +70,8 @@ export default function About() {
         <div className="container mx-auto px-4 md:px-10 pb-10 -mt-16 relative z-20">
           <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-black/40 p-8 md:p-12 border border-slate-200 dark:border-slate-700 transition-all duration-300">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-slate-200 dark:divide-slate-700">
-              {stats.map((stat, index) => (
-                <div key={index} className="text-center group px-4">
+              {ABOUT_STATS.map((stat) => (
+                <div key={stat.title} className="text-center group px-4">
                   <div className="mb-4 inline-flex items-center justify-center w-14 h-14 rounded-full bg-linear-to-br from-blue-500/10 to-purple-500/10 dark:from-blue-500/20 dark:to-purple-500/20 text-blue-600 dark:text-blue-400 text-2xl group-hover:scale-110 transition-transform duration-300 border border-slate-100 dark:border-white/5">
                     {stat.icon}
                   </div>
@@ -250,7 +193,7 @@ export default function About() {
                 Giá trị cho giáo dục
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {values.map((value, index) => (
+                {ABOUT_VALUES.map((value, index) => (
                   <div key={index} className="flex flex-col items-center text-center gap-3 p-4">
                     <div className="w-14 h-14 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-2">
                       {value.icon}
@@ -275,7 +218,7 @@ export default function About() {
                 <p className="text-slate-600 dark:text-slate-400 text-base transition-colors duration-300">Hỗ trợ toàn bộ hệ sinh thái giáo dục.</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {targetAudiences.map((audience, index) => (
+                {TARGET_AUDIENCES.map((audience, index) => (
                   <div key={index} className="group relative overflow-hidden rounded-xl h-64 cursor-pointer">
                     <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-110">
                       <Image

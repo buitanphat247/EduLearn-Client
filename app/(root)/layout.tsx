@@ -1,6 +1,5 @@
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
-import DarkConfigProvider from "../components/common/DarkConfigProvider";
 
 export const dynamic = "force-dynamic";
 

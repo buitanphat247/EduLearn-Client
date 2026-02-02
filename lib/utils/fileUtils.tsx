@@ -1,6 +1,5 @@
-import React from "react";
 import { FileTextOutlined, FilePdfOutlined, FileImageOutlined, FileWordOutlined } from "@ant-design/icons";
-import type { UploadFile } from "antd";
+import type { ReactNode } from "react";
 
 export interface FileItem {
   name?: string;
@@ -14,7 +13,7 @@ export interface FileItem {
 /**
  * Get appropriate icon for file based on type or extension
  */
-export const getFileIcon = (file: FileItem): React.ReactNode => {
+export const getFileIcon = (file: FileItem): ReactNode => {
   const fileName = file.name || file.file_name || "";
   const fileType = file.type || file.file_type || "";
 

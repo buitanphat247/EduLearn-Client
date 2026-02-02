@@ -12,7 +12,7 @@ import CustomCard from "@/app/components/common/CustomCard";
 import DataLoadingSplash from "@/app/components/common/DataLoadingSplash";
 import { getClassById, getClassStudentsByClass, type ClassStudentRecord } from "@/lib/api/classes";
 import { CLASS_STATUS_MAP, formatStudentId } from "@/lib/utils/classUtils";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { getUserIdFromCookie, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
 import type { StudentItem } from "@/interface/students";
 import type { ColumnsType } from "antd/es/table";
 import { classSocketClient } from "@/lib/socket/class-client";
@@ -48,7 +48,7 @@ export default function UserClassDetail() {
   useEffect(() => {
     classIdRef.current = classId;
   }, [classId]);
-  
+
   useEffect(() => {
     messageRef.current = message;
   }, [message]);
@@ -61,7 +61,7 @@ export default function UserClassDetail() {
   const [isTabLoading, setIsTabLoading] = useState(false);
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
-  
+
   // Tab-specific state
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState("");
   const [exercisePage, setExercisePage] = useState(1);
@@ -69,7 +69,7 @@ export default function UserClassDetail() {
   const [notificationPage, setNotificationPage] = useState(1);
   const [examSearchQuery, setExamSearchQuery] = useState("");
   const [examPage, setExamPage] = useState(1);
-  
+
   // Constants
   const exercisePageSize = 4;
   const notificationPageSize = 4;
@@ -126,12 +126,21 @@ export default function UserClassDetail() {
     if (!currentClassId) return "";
 
     try {
-      const userId = getUserIdFromCookie();
+      let userId: string | number | null = getUserIdFromCookie();
+
+      if (!userId) {
+        try {
+          userId = await getUserIdFromCookieAsync();
+        } catch (e) {
+          console.error("Async user fetch failed:", e);
+        }
+      }
+
       if (!userId) throw new Error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
-      
+
       const numericUserId = typeof userId === "string" ? Number(userId) : userId;
       if (isNaN(numericUserId)) throw new Error("User ID không hợp lệ");
-      
+
       const data = await getClassById(currentClassId, numericUserId);
 
       const mappedClassData = {
@@ -160,7 +169,7 @@ export default function UserClassDetail() {
 
     try {
       if (showLoading) setStudentsLoading(true);
-      
+
       const records = await getClassStudentsByClass({
         classId: currentClassId,
         page: 1,
@@ -262,7 +271,7 @@ export default function UserClassDetail() {
         const newStudent = mapStudentRecordToItem(data, classNameRef.current);
         setStudents((prev) => {
           if (prev.some((s) => String(s.userId) === String(newStudent.userId))) return prev;
-          
+
           const newList = [newStudent, ...prev];
           const newCount = data.student_count ?? newList.length;
           setClassData((prevData) => (prevData ? { ...prevData, students: newCount } : prevData));
@@ -297,7 +306,7 @@ export default function UserClassDetail() {
 
         const currentUserId = getUserIdFromCookie();
         const isCurrentUser = String(data.user_id) === String(currentUserId);
-        
+
         if (isCurrentUser && data.status === "banned") return;
 
         if (data.status === "banned") {

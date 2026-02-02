@@ -387,7 +387,6 @@ export default function UserDocuments() {
             total: pagination.total,
             showSizeChanger: false,
             showTotal: (total) => <span className="text-gray-500 dark:text-gray-400 font-medium">Tổng {total} tài liệu</span>,
-            size: "default",
             onChange: handleTableChange,
           }}
           bordered={false}

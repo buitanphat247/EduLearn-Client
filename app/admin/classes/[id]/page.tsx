@@ -52,7 +52,7 @@ export default function ClassDetail() {
   useEffect(() => {
     classIdRef.current = classId;
   }, [classId]);
-  
+
   useEffect(() => {
     messageRef.current = message;
   }, [message]);
@@ -110,59 +110,59 @@ export default function ClassDetail() {
 
   // Fetch class info
   const fetchClassInfo = useCallback(async (showLoading: boolean = true): Promise<string> => {
-    const currentClassId = classIdRef.current;
+      const currentClassId = classIdRef.current;
     if (!currentClassId || !userId) return "";
 
-    try {
-      const numericUserId = typeof userId === "string" ? Number(userId) : userId;
+      try {
+        const numericUserId = typeof userId === "string" ? Number(userId) : userId;
       if (isNaN(numericUserId)) throw new Error("User ID không hợp lệ");
 
-      const data = await getClassById(currentClassId, numericUserId);
+        const data = await getClassById(currentClassId, numericUserId);
 
-      const mappedClassData = {
-        id: String(data.class_id),
-        name: data.name,
-        code: data.code,
-        students: data.student_count,
-        status: (data.status === "active" ? CLASS_STATUS_MAP.active : CLASS_STATUS_MAP.inactive) as "Đang hoạt động" | "Tạm dừng",
-      };
+        const mappedClassData = {
+          id: String(data.class_id),
+          name: data.name,
+          code: data.code,
+          students: data.student_count,
+          status: (data.status === "active" ? CLASS_STATUS_MAP.active : CLASS_STATUS_MAP.inactive) as "Đang hoạt động" | "Tạm dừng",
+        };
 
-      setClassData(mappedClassData);
+        setClassData(mappedClassData);
       setOriginalClassData(data);
       classNameRef.current = data.name;
       return data.name;
-    } catch (error: any) {
+      } catch (error: any) {
       if (showLoading) setClassData(null);
-      throw error;
-    }
+        throw error;
+      }
   }, [userId]);
 
   // Fetch students
   const fetchClassStudents = useCallback(async (className?: string, showLoading: boolean = false) => {
-    const currentClassId = classIdRef.current;
-    if (!currentClassId) return;
+      const currentClassId = classIdRef.current;
+      if (!currentClassId) return;
 
-    const startTime = Date.now();
-    try {
-      const records = await getClassStudentsByClass({
-        classId: currentClassId,
-        page: 1,
+      const startTime = Date.now();
+      try {
+        const records = await getClassStudentsByClass({
+          classId: currentClassId,
+          page: 1,
         limit: 1000,
-      });
+        });
 
-      const studentClassName = className || classNameRef.current || "";
+        const studentClassName = className || classNameRef.current || "";
       const mappedStudents: StudentItem[] = records.map((record: ClassStudentRecord) => 
         mapStudentRecordToItem(record, studentClassName)
       );
 
       if (showLoading) await ensureMinLoadingTime(startTime);
-      setStudents(mappedStudents);
-    } catch (error: any) {
-      if (showLoading) {
-        await ensureMinLoadingTime(startTime);
-        setStudents([]);
+        setStudents(mappedStudents);
+      } catch (error: any) {
+        if (showLoading) {
+          await ensureMinLoadingTime(startTime);
+          setStudents([]);
+        }
       }
-    }
   }, [mapStudentRecordToItem]);
 
   // Fetch both class info and students
@@ -207,7 +207,7 @@ export default function ClassDetail() {
     };
 
     if (socket.connected) {
-      classSocketClient.joinClass(classId);
+    classSocketClient.joinClass(classId);
     } else {
       socket.on("connect", () => classSocketClient.joinClass(classId));
       joinRoom();
@@ -217,36 +217,36 @@ export default function ClassDetail() {
     const unsubscribeUpdated = classSocketClient.on("class_updated", (data: any) => {
       if (Number(data.class_id) !== Number(classId)) return;
 
-      setClassData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          name: data.name,
-          code: data.code,
-          status: data.status === "active" ? CLASS_STATUS_MAP.active : CLASS_STATUS_MAP.inactive,
-        };
-      });
-      classNameRef.current = data.name;
-
-      if (userId && Number(data.updated_by) !== Number(userId)) {
-        const toastMessage = data.old_name && data.name !== data.old_name
-          ? `Lớp học "${data.old_name}" vừa đổi tên thành "${data.name}"`
-          : `Lớp học "${data.name}" vừa được cập nhật`;
-        
-        messageRef.current.info({
-          content: toastMessage,
-          key: `class_update_${data.class_id}`,
-          duration: 3,
+        setClassData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            name: data.name,
+            code: data.code,
+            status: data.status === "active" ? CLASS_STATUS_MAP.active : CLASS_STATUS_MAP.inactive,
+          };
         });
+        classNameRef.current = data.name;
+
+        if (userId && Number(data.updated_by) !== Number(userId)) {
+          const toastMessage = data.old_name && data.name !== data.old_name
+            ? `Lớp học "${data.old_name}" vừa đổi tên thành "${data.name}"`
+            : `Lớp học "${data.name}" vừa được cập nhật`;
+          
+        messageRef.current.info({
+            content: toastMessage,
+          key: `class_update_${data.class_id}`,
+            duration: 3,
+          });
       }
     });
 
     const unsubscribeDeleted = classSocketClient.on("class_deleted", (data: any) => {
       if (Number(data.class_id) !== Number(classId)) return;
 
-      if (userId && data.deleted_by && Number(data.deleted_by) !== Number(userId)) {
+        if (userId && data.deleted_by && Number(data.deleted_by) !== Number(userId)) {
         messageRef.current.warning(`Lớp học "${data.name}" đã bị giải tán bởi quản trị viên khác.`);
-        router.push("/admin/classes");
+          router.push("/admin/classes");
       }
     });
 
@@ -295,30 +295,30 @@ export default function ClassDetail() {
     const unsubscribeRemoved = classSocketClient.on("student_removed", (data: any) => {
       if (Number(data.class_id) !== Number(classId)) return;
 
-      setStudents((prev) => {
+        setStudents((prev) => {
         if (!Array.isArray(prev)) return [];
-        const newList = prev.filter((s) => String(s.userId) !== String(data.user_id));
+          const newList = prev.filter((s) => String(s.userId) !== String(data.user_id));
         const newCount = data.student_count ?? newList.length;
-        setClassData((prevData) => (prevData ? { ...prevData, students: newCount } : prevData));
-        return newList;
-      });
+          setClassData((prevData) => (prevData ? { ...prevData, students: newCount } : prevData));
+          return newList;
+        });
     });
 
     const unsubscribeStatus = classSocketClient.on("student_status_updated", (data: any) => {
       if (Number(data.class_id) !== Number(classId)) return;
 
-      setStudents((prev) => {
+          setStudents((prev) => {
         if (!Array.isArray(prev)) return [];
-        const index = prev.findIndex((s) => String(s.userId) === String(data.user_id));
+            const index = prev.findIndex((s) => String(s.userId) === String(data.user_id));
         if (index === -1) return prev;
 
-        const newList = [...prev];
-        newList[index] = {
-          ...newList[index],
-          status: data.status === "banned" ? "Bị cấm" : "Đang học",
-          apiStatus: data.status,
-        };
-        return newList;
+              const newList = [...prev];
+              newList[index] = {
+                ...newList[index],
+                status: data.status === "banned" ? "Bị cấm" : "Đang học",
+                apiStatus: data.status,
+              };
+              return newList;
       });
       
       if (data.student_count !== undefined) {
@@ -463,24 +463,24 @@ export default function ClassDetail() {
   }, []);
 
   const handleRemoveStudent = useCallback((student: StudentItem) => {
-    modal.confirm({
-      title: "Xác nhận xóa học sinh",
+      modal.confirm({
+        title: "Xác nhận xóa học sinh",
       content: `Bạn có chắc chắn muốn xóa học sinh "${student.name}" ra khỏi lớp "${classNameRef.current}"?`,
-      okText: "Xóa",
-      okType: "danger",
-      cancelText: "Hủy",
-      onOk: async () => {
-        try {
-          await removeStudentFromClass({
+        okText: "Xóa",
+        okType: "danger",
+        cancelText: "Hủy",
+        onOk: async () => {
+          try {
+            await removeStudentFromClass({
             classId: classIdRef.current,
-            userId: student.userId,
-          });
+              userId: student.userId,
+            });
           messageRef.current.success(`Đã xóa học sinh "${student.name}" ra khỏi lớp`);
-        } catch (error: any) {
+          } catch (error: any) {
           messageRef.current.error(error?.message || "Không thể xóa học sinh khỏi lớp");
-        }
-      },
-    });
+          }
+        },
+      });
   }, [modal]);
 
   // Memoized values
@@ -539,81 +539,81 @@ export default function ClassDetail() {
 
   // Memoize tab items
   const tabItems = useMemo(() => [
-    {
-      key: "students",
-      label: (
-        <span>
-          <UserOutlined className="mr-2" />
-          Danh sách học sinh
-        </span>
-      ),
-      children: renderTabContent(
-        <ClassStudentsTable
-          students={students}
-          onViewStudent={handleViewStudent}
-          onRemoveStudent={handleRemoveStudent}
-          onBanStudent={handleBanStudent}
+          {
+            key: "students",
+            label: (
+              <span>
+                <UserOutlined className="mr-2" />
+                Danh sách học sinh
+              </span>
+            ),
+            children: renderTabContent(
+              <ClassStudentsTable
+                students={students}
+                onViewStudent={handleViewStudent}
+                onRemoveStudent={handleRemoveStudent}
+                onBanStudent={handleBanStudent}
           onUnbanStudent={handleUnbanStudent}
-        />
-      ),
-    },
-    {
-      key: "notifications",
-      label: (
-        <span>
-          <BellOutlined className="mr-2" />
-          Thông báo
-        </span>
-      ),
-      children: renderTabContent(
-        <ClassNotificationsTab
-          classId={classId}
-          searchQuery={notificationSearchQuery}
-          onSearchChange={setNotificationSearchQuery}
-          currentPage={notificationPage}
-          pageSize={notificationPageSize}
-          onPageChange={setNotificationPage}
-        />
-      ),
-    },
-    {
-      key: "exercises",
-      label: (
-        <span>
-          <FileTextOutlined className="mr-2" />
-          Bài tập
-        </span>
-      ),
-      children: renderTabContent(
-        <ClassExercisesTab
-          classId={classId}
-          searchQuery={exerciseSearchQuery}
-          onSearchChange={setExerciseSearchQuery}
-          currentPage={exercisePage}
-          pageSize={exercisePageSize}
-          onPageChange={setExercisePage}
-        />
-      ),
-    },
-    {
-      key: "exams",
-      label: (
-        <span>
-          <ExperimentOutlined className="mr-2" />
-          Kiểm tra
-        </span>
-      ),
-      children: renderTabContent(
-        <ClassExamsTab
-          classId={classId}
-          searchQuery={examSearchQuery}
-          onSearchChange={setExamSearchQuery}
-          currentPage={examPage}
-          pageSize={examPageSize}
-          onPageChange={setExamPage}
-        />
-      ),
-    },
+              />
+            ),
+          },
+          {
+            key: "notifications",
+            label: (
+              <span>
+                <BellOutlined className="mr-2" />
+                Thông báo
+              </span>
+            ),
+            children: renderTabContent(
+              <ClassNotificationsTab
+                classId={classId}
+                searchQuery={notificationSearchQuery}
+                onSearchChange={setNotificationSearchQuery}
+                currentPage={notificationPage}
+                pageSize={notificationPageSize}
+                onPageChange={setNotificationPage}
+              />
+            ),
+          },
+          {
+            key: "exercises",
+            label: (
+              <span>
+                <FileTextOutlined className="mr-2" />
+                Bài tập
+              </span>
+            ),
+            children: renderTabContent(
+              <ClassExercisesTab
+                classId={classId}
+                searchQuery={exerciseSearchQuery}
+                onSearchChange={setExerciseSearchQuery}
+                currentPage={exercisePage}
+                pageSize={exercisePageSize}
+                onPageChange={setExercisePage}
+              />
+            ),
+          },
+          {
+            key: "exams",
+            label: (
+              <span>
+                <ExperimentOutlined className="mr-2" />
+                Kiểm tra
+              </span>
+            ),
+            children: renderTabContent(
+              <ClassExamsTab
+                classId={classId}
+                searchQuery={examSearchQuery}
+                onSearchChange={setExamSearchQuery}
+                currentPage={examPage}
+                pageSize={examPageSize}
+                onPageChange={setExamPage}
+              />
+            ),
+          },
   ], [
     students, handleViewStudent, handleRemoveStudent, handleBanStudent, handleUnbanStudent,
     classId, notificationSearchQuery, notificationPage, exerciseSearchQuery, exercisePage,

@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
+import { cookies } from "next/headers";
+import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import PrefetchRoutes from "./components/common/PrefetchRoutes";
+import ErrorBoundary from "./error-boundary";
+import { noTransitionsScript } from "./scripts/no-transitions";
 
 // Optimize font loading - chỉ load weights cần thiết
 const roboto = Roboto({
@@ -23,24 +27,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const theme = cookieStore.get("theme");
+  const isDark = theme?.value === "dark";
+
   return (
-    <html lang="vi" suppressHydrationWarning>
+    <html lang="vi" className={isDark ? "dark" : ""} suppressHydrationWarning>
       <head>
         {/* Preconnect to Google Fonts - Tăng tốc độ load fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        
-        {/* Prefetch critical routes - Preload routes quan trọng */}
-        <link rel="prefetch" href="/admin" as="document" />
-        <link rel="prefetch" href="/admin/classes" as="document" />
-        <link rel="prefetch" href="/user" as="document" />
-        <link rel="prefetch" href="/user/classes" as="document" />
-        
+
+        {/* ✅ Prefetch routes được xử lý bởi PrefetchRoutes component - không hardcode ở đây */}
+        {/* PrefetchRoutes component sẽ prefetch routes dựa trên user context và pathname */}
+
         {/* Font Awesome - Load async để không block render */}
         <link
           rel="preload"
@@ -54,50 +59,26 @@ export default function RootLayout({
           crossOrigin="anonymous"
           referrerPolicy="no-referrer"
         />
-        <script
+        {/* ✅ Use Next.js Script component instead of dangerouslySetInnerHTML to prevent XSS */}
+        <Script
+          id="no-transitions-script"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var html = document.documentElement;
-                  // Disable transitions initially to prevent flash
-                  html.classList.add('no-transitions');
-                  
-                  var theme = localStorage.getItem('theme');
-                  if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                    html.classList.add('dark');
-                  }
-                  
-                  // Re-enable transitions immediately after DOM content is loaded
-                  // interactive (DOMContentLoaded) is sooner than complete (window.load)
-                  var removeNoTransitions = function() {
-                      // RequestAnimationFrame ensures the paint with 'dark' class has happened
-                      requestAnimationFrame(function() {
-                        setTimeout(function() {
-                          html.classList.remove('no-transitions');
-                        }, 0);
-                      });
-                  };
-
-                  if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', removeNoTransitions);
-                  } else {
-                    removeNoTransitions();
-                  }
-                } catch (e) {}
-              })();
-            `,
+            __html: noTransitionsScript,
           }}
         />
+        {/* Critical CSS moved to Header.css to prevent hydration errors */}
       </head>
       <body
         className={`${roboto.variable} antialiased`}
       >
         <AntdRegistry>
-          <Providers>
-            <PrefetchRoutes />
-            {children}
-          </Providers>
+          <ErrorBoundary>
+            <Providers>
+              <PrefetchRoutes />
+              {children}
+            </Providers>
+          </ErrorBoundary>
         </AntdRegistry>
       </body>
     </html>
