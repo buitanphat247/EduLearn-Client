@@ -1,10 +1,53 @@
 @import "tailwindcss";
 @config "../tailwind.config.ts";
 
+/* Tailwind v4: Kích hoạt class-based dark mode (.dark selector) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================
+   CSS VARIABLES - ORGANIZED BY CATEGORY
+   ============================================ */
+
+/* 
+ * Color Variables - Theme Colors
+ * Used for light/dark mode theming
+ */
 :root {
+  /* Background Colors */
   --background: #ffffff;
+  --background-dark: #0f172a;
+  
+  /* Foreground/Text Colors */
   --foreground: #171717;
+  --foreground-dark: #ffffff;
+  
+  /* Border Colors */
   --border-color: #d1d5dc;
+  --border-color-dark: #314059;
+  
+  /* Gray Scale (for borders, dividers) */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  
+  /* Slate Colors (for dark mode) */
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  
+  /* Primary Colors */
+  --primary-blue: #3b82f6;
+  --primary-blue-hover: #2563eb;
+  
+  /* Font Variables */
+  --font-roboto: var(--font-roboto);
 }
 
 @theme inline {
@@ -13,12 +56,21 @@
   --font-sans: var(--font-roboto);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Override Tailwind preflight link colors - EXCEPT header nav */
+a:not(header nav a) {
+  color: inherit;
+  text-decoration: inherit;
 }
+
+/* Header navigation styles moved to Header.module.css for maximum specificity */
+
+/* Navigation styles completely removed - using inline styles only */
+
+/* 
+  Note: prefers-color-scheme media query đã được disable
+  vì chúng ta sử dụng class-based dark mode (.dark class trên html)
+  được điều khiển bởi JavaScript (ThemeContext)
+*/
 
 /* Cấu hình font để hiển thị emoji và ẩn scrollbar */
 * {
@@ -30,41 +82,7 @@
   display: none; /* Chrome, Safari, Opera */
 }
 
-/* Style cho NavLink active */
-a.active {
-  opacity: 1 !important;
-}
-
-a.active span {
-  opacity: 1 !important;
-}
-
-/* Navigation underline hover animation - mở từ giữa ra 2 bên */
-.nav-link {
-  position: relative;
-}
-
-.nav-link::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: #2563eb;
-  border-radius: 9999px;
-  transform: scaleX(0);
-  transform-origin: center;
-  transition: transform 0.3s ease;
-}
-
-html.dark .nav-link::after {
-  background: #60a5fa;
-}
-
-.nav-link:hover::after {
-  transform: scaleX(1);
-}
+/* Navigation styles removed - using inline styles in components */
 
 body {
   background: #fafbfc;
@@ -111,8 +129,8 @@ select {
   /* Theme transition duration can be configured via NEXT_PUBLIC_THEME_TRANSITION_DURATION env variable */
   transition:
     background-color 0.3s ease,
-    color 0.3s ease,
     border-color 0.3s ease;
+  /* Removed color transition to prevent text color flash on theme change */
 }
 
 /* Exclude elements with explicit transition classes or animations */
@@ -266,7 +284,7 @@ html.dark .theme-toggle-btn:hover {
 /* Light Mode: Bulb Off (Dark Gray) */
 .theme-toggle-btn .anticon svg {
   color: #64748b; /* slate-500 */
-  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
 }
 
 /* Dark Mode: Bulb On (Glowing Yellow) */
