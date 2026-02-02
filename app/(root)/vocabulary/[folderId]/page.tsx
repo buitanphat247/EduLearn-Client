@@ -202,6 +202,8 @@ export default function VocabularyDetail() {
                       router.push(`/vocabulary/flashcard/${folderId}`);
                     } else if (mode.title === "Kiểm tra") {
                       router.push(`/vocabulary/quiz/${folderId}`);
+                    } else if (mode.title === "Gõ từ") {
+                      router.push(`/vocabulary/typing/${folderId}`);
                     } else {
                       message.info("Tính năng này đang được phát triển");
                     }

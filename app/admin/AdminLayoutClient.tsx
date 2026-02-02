@@ -6,8 +6,6 @@ import { usePathname } from "next/navigation";
 import { Spin, message, Modal } from "antd";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { useUserId } from "@/app/hooks/useUserId";
-import { useTheme } from "@/app/context/ThemeContext";
-import { BulbOutlined, BulbFilled } from "@ant-design/icons";
 
 const pageTitles: Record<string, string> = {
   "/admin": "Dashboard",
@@ -28,7 +26,6 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const { theme, toggleTheme } = useTheme();
 
   // Memoize page title calculation
   const currentPageTitle = useMemo(() => {
@@ -49,7 +46,7 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
 
     let isMounted = true;
     if (showError) setLoadingProfile(true);
-    
+
     try {
       const user = await getUserInfo(userId);
       if (isMounted) {
@@ -57,8 +54,8 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
       }
     } catch (error: unknown) {
       if (isMounted) {
-        const errorMessage = error instanceof Error 
-          ? error.message 
+        const errorMessage = error instanceof Error
+          ? error.message
           : "Không thể tải thông tin người dùng";
         if (showError) {
           message.error(errorMessage);
@@ -127,13 +124,6 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
         </div>
 
         <div className="flex items-center gap-4">
-          <button
-            onClick={(e) => toggleTheme(e)}
-            className="theme-toggle-btn"
-            aria-label="Toggle Theme"
-          >
-            {theme === "dark" ? <BulbFilled /> : <BulbOutlined />}
-          </button>
           <div
             onClick={() => setIsProfileModalOpen(true)}
             className="flex items-center gap-3 pl-4 cursor-pointer hover:opacity-80 transition-opacity"

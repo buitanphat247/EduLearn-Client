@@ -235,7 +235,7 @@ export default function UserSettings() {
         }
       >
         <div className="space-y-4">
-          <div 
+          <div
             className="flex items-center justify-between py-3 border-b border-gray-100 dark:!border-slate-600 cursor-pointer"
             onClick={() => messageApi.info("Tính năng đang phát triển")}
           >
@@ -243,14 +243,14 @@ export default function UserSettings() {
               <p className="font-semibold text-gray-800 dark:text-gray-200">Thông báo qua email</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Nhận thông báo quan trọng qua email</p>
             </div>
-            <Switch 
-              checked={emailNotifications} 
-              onChange={() => {}} 
+            <Switch
+              checked={emailNotifications}
+              onChange={() => { }}
               disabled
             />
           </div>
 
-          <div 
+          <div
             className="flex items-center justify-between py-3 border-b border-gray-100 dark:!border-slate-600 cursor-pointer"
             onClick={() => messageApi.info("Tính năng đang phát triển")}
           >
@@ -258,14 +258,14 @@ export default function UserSettings() {
               <p className="font-semibold text-gray-800 dark:text-gray-200">Thông báo đẩy</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Nhận thông báo ngay trên trình duyệt</p>
             </div>
-            <Switch 
-              checked={pushNotifications} 
-              onChange={() => {}} 
+            <Switch
+              checked={pushNotifications}
+              onChange={() => { }}
               disabled
             />
           </div>
 
-          <div 
+          <div
             className="flex items-center justify-between py-3 cursor-pointer"
             onClick={() => messageApi.info("Tính năng đang phát triển")}
           >
@@ -273,9 +273,9 @@ export default function UserSettings() {
               <p className="font-semibold text-gray-800 dark:text-gray-200">Cập nhật hệ thống</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Nhận thông báo về các cập nhật hệ thống</p>
             </div>
-            <Switch 
-              checked={systemUpdates} 
-              onChange={() => {}} 
+            <Switch
+              checked={systemUpdates}
+              onChange={() => { }}
               disabled
             />
           </div>
@@ -306,7 +306,7 @@ export default function UserSettings() {
         }
       >
         <div className="space-y-4">
-          <div 
+          <div
             className="flex items-center justify-between py-3 border-b border-gray-100 dark:!border-slate-600 cursor-pointer"
             onClick={() => messageApi.info("Tính năng đang phát triển")}
           >
@@ -314,9 +314,9 @@ export default function UserSettings() {
               <p className="font-semibold text-gray-800 dark:text-gray-200">Xác thực hai yếu tố (2FA)</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Bảo vệ tài khoản của bạn bằng xác thực hai yếu tố</p>
             </div>
-            <Switch 
-              checked={twoFactorAuth} 
-              onChange={() => {}} 
+            <Switch
+              checked={twoFactorAuth}
+              onChange={() => { }}
               disabled
             />
           </div>
@@ -336,7 +336,7 @@ export default function UserSettings() {
           </div>
         </div>
       </CustomCard>
-      
+
       {/* Change Password */}
       <CustomCard
         title={

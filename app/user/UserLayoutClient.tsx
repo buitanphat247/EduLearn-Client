@@ -6,8 +6,6 @@ import { usePathname } from "next/navigation";
 import { Modal, Spin, message } from "antd";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
-import { useTheme } from "@/app/context/ThemeContext";
-import { BulbOutlined, BulbFilled } from "@ant-design/icons";
 
 const pageTitles: Record<string, string> = {
   "/user": "Trang chủ",
@@ -27,7 +25,6 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const { theme, toggleTheme } = useTheme();
 
   // Memoize page title calculation
   const currentPageTitle = useMemo(() => {
@@ -121,13 +118,6 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
         </div>
 
         <div className="flex items-center gap-4">
-          <button
-            onClick={(e) => toggleTheme(e)}
-            className="theme-toggle-btn"
-            aria-label="Toggle Theme"
-          >
-            {theme === "dark" ? <BulbFilled /> : <BulbOutlined />}
-          </button>
           <div
             onClick={() => setIsProfileModalOpen(true)}
             className="flex items-center gap-3 pl-4 border-l border-gray-300 dark:border-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
