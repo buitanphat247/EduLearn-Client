@@ -41,6 +41,7 @@ export default function VocabularyTyping() {
     const [isChecking, setIsChecking] = useState(false);
     const inputRef = useRef<any>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const lastQuestionIdRef = useRef<number | null>(null);
 
     // Parse example để lấy câu
     const parseExample = useCallback((exampleStr: string) => {
@@ -72,6 +73,8 @@ export default function VocabularyTyping() {
         });
 
         setQuestions(newQuestions);
+        // Reset last question ID when questions are regenerated
+        lastQuestionIdRef.current = null;
     }, [parseExample]);
 
     const fetchVocabularies = useCallback(async () => {
@@ -231,6 +234,14 @@ export default function VocabularyTyping() {
 
     const handleRestart = useCallback(() => {
         if (vocabularies.length > 0) {
+            // Stop any playing audio
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+                audioRef.current = null;
+            }
+            // Reset last question ID
+            lastQuestionIdRef.current = null;
             generateQuestions(vocabularies);
             setCurrentQuestionIndex(0);
             setUserInput("");
@@ -246,8 +257,22 @@ export default function VocabularyTyping() {
         return ((currentQuestionIndex + 1) / questions.length) * 100;
     }, [currentQuestionIndex, questions.length]);
 
-    // Auto play audio when question changes
+    // Auto play audio when question changes (only if question ID actually changed)
     useEffect(() => {
+        // Don't play if still loading or no questions yet
+        if (loading || questions.length === 0) {
+            return;
+        }
+
+        // Only play if we have a valid question and it's different from the last one
+        if (!currentQuestion || currentQuestion.id === lastQuestionIdRef.current) {
+            return;
+        }
+
+        // Update the last question ID immediately to prevent duplicate plays
+        const questionId = currentQuestion.id;
+        lastQuestionIdRef.current = questionId;
+
         // Stop previous audio if exists
         if (audioRef.current) {
             audioRef.current.pause();
@@ -256,19 +281,22 @@ export default function VocabularyTyping() {
         }
 
         // Play new audio after a small delay to ensure previous audio is stopped
-        if (currentQuestion?.word?.audioUrl?.[0]?.url) {
+        if (currentQuestion.word?.audioUrl?.[0]?.url) {
             const timeoutId = setTimeout(() => {
-                const audio = new Audio(currentQuestion.word.audioUrl![0].url);
-                audioRef.current = audio;
-                audio.play().catch((error) => {
-                    console.error("Error auto-playing audio:", error);
-                });
-                
-                // Clean up when audio ends
-                audio.addEventListener('ended', () => {
-                    audioRef.current = null;
-                });
-            }, 100);
+                // Triple check: still on the same question, not loading, and questions are ready
+                if (lastQuestionIdRef.current === questionId && !loading && questions.length > 0) {
+                    const audio = new Audio(currentQuestion.word.audioUrl![0].url);
+                    audioRef.current = audio;
+                    audio.play().catch((error) => {
+                        console.error("Error auto-playing audio:", error);
+                    });
+                    
+                    // Clean up when audio ends
+                    audio.addEventListener('ended', () => {
+                        audioRef.current = null;
+                    });
+                }
+            }, 200);
 
             return () => {
                 clearTimeout(timeoutId);
@@ -288,7 +316,7 @@ export default function VocabularyTyping() {
                 audioRef.current = null;
             }
         };
-    }, [currentQuestion]);
+    }, [currentQuestion, loading, questions.length]);
 
     if (!folderId) {
         return (
