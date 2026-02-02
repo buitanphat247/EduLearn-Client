@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import io, { Socket } from "socket.io-client";
+import io from "socket.io-client";
+import type { Socket as SocketType } from "socket.io-client";
 
 /**
  * Socket.IO connection URL for exam real-time features
@@ -29,13 +30,13 @@ interface UseExamSocketProps {
  * Hook for managing Socket.IO connection during exams
  * @param {UseExamSocketProps} props - Socket configuration
  * @returns {{ isConnected: boolean, socket: Socket | null }} Connection state and socket instance
- * @description 
+ * @description
  * Manages real-time socket connection for exam features:
  * - Auto-connects when examId/attemptId and studentId are provided
  * - Joins exam room for real-time updates
  * - Handles reconnection automatically
  * - Cleans up on unmount
- * 
+ *
  * @example
  * ```typescript
  * const { isConnected, socket } = useExamSocket({
@@ -47,7 +48,7 @@ interface UseExamSocketProps {
  */
 export const useExamSocket = ({ examId, attemptId, studentId, onConnect, onDisconnect }: UseExamSocketProps) => {
   // ✅ Fix: Use proper Socket type instead of any
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<any>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
@@ -62,10 +63,10 @@ export const useExamSocket = ({ examId, attemptId, studentId, onConnect, onDisco
 
     // ✅ Fix: Use proper io import (no need for (io as any).default check)
     const socket = io(SOCKET_URL, {
-          transports: ["websocket"],
-          reconnectionAttempts: 5,
-          reconnectionDelay: 1000,
-        });
+      transports: ["websocket"],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
 
     socketRef.current = socket;
 
@@ -136,7 +137,7 @@ export const useExamSocket = ({ examId, attemptId, studentId, onConnect, onDisco
         console.warn("Socket not connected, cannot report violation:", type);
       }
     },
-    [examId, attemptId, studentId, isConnected]
+    [examId, attemptId, studentId, isConnected],
   );
 
   return {

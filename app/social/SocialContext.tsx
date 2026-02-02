@@ -121,7 +121,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set());
   const [blockedByUserIds, setBlockedByUserIds] = useState<Set<string>>(new Set());
   const [blockedUsers, setBlockedUsers] = useState<UserBlock[]>([]);
-  
+
   // Modal States
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -133,8 +133,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     typeof currentUserId === "string"
       ? parseInt(currentUserId, 10)
       : typeof currentUserId === "number"
-      ? currentUserId
-      : null;
+        ? currentUserId
+        : null;
 
   const receivedFriendRequests = useMemo(() => {
     if (currentUserIdNumber === null) return [];
@@ -160,7 +160,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       data &&
       typeof data === 'object' &&
       (typeof data.user_id === 'number' || typeof data.user_id === 'string' ||
-       typeof data.id === 'number' || typeof data.id === 'string')
+        typeof data.id === 'number' || typeof data.id === 'string')
     );
   }
 
@@ -168,18 +168,18 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     try {
       const userStr = localStorage.getItem("user");
       if (!userStr) return;
-      
+
       const user = JSON.parse(userStr);
-      
+
       // ✅ Validate user data structure
       if (!isValidUserData(user)) {
         console.error("Invalid user data structure");
         localStorage.removeItem("user"); // Clean corrupted data
         return;
       }
-      
+
       setCurrentUser({
-        id: user.user_id || user.id,
+        id: user.user_id || user.id || '',
         username: user.username || '',
         fullname: user.fullname,
         email: user.email,
@@ -217,7 +217,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Socket: Block events removed from here and moved to the main useEffect below to avoid stale closures
-  
+
 
   const fetchContacts = useCallback(async () => {
     const userId = getUserIdFromCookie();
@@ -277,13 +277,13 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   >({});
   const skipAutoLoadMessagesRef = React.useRef(false);
   const processedMessageIdsRef = React.useRef(new Set<string>());
-  
+
   // ✅ Constants for magic numbers
   const FRIEND_REQUESTS_LIMIT = 50;
   const CONVERSATIONS_LIMIT = 100;
   const MESSAGES_LIMIT = 50;
   const MAX_PROCESSED_IDS = 1000;
-  
+
   // ✅ Fix: Cleanup processedMessageIdsRef periodically để prevent memory leak
   useEffect(() => {
     const interval = setInterval(() => {
@@ -293,7 +293,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         processedMessageIdsRef.current = new Set(ids.slice(-500));
       }
     }, 60000); // Cleanup every minute
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -375,8 +375,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
           avatar:
             room.room_type === ChatRoomType.DIRECT
               ? (room?.members || []).find(
-                  (m: any) => String(m.user_id) !== String(userIdNumber)
-                )?.user?.avatar
+                (m: any) => String(m.user_id) !== String(userIdNumber)
+              )?.user?.avatar
               : undefined,
           lastMessage: lastContent
             ? isOwnLastMessage
@@ -385,9 +385,9 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             : "Bắt đầu cuộc trò chuyện",
           time: room.last_message?.created_at
             ? new Date(room.last_message.created_at).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
+              hour: "2-digit",
+              minute: "2-digit",
+            })
             : "",
           unread: room.unread_count || 0,
           isGroup: room.room_type === ChatRoomType.GROUP,
@@ -430,7 +430,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   // Define refs after functions are defined
   const fetchContactsRef = React.useRef<() => Promise<void>>(() => Promise.resolve());
   const fetchConversationsRef = React.useRef<() => Promise<void>>(() => Promise.resolve());
-  
+
   useEffect(() => {
     fetchContactsRef.current = fetchContacts;
     fetchConversationsRef.current = fetchConversations;
@@ -444,9 +444,9 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     const currentRoomIdRef = roomId; // ✅ Capture roomId để check later
     setLoadingMessages(true);
     setMessages([]); // ✅ Clear immediately
-    
+
     const controller = new AbortController();
-    
+
     try {
       const userIdNumber =
         typeof userId === "string" ? parseInt(userId, 10) : userId;
@@ -457,16 +457,16 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         setLoadingMessages(false);
         return;
       }
- 
+
       await markAsRead(userIdNumber, roomIdNumber); // Only mark real rooms
- 
+
       // ✅ Pass signal to prevent race condition (if getMessages supports it)
       const result = await getMessages({
         userId: userIdNumber,
         roomId: roomIdNumber,
         limit: MESSAGES_LIMIT,
       });
- 
+
       // ✅ Only update if still on the same room
       if (currentRoomIdRef === roomId) {
         // Map messages
@@ -482,7 +482,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
           isOwn: String(msg.sender_id) === String(userIdNumber),
           fileAttachment: msg.fileAttachment, // Preserve if available
         }));
- 
+
         setMessages(mappedMessages);
 
         // Optimistic Update: Clear badge immediately
@@ -783,8 +783,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         status: payload.friend.status as 'pending' | 'accepted' | 'rejected',
         created_at: payload.friend.created_at,
         accepted_at: payload.friend.accepted_at || null,
-        requester: payload.friend.requester,
-        addressee: payload.friend.addressee,
+        requester: payload.friend.requester as any,
+        addressee: payload.friend.addressee as any,
       };
 
       setFriendRequests((prev) => {
@@ -793,8 +793,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         return prev;
       });
       antMessage.info(
-        `Bạn có lời mời kết bạn mới từ ${
-          payload.friend.requester?.fullname || "ai đó"
+        `Bạn có lời mời kết bạn mới từ ${payload.friend.requester?.fullname || "ai đó"
         }`
       );
     });
@@ -808,8 +807,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         typeof userId === "string" ? parseInt(userId, 10) : userId;
       if (userIdNum === payload.friend.requester_id) {
         antMessage.success(
-          `${
-            payload.friend.addressee?.fullname || "Ai đó"
+          `${payload.friend.addressee?.fullname || "Ai đó"
           } đã chấp nhận lời mời kết bạn của bạn`
         );
       }
@@ -984,7 +982,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
 
         setMessages((prev) => {
           if (!newMessage.content && !newMessage.fileAttachment) return prev;
-          
+
           // 1. Check for standard duplicate by ID
           if (prev.some((m) => m.id === newMessage.id)) return prev;
 
@@ -1125,68 +1123,68 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   }, [currentUserIdNumber]); // ✅ Fix: Remove callbacks from dependencies, use refs instead
 
   const value = React.useMemo(() => ({
-        currentUser,
-        contacts,
-        friendRequests,
-        receivedFriendRequests,
-        conversations,
-        activeConversationId,
-        messages,
-        loadingMessages,
-        groupCount,
-        fetchContacts,
-        fetchConversations,
-        fetchFriendRequests,
-        loadMessages, // Used twice in original? loadMessages,
-        loadingConversations,
-        sendMessage,
-        startChat,
-        setContacts,
-        setFriendRequests,
-        setActiveConversationId,
-        isSettingsOpen,
-        setIsSettingsOpen,
-        isProfileOpen,
-        setIsProfileOpen,
-        isAddFriendOpen,
-        setIsAddFriendOpen,
-        markConversationAsRead,
-        deleteConversation: deleteConversationHandler,
-        lastReadMessageIds,
-        blockedUserIds,
-        blockedByUserIds,
-        blockedUsers,
-        blockUser: blockUserHandler,
-        unblockUser: unblockUserHandler,
+    currentUser,
+    contacts,
+    friendRequests,
+    receivedFriendRequests,
+    conversations,
+    activeConversationId,
+    messages,
+    loadingMessages,
+    groupCount,
+    fetchContacts,
+    fetchConversations,
+    fetchFriendRequests,
+    loadMessages, // Used twice in original? loadMessages,
+    loadingConversations,
+    sendMessage,
+    startChat,
+    setContacts,
+    setFriendRequests,
+    setActiveConversationId,
+    isSettingsOpen,
+    setIsSettingsOpen,
+    isProfileOpen,
+    setIsProfileOpen,
+    isAddFriendOpen,
+    setIsAddFriendOpen,
+    markConversationAsRead,
+    deleteConversation: deleteConversationHandler,
+    lastReadMessageIds,
+    blockedUserIds,
+    blockedByUserIds,
+    blockedUsers,
+    blockUser: blockUserHandler,
+    unblockUser: unblockUserHandler,
   }), [
-        currentUser,
-        contacts,
-        friendRequests,
-        receivedFriendRequests,
-        conversations,
-        activeConversationId,
-        messages,
-        loadingMessages,
-        groupCount,
-        fetchContacts,
-        fetchConversations,
-        fetchFriendRequests,
-        loadMessages,
-        loadingConversations,
-        sendMessage,
-        startChat,
-        deleteConversationHandler,
-        lastReadMessageIds,
-        blockedUserIds,
-        blockedByUserIds,
-        blockedUsers,
-        blockUserHandler,
-        unblockUserHandler,
-        // Boolean setters are stable usually (useState) but harmless to add or omit if stable
-        // Adding state values that might change reference
-        isSettingsOpen,
-        isProfileOpen,
-        isAddFriendOpen,
+    currentUser,
+    contacts,
+    friendRequests,
+    receivedFriendRequests,
+    conversations,
+    activeConversationId,
+    messages,
+    loadingMessages,
+    groupCount,
+    fetchContacts,
+    fetchConversations,
+    fetchFriendRequests,
+    loadMessages,
+    loadingConversations,
+    sendMessage,
+    startChat,
+    deleteConversationHandler,
+    lastReadMessageIds,
+    blockedUserIds,
+    blockedByUserIds,
+    blockedUsers,
+    blockUserHandler,
+    unblockUserHandler,
+    // Boolean setters are stable usually (useState) but harmless to add or omit if stable
+    // Adding state values that might change reference
+    isSettingsOpen,
+    isProfileOpen,
+    isAddFriendOpen,
   ]);
 
   return (

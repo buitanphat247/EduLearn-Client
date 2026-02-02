@@ -7,7 +7,7 @@ import CountUp from "react-countup";
 interface StatItem {
   label: string;
   value: string;
-  icon: typeof FileTextOutlined;
+  icon: React.ComponentType<any>;
   color: string;
   bgColor: string;
 }

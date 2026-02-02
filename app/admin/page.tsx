@@ -18,14 +18,14 @@ const CountUp = dynamic(() => import("react-countup"), {
 interface StatCard {
   label: string;
   value: string;
-  icon: ComponentType;
+  icon: ComponentType<any>;
   color: string;
   bgColor: string;
   numericValue?: number;
 }
 
 interface QuickActionItem {
-  icon: ComponentType;
+  icon: ComponentType<any>;
   title: string;
   description: string;
   gradient: string;
@@ -105,7 +105,7 @@ function WelcomeBanner() {
 }
 
 function StatisticsCards({ stats }: { stats: StatCard[] }) {
-  const statsCards = useMemo(() => 
+  const statsCards = useMemo(() =>
     stats.map((stat) => ({
       ...stat,
       numericValue: parseInt(stat.value.replace(/,/g, "")) || 0,

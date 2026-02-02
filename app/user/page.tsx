@@ -50,7 +50,7 @@ const userDashboardItems = [
 ];
 
 interface DashboardItem {
-  icon: React.ComponentType;
+  icon: React.ComponentType<any>;
   title: string;
   description: string;
   gradient: string;

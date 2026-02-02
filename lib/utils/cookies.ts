@@ -2,7 +2,7 @@
  * Cookie utility functions
  * @module lib/utils/cookies
  * @description Provides optimized cookie operations with caching and session storage support
- * 
+ *
  * Features:
  * - Double-layer caching (cookie string + parsed cookies)
  * - LRU cache for parsed cookies to prevent memory leaks
@@ -42,7 +42,9 @@ class LRUCache<K, V> {
     } else if (this.cache.size >= this.maxSize) {
       // Remove oldest (first) entry
       const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
     }
     this.cache.set(key, value);
   }
@@ -72,9 +74,9 @@ const PARSED_COOKIES_CACHE_DURATION = 50; // 50ms cache cho parsed cookies
  */
 export const getCookie = (name: string): string | null => {
   if (typeof document === "undefined") return null;
-  
+
   const now = Date.now();
-  
+
   // Check parsed cookies cache first (fastest)
   if (now - parsedCookiesTimestamp < PARSED_COOKIES_CACHE_DURATION) {
     const cached = parsedCookiesCache.get(name);
@@ -82,7 +84,7 @@ export const getCookie = (name: string): string | null => {
       return cached;
     }
   }
-  
+
   // Cache cookie string trong 100ms để tránh đọc document.cookie nhiều lần
   if (!cachedCookieString || now - cachedCookieTimestamp > COOKIE_CACHE_DURATION) {
     cachedCookieString = document.cookie;
@@ -90,9 +92,9 @@ export const getCookie = (name: string): string | null => {
     // Clear parsed cache khi cookie string thay đổi
     parsedCookiesCache.clear();
   }
-  
+
   // ✅ Use regex for efficient cookie parsing
-  const match = cachedCookieString.match(new RegExp(`(?:^|; )${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=([^;]*)`));
+  const match = cachedCookieString.match(new RegExp(`(?:^|; )${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}=([^;]*)`));
   let result: string | null = null;
   if (match) {
     try {
@@ -101,11 +103,11 @@ export const getCookie = (name: string): string | null => {
       result = match[1];
     }
   }
-  
+
   // Cache parsed result
   parsedCookiesCache.set(name, result);
   parsedCookiesTimestamp = now;
-  
+
   return result;
 };
 
@@ -135,7 +137,7 @@ const DECRYPT_PROMISE_TTL = 5000; // 5 seconds timeout for promise cache
 // ✅ Clear stale promise
 const clearStalePromise = (): void => {
   const now = Date.now();
-  if (decryptPromise && (now - decryptPromiseTimestamp > DECRYPT_PROMISE_TTL)) {
+  if (decryptPromise && now - decryptPromiseTimestamp > DECRYPT_PROMISE_TTL) {
     decryptPromise = null;
     isDecrypting = false;
     decryptPromiseTimestamp = 0;
@@ -153,7 +155,7 @@ const clearStalePromise = (): void => {
  */
 export const getUserIdFromSession = (): number | string | null => {
   if (typeof window === "undefined") return null;
-  
+
   try {
     const userIdStr = sessionStorage.getItem(SESSION_USER_ID_KEY);
     if (userIdStr) {
@@ -162,11 +164,11 @@ export const getUserIdFromSession = (): number | string | null => {
     }
   } catch (error) {
     // sessionStorage có thể bị block trong một số trường hợp
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       console.warn("Cannot access sessionStorage:", error);
     }
   }
-  
+
   return null;
 };
 
@@ -175,11 +177,11 @@ export const getUserIdFromSession = (): number | string | null => {
  */
 const saveUserIdToSession = (userId: number | string): void => {
   if (typeof window === "undefined") return;
-  
+
   try {
     sessionStorage.setItem(SESSION_USER_ID_KEY, String(userId));
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       console.warn("Cannot save to sessionStorage:", error);
     }
   }
@@ -192,18 +194,18 @@ const saveUserIdToSession = (userId: number | string): void => {
  */
 export const getUserDataFromSession = (): any | null => {
   if (typeof window === "undefined") return null;
-  
+
   try {
     const userDataStr = sessionStorage.getItem(SESSION_USER_DATA_KEY);
     if (userDataStr) {
       return JSON.parse(userDataStr);
     }
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       console.warn("Cannot read user data from sessionStorage:", error);
     }
   }
-  
+
   return null;
 };
 
@@ -214,14 +216,14 @@ export const getUserDataFromSession = (): any | null => {
  */
 export const saveUserDataToSession = (userData: any): void => {
   if (typeof window === "undefined") return;
-  
+
   try {
     sessionStorage.setItem(SESSION_USER_DATA_KEY, JSON.stringify(userData));
     if (userData.user_id) {
       saveUserIdToSession(userData.user_id);
     }
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       console.warn("Cannot save user data to sessionStorage:", error);
     }
   }
@@ -244,16 +246,16 @@ export const getUserIdFromCookie = (): number | string | null => {
 
   // 2. Thử lấy từ cookie "_u" (đã mã hóa) - giải mã qua API
   const encryptedUserCookie = getCookie("_u");
-  
+
   // ✅ Clear stale promise before checking
   clearStalePromise();
-  
+
   if (encryptedUserCookie) {
     // ✅ Return existing promise if available
     if (decryptPromise) {
       return null; // Return null, but promise is already running
     }
-    
+
     if (!isDecrypting) {
       isDecrypting = true;
       decryptPromiseTimestamp = Date.now();
@@ -307,27 +309,27 @@ export const getUserIdFromCookieAsync = async (): Promise<number | string | null
       // ✅ Add timeout to prevent stuck promises
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-      
+
       const response = await fetch("/api-proxy/auth/decrypt-user", {
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       const data = await response.json();
-      
+
       if (data.status && data.data && data.data.user_id) {
         const parsed = Number(data.data.user_id);
         const userId = isNaN(parsed) ? data.data.user_id : parsed;
-        
+
         // Lưu vào sessionStorage để tránh decrypt lại lần sau
         saveUserIdToSession(userId);
-        
+
         // Lưu toàn bộ user data nếu có
         if (data.data) {
           saveUserDataToSession(data.data);
         }
-        
+
         return userId;
       }
     } catch (error) {
@@ -335,8 +337,8 @@ export const getUserIdFromCookieAsync = async (): Promise<number | string | null
       decryptPromise = null;
       isDecrypting = false;
       decryptPromiseTimestamp = 0;
-      
-      if (process.env.NODE_ENV === 'development') {
+
+      if (process.env.NODE_ENV === "development") {
         console.error("Error decrypting user cookie:", error);
       }
     }
@@ -352,14 +354,14 @@ export const clearUserCache = (): void => {
   isDecrypting = false;
   decryptPromise = null;
   clearCookieCache();
-  
+
   // Clear sessionStorage
   if (typeof window !== "undefined") {
     try {
       sessionStorage.removeItem(SESSION_USER_ID_KEY);
       sessionStorage.removeItem(SESSION_USER_DATA_KEY);
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === "development") {
         console.warn("Cannot clear sessionStorage:", error);
       }
     }

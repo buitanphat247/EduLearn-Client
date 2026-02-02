@@ -38,7 +38,7 @@ interface UseAntiCheatProps {
  * @returns {boolean} returns.isFullScreen - Whether exam is in fullscreen mode
  * @returns {Function} returns.enterFullScreen - Function to enter fullscreen
  * @returns {Function} returns.exitFullScreen - Function to exit fullscreen
- * 
+ *
  * @description
  * Monitors and detects cheating behaviors:
  * - Tab switching
@@ -46,7 +46,7 @@ interface UseAntiCheatProps {
  * - Copy/paste attempts
  * - Developer tools access
  * - Window focus loss
- * 
+ *
  * @example
  * ```typescript
  * const { violations, isFullScreen, enterFullScreen } = useAntiCheat({
@@ -63,7 +63,7 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
   const [violations, setViolations] = useState<Violation[]>([]);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const overlayRef = useRef<HTMLDivElement | null>(null);
-  
+
   // Pause detection state (for when modals are open)
   const [paused, setPaused] = useState(false);
   const lastViolationTimeRef = useRef<number>(0);
@@ -78,19 +78,19 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
 
   // Handle Initial Count
   useEffect(() => {
-      if (initialViolationsCount !== undefined && initialViolationsCount > 0) {
-          fullscreenExitCountRef.current = initialViolationsCount;
-          // Pre-fill violation state with placeholders if they are generic
-          const initialLogs: Violation[] = Array.from({ length: initialViolationsCount }, (_, i) => ({
-             id: `init-${i}`,
-             type: "resumed_violation",
-             message: `Cảnh báo vi phạm lần ${i + 1}`,
-             timestamp: "Trước đó"
-          }));
-          setViolations(initialLogs);
-      }
+    if (initialViolationsCount !== undefined && initialViolationsCount > 0) {
+      fullscreenExitCountRef.current = initialViolationsCount;
+      // Pre-fill violation state with placeholders if they are generic
+      const initialLogs: Violation[] = Array.from({ length: initialViolationsCount }, (_, i) => ({
+        id: `init-${i}`,
+        type: "resumed_violation",
+        message: `Cảnh báo vi phạm lần ${i + 1}`,
+        timestamp: "Trước đó",
+      }));
+      setViolations(initialLogs);
+    }
   }, [initialViolationsCount]);
-  
+
   // ✅ Constants for magic numbers
   const VIOLATION_COOLDOWN_MS = 1000;
   const DEVTOOLS_THRESHOLD = 200;
@@ -98,102 +98,109 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
   const INCIDENT_COOLDOWN_MS = 1000;
 
   // Helper to record violation
-  const recordViolation = useCallback((type: string, message: string) => {
-    const now = Date.now();
-    // ✅ Fix: Use constant instead of magic number
-    // If paused, overlay is already showing, OR a violation was recorded < 1 second ago, ignore.
-    if (paused || overlayRef.current || (now - lastViolationTimeRef.current < VIOLATION_COOLDOWN_MS)) return; 
+  const recordViolation = useCallback(
+    (type: string, message: string) => {
+      const now = Date.now();
+      // ✅ Fix: Use constant instead of magic number
+      // If paused, overlay is already showing, OR a violation was recorded < 1 second ago, ignore.
+      if (paused || overlayRef.current || now - lastViolationTimeRef.current < VIOLATION_COOLDOWN_MS) return;
 
-    lastViolationTimeRef.current = now;
-    const newViolation: Violation = {
-      id: Math.random().toString(36).substr(2, 9),
-      type,
-      message,
-      timestamp: new Date().toLocaleTimeString('vi-VN')
-    };
-    setViolations(prev => [newViolation, ...prev]);
-    if (onViolationRef.current) onViolationRef.current(type, message);
-  }, [paused]);
+      lastViolationTimeRef.current = now;
+      const newViolation: Violation = {
+        id: Math.random().toString(36).substr(2, 9),
+        type,
+        message,
+        timestamp: new Date().toLocaleTimeString("vi-VN"),
+      };
+      setViolations((prev) => [newViolation, ...prev]);
+      if (onViolationRef.current) onViolationRef.current(type, message);
+    },
+    [paused],
+  );
 
   // Overlay Logic
-  const toggleBlockingOverlaySecure = useCallback((show: boolean, msg: string = "Cảnh báo gian lận") => {
-      if (paused && show) return; 
+  const toggleBlockingOverlaySecure = useCallback(
+    (show: boolean, msg: string = "Cảnh báo gian lận") => {
+      if (paused && show) return;
 
       if (show) {
-          if (!overlayRef.current) {
-            const div = document.createElement("div");
-            div.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.95);z-index:2147483647;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:24px;text-align:center;backdrop-filter:blur(10px);";
-            const upperMsg = msg.toUpperCase();
-            const isLocked = upperMsg.includes("BỊ KHÓA");
-            const isInfo = upperMsg.includes("HẾT LƯỢT");
-            const isError = upperMsg.includes("KHÔNG THỂ");
-            const isHardBlock = isLocked || isInfo || isError;
-            
-            let title = "CẢNH BÁO VI PHẠM";
-            let icon = "⚠️";
-            let btnText = "Quay lại Chế độ Toàn màn hình";
-            let titleColor = "#ff4d4f"; // Default Red
+        if (!overlayRef.current) {
+          const div = document.createElement("div");
+          div.style.cssText =
+            "position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.95);z-index:2147483647;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:24px;text-align:center;backdrop-filter:blur(10px);";
+          const upperMsg = msg.toUpperCase();
+          const isLocked = upperMsg.includes("BỊ KHÓA");
+          const isInfo = upperMsg.includes("HẾT LƯỢT");
+          const isError = upperMsg.includes("KHÔNG THỂ");
+          const isHardBlock = isLocked || isInfo || isError;
 
-            if (isInfo) {
-                title = "THÔNG BÁO HỆ THỐNG";
-                icon = "ℹ️";
-                btnText = "Quay về lớp học";
-                titleColor = "#4f46e5"; // Indigo for Info
-            } else if (isLocked) {
-                title = "BÀI THI ĐÃ BỊ KHÓA";
-                icon = "🚫";
-                btnText = "Quay lại";
-            } else if (isError) {
-                title = "KHÔNG THỂ BẮT ĐẦU";
-                icon = "🚫";
-                btnText = "Quay lại";
+          let title = "CẢNH BÁO VI PHẠM";
+          let icon = "⚠️";
+          let btnText = "Quay lại Chế độ Toàn màn hình";
+          let titleColor = "#ff4d4f"; // Default Red
+
+          if (isInfo) {
+            title = "THÔNG BÁO HỆ THỐNG";
+            icon = "ℹ️";
+            btnText = "Quay về lớp học";
+            titleColor = "#4f46e5"; // Indigo for Info
+          } else if (isLocked) {
+            title = "BÀI THI ĐÃ BỊ KHÓA";
+            icon = "🚫";
+            btnText = "Quay lại";
+          } else if (isError) {
+            title = "KHÔNG THỂ BẮT ĐẦU";
+            icon = "🚫";
+            btnText = "Quay lại";
+          }
+
+          // ✅ Fix XSS: Use textContent và createElement instead of innerHTML
+          const iconDiv = document.createElement("div");
+          iconDiv.style.cssText = "font-size: 60px; margin-bottom: 20px;";
+          iconDiv.textContent = icon;
+
+          const titleEl = document.createElement("h2");
+          titleEl.style.cssText = `color: ${titleColor}; font-weight: bold; font-size: 32px; margin-bottom: 15px;`;
+          titleEl.textContent = title; // ✅ textContent escapes HTML
+
+          const msgEl = document.createElement("p");
+          msgEl.id = "overlay-msg";
+          msgEl.style.cssText = "margin: 10px 0; font-size: 20px; line-height: 1.6;";
+          msgEl.textContent = msg; // ✅ textContent escapes HTML
+
+          const btnEl = document.createElement("button");
+          btnEl.id = "resume-btn";
+          btnEl.style.cssText = `margin-top: 40px; padding: 14px 50px; font-size: 18px; background: linear-gradient(135deg, ${isInfo ? "#6366f1 0%, #4f46e5 100%" : "#4f46e5 0%, #7c3aed 100%"}); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4); transition: transform 0.2s;`;
+          btnEl.textContent = btnText; // ✅ textContent escapes HTML
+
+          div.appendChild(iconDiv);
+          div.appendChild(titleEl);
+          div.appendChild(msgEl);
+          div.appendChild(btnEl);
+          document.body.appendChild(div);
+          overlayRef.current = div;
+
+          div.querySelector("#resume-btn")?.addEventListener("click", () => {
+            if (isHardBlock) {
+              window.dispatchEvent(new CustomEvent("exam_locked_exit"));
+            } else {
+              enterFullScreenRef.current();
             }
-
-            // ✅ Fix XSS: Use textContent và createElement instead of innerHTML
-            const iconDiv = document.createElement("div");
-            iconDiv.style.cssText = "font-size: 60px; margin-bottom: 20px;";
-            iconDiv.textContent = icon;
-
-            const titleEl = document.createElement("h2");
-            titleEl.style.cssText = `color: ${titleColor}; font-weight: bold; font-size: 32px; margin-bottom: 15px;`;
-            titleEl.textContent = title; // ✅ textContent escapes HTML
-
-            const msgEl = document.createElement("p");
-            msgEl.id = "overlay-msg";
-            msgEl.style.cssText = "margin: 10px 0; font-size: 20px; line-height: 1.6;";
-            msgEl.textContent = msg; // ✅ textContent escapes HTML
-
-            const btnEl = document.createElement("button");
-            btnEl.id = "resume-btn";
-            btnEl.style.cssText = `margin-top: 40px; padding: 14px 50px; font-size: 18px; background: linear-gradient(135deg, ${isInfo ? '#6366f1 0%, #4f46e5 100%' : '#4f46e5 0%, #7c3aed 100%'}); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4); transition: transform 0.2s;`;
-            btnEl.textContent = btnText; // ✅ textContent escapes HTML
-
-            div.appendChild(iconDiv);
-            div.appendChild(titleEl);
-            div.appendChild(msgEl);
-            div.appendChild(btnEl);
-            document.body.appendChild(div);
-            overlayRef.current = div;
-            
-            div.querySelector("#resume-btn")?.addEventListener("click", () => {
-                if (isHardBlock) {
-                    window.dispatchEvent(new CustomEvent("exam_locked_exit"));
-                } else {
-                    enterFullScreenRef.current();
-                }
-            });
-          } else {
-             // ✅ Fix XSS: Use textContent instead of innerHTML
-             const p = overlayRef.current.querySelector("#overlay-msg") as HTMLElement;
-             if (p) p.textContent = msg; // ✅ textContent escapes HTML
-          }
+          });
+        } else {
+          // ✅ Fix XSS: Use textContent instead of innerHTML
+          const p = overlayRef.current.querySelector("#overlay-msg") as HTMLElement;
+          if (p) p.textContent = msg; // ✅ textContent escapes HTML
+        }
       } else {
-          if (overlayRef.current && document.body.contains(overlayRef.current)) {
-              document.body.removeChild(overlayRef.current);
-          }
-          overlayRef.current = null;
+        if (overlayRef.current && document.body.contains(overlayRef.current)) {
+          document.body.removeChild(overlayRef.current);
+        }
+        overlayRef.current = null;
       }
-  }, [paused]);
+    },
+    [paused],
+  );
 
   const enterFullScreen = useCallback(async () => {
     try {
@@ -201,8 +208,12 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
         // @ts-ignore
         await document.documentElement.requestFullscreen({ navigationUI: "hide" });
       }
-      if ('keyboard' in navigator && 'lock' in (navigator as any).keyboard) {
-          try { await (navigator as any).keyboard.lock(['Escape']); } catch (e) { console.error(e); }
+      if ("keyboard" in navigator && "lock" in (navigator as any).keyboard) {
+        try {
+          await (navigator as any).keyboard.lock(["Escape"]);
+        } catch (e) {
+          console.error(e);
+        }
       }
       toggleBlockingOverlaySecure(false);
     } catch (err) {
@@ -211,13 +222,13 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
   }, [toggleBlockingOverlaySecure]);
 
   useEffect(() => {
-      enterFullScreenRef.current = enterFullScreen;
+    enterFullScreenRef.current = enterFullScreen;
   }, [enterFullScreen]);
 
   const exitFullScreen = useCallback(async () => {
     try {
-      if ('keyboard' in navigator && 'unlock' in (navigator as any).keyboard) {
-          (navigator as any).keyboard.unlock();
+      if ("keyboard" in navigator && "unlock" in (navigator as any).keyboard) {
+        (navigator as any).keyboard.unlock();
       }
       if (document.fullscreenElement) {
         await document.exitFullscreen();
@@ -235,17 +246,16 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       // Standard way to trigger browser confirmation dialog
       e.preventDefault();
-      e.returnValue = '';
-      return '';
+      e.returnValue = "";
+      return "";
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [enable]);
 
-
   // ✅ Fix: Use refs để prevent handler recreation
-  const checkDevToolsRef = useRef<() => void>();
+  const checkDevToolsRef = useRef<() => void>(undefined);
   const recordViolationRef = useRef(recordViolation);
   const toggleBlockingOverlaySecureRef = useRef(toggleBlockingOverlaySecure);
 
@@ -257,30 +267,30 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
   // 1. Monitor DevTools (Relaxed Threshold)
   useEffect(() => {
     if (!enable || paused) return;
-    
+
     // ✅ Fix: Define checkDevTools inside useEffect để có stable reference
     const checkDevTools = () => {
-        if (paused) return; // Add check inside interval as well
-        // ✅ Fix: Use constant instead of magic number
-        const widthThreshold = window.outerWidth - window.innerWidth > DEVTOOLS_THRESHOLD;
-        const heightThreshold = window.outerHeight - window.innerHeight > DEVTOOLS_THRESHOLD;
-        
-        if (widthThreshold || heightThreshold) {
-            const msg = "Phát hiện hành vi gian lận!";
-            recordViolationRef.current("devtools_open", msg);
-            toggleBlockingOverlaySecureRef.current(true, msg);
-        }
+      if (paused) return; // Add check inside interval as well
+      // ✅ Fix: Use constant instead of magic number
+      const widthThreshold = window.outerWidth - window.innerWidth > DEVTOOLS_THRESHOLD;
+      const heightThreshold = window.outerHeight - window.innerHeight > DEVTOOLS_THRESHOLD;
+
+      if (widthThreshold || heightThreshold) {
+        const msg = "Phát hiện hành vi gian lận!";
+        recordViolationRef.current("devtools_open", msg);
+        toggleBlockingOverlaySecureRef.current(true, msg);
+      }
     };
-    
+
     checkDevToolsRef.current = checkDevTools;
-    
+
     // ✅ Fix: Use constant instead of magic number
     const interval = setInterval(checkDevTools, DEVTOOLS_CHECK_INTERVAL_MS);
-    window.addEventListener('resize', checkDevTools);
-    
-    return () => { 
-      clearInterval(interval); 
-      window.removeEventListener('resize', checkDevTools); 
+    window.addEventListener("resize", checkDevTools);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("resize", checkDevTools);
     };
   }, [enable, paused]); // ✅ Remove callbacks from dependencies, use refs instead
 
@@ -289,42 +299,45 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
   const wasFullScreenRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (typeof document !== 'undefined') {
+    if (typeof document !== "undefined") {
       wasFullScreenRef.current = !!document.fullscreenElement;
     }
   }, []);
 
-  const handleOutIncident = useCallback((type: "exit_fullscreen" | "focus_loss", customMsg?: string) => {
-    // 0. If overlay is ALREADY showing, do not count further incidents
-    if (overlayRef.current) return;
+  const handleOutIncident = useCallback(
+    (type: "exit_fullscreen" | "focus_loss", customMsg?: string) => {
+      // 0. If overlay is ALREADY showing, do not count further incidents
+      if (overlayRef.current) return;
 
-    const now = Date.now();
-    // ✅ Fix: Use constant instead of magic number
-    // Protect against rapid firing
-    if (now - lastIncidentTimeRef.current < INCIDENT_COOLDOWN_MS) return;
-    lastIncidentTimeRef.current = now;
+      const now = Date.now();
+      // ✅ Fix: Use constant instead of magic number
+      // Protect against rapid firing
+      if (now - lastIncidentTimeRef.current < INCIDENT_COOLDOWN_MS) return;
+      lastIncidentTimeRef.current = now;
 
-    // 1. Increment incident counter
-    fullscreenExitCountRef.current += 1;
-    const currentCount = fullscreenExitCountRef.current;
+      // 1. Increment incident counter
+      fullscreenExitCountRef.current += 1;
+      const currentCount = fullscreenExitCountRef.current;
 
-    // 2. Record formal violation EVERY incident (User wants 5 total = lock)
-    recordViolation(type, `Cảnh báo vi phạm lần ${currentCount}`);
+      // 2. Record formal violation EVERY incident (User wants 5 total = lock)
+      recordViolation(type, `Cảnh báo vi phạm lần ${currentCount}`);
 
-    // 3. Show overlay immediately
-    let displayMsg = "";
-    if (currentCount < 5) {
+      // 3. Show overlay immediately
+      let displayMsg = "";
+      if (currentCount < 5) {
         displayMsg = `Vui lòng QUAY LẠI bài thi ngay!<br/>
                       <span style="font-size:18px; color:#ff4d4f; margin-top:20px; display:block; font-weight:bold;">
                         CẢNH BÁO VI PHẠM LẦN: ${currentCount}/5
                       </span>
                       <p style="font-size:14px; color:#888; margin-top:10px;">(Hệ thống sẽ TỰ ĐỘNG KHÓA bài thi nếu bạn vi phạm đủ 5 lần)</p>`;
-    } else {
+      } else {
         displayMsg = `<span style="color:#ff4d4f; font-weight:bold;">BẠN ĐÃ VI PHẠM QUY CHẾ THI ĐỦ 5 LẦN.</span><br/>
                       Bài thi đã bị BỊ KHÓA vĩnh viễn và hệ thống đã tự động nộp bài làm của bạn.`;
-    }
-    toggleBlockingOverlaySecure(true, displayMsg);
-  }, [recordViolation, toggleBlockingOverlaySecure]);
+      }
+      toggleBlockingOverlaySecure(true, displayMsg);
+    },
+    [recordViolation, toggleBlockingOverlaySecure],
+  );
 
   useEffect(() => {
     if (!enable || paused) return;
@@ -334,19 +347,19 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
       const isFull = !!document.fullscreenElement;
       const previouslyFull = wasFullScreenRef.current;
       wasFullScreenRef.current = isFull;
-      
+
       setIsFullScreen(isFull);
-      
+
       if (!isFull && previouslyFull && enable) {
         handleOutIncident("exit_fullscreen");
       } else if (isFull) {
         toggleBlockingOverlaySecure(false);
       }
     };
-    
+
     document.addEventListener("fullscreenchange", handleFullScreenChange);
-    return () => { 
-        document.removeEventListener("fullscreenchange", handleFullScreenChange); 
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullScreenChange);
     };
   }, [enable, handleOutIncident, toggleBlockingOverlaySecure, paused]);
 
@@ -397,12 +410,12 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
     window.addEventListener("contextmenu", handleContextMenu, true);
     window.addEventListener("wheel", handleWheel, { passive: false });
     window.addEventListener("gesturestart", handleGesture);
-    
+
     return () => {
-        window.removeEventListener("keydown", handleKeyDown, true);
-        window.removeEventListener("contextmenu", handleContextMenu, true);
-        window.removeEventListener("wheel", handleWheel);
-        window.removeEventListener("gesturestart", handleGesture);
+      window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("contextmenu", handleContextMenu, true);
+      window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("gesturestart", handleGesture);
     };
   }, [enable]);
 
@@ -412,19 +425,19 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
 
     // Detect Tab Switch / Minimize
     const handleVisibilityChange = () => {
-      if (paused) return; 
+      if (paused) return;
       if (document.hidden) {
-         handleOutIncident("focus_loss");
-         document.title = "⚠️ VI PHẠM ⚠️";
+        handleOutIncident("focus_loss");
+        document.title = "⚠️ VI PHẠM ⚠️";
       } else {
-         document.title = "Làm bài thi";
+        document.title = "Làm bài thi";
       }
     };
 
     // Detect Loss of Focus (Alt+Tab, Click other Window)
     const handleBlur = () => {
-        if (paused) return; 
-        handleOutIncident("focus_loss");
+      if (paused) return;
+      handleOutIncident("focus_loss");
     };
 
     window.addEventListener("blur", handleBlur);
@@ -439,9 +452,9 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
   // FINAL CLEANUP: Ensure overlay is removed when component unmounts
   useEffect(() => {
     return () => {
-        if (overlayRef.current && document.body.contains(overlayRef.current)) {
-            document.body.removeChild(overlayRef.current);
-        }
+      if (overlayRef.current && document.body.contains(overlayRef.current)) {
+        document.body.removeChild(overlayRef.current);
+      }
     };
   }, []);
 
@@ -451,6 +464,6 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
     enterFullScreen,
     exitFullScreen,
     setPaused,
-    toggleBlockingOverlaySecure
+    toggleBlockingOverlaySecure,
   };
 };
