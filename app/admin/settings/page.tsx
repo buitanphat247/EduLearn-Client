@@ -245,7 +245,7 @@ export default function AdminSettings() {
               <p className="font-semibold text-gray-800 dark:text-gray-200">Thông báo qua email</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Nhận thông báo quan trọng qua email</p>
             </div>
-            <Switch checked={emailNotifications} onChange={setEmailNotifications} />
+            <Switch checked={emailNotifications} onChange={setEmailNotifications} disabled />
           </div>
 
           <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:!border-slate-600">
@@ -253,7 +253,7 @@ export default function AdminSettings() {
               <p className="font-semibold text-gray-800 dark:text-gray-200">Thông báo đẩy</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Nhận thông báo ngay trên trình duyệt</p>
             </div>
-            <Switch checked={pushNotifications} onChange={setPushNotifications} />
+            <Switch checked={pushNotifications} onChange={setPushNotifications} disabled />
           </div>
 
           <div className="flex items-center justify-between py-3">
@@ -261,7 +261,7 @@ export default function AdminSettings() {
               <p className="font-semibold text-gray-800 dark:text-gray-200">Cập nhật hệ thống</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Nhận thông báo về các cập nhật hệ thống</p>
             </div>
-            <Switch checked={systemUpdates} onChange={setSystemUpdates} />
+            <Switch checked={systemUpdates} onChange={setSystemUpdates} disabled />
           </div>
         </div>
 
@@ -272,6 +272,7 @@ export default function AdminSettings() {
             size="large"
             loading={saving}
             onClick={handleSaveNotifications}
+            disabled
             className="bg-blue-600 hover:bg-blue-700 border-none"
           >
             Lưu cài đặt
@@ -294,7 +295,7 @@ export default function AdminSettings() {
               <p className="font-semibold text-gray-800 dark:text-gray-200">Xác thực hai yếu tố (2FA)</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">Bảo vệ tài khoản của bạn bằng xác thực hai yếu tố</p>
             </div>
-            <Switch checked={twoFactorAuth} onChange={setTwoFactorAuth} />
+            <Switch checked={twoFactorAuth} onChange={setTwoFactorAuth} disabled />
           </div>
 
           <div className="mt-6">
@@ -304,6 +305,7 @@ export default function AdminSettings() {
               size="large"
               loading={saving}
               onClick={handleSaveSecurity}
+              disabled
               className="bg-blue-600 hover:bg-blue-700 border-none"
             >
               Lưu cài đặt
