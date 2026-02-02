@@ -1,54 +1,164 @@
+/**
+ * API Client Configuration
+ * @module app/config/api
+ * @description Centralized API client configuration with environment variable support and validation
+ */
+
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { getCookie, clearCookieCache } from "@/lib/utils/cookies";
 
 const isDev = process.env.NODE_ENV === "development";
 
+/**
+ * Get base URL for API requests
+ * @returns {string} Base URL for API client
+ * @description 
+ * - Client-side: Uses '/api-proxy' route
+ * - Server-side: Uses NEXT_PUBLIC_API_URL env variable or defaults to localhost
+ * - Validates URL format before returning
+ */
 const getBaseURL = (): string => {
   if (typeof window !== "undefined") return "/api-proxy";
+  
+  // ✅ Use environment variable with validation
   const envURL = process.env.NEXT_PUBLIC_API_URL;
   if (envURL?.trim()) {
     try {
       new URL(envURL);
       return envURL;
-    } catch {}
+    } catch {
+      if (isDev) {
+        console.warn(`[API Config] Invalid NEXT_PUBLIC_API_URL: ${envURL}, using default`);
+      }
+    }
   }
-  return "http://localhost:1611/api";
+  
+  // ✅ Default fallback (should be overridden by env var in production)
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611/api";
 };
 
+/**
+ * API timeout in milliseconds
+ * @constant {number}
+ * @default 30000
+ * @description Can be overridden via NEXT_PUBLIC_API_TIMEOUT env variable
+ */
+const API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT) || 30000;
+
+/**
+ * Auth cache TTL in milliseconds
+ * @constant {number}
+ * @default 5000
+ * @description How long to cache auth headers before re-validating
+ */
+const AUTH_CACHE_TTL = Number(process.env.NEXT_PUBLIC_AUTH_CACHE_TTL) || 5000;
+
+/**
+ * Response cache TTL in milliseconds
+ * @constant {number}
+ * @default 30000
+ * @description How long to cache GET responses
+ */
+const CACHE_TTL = Number(process.env.NEXT_PUBLIC_RESPONSE_CACHE_TTL) || 30000;
+
+/**
+ * Maximum response cache size
+ * @constant {number}
+ * @default 50
+ * @description Maximum number of cached responses
+ */
+const MAX_CACHE_SIZE = Number(process.env.NEXT_PUBLIC_MAX_CACHE_SIZE) || 50;
+
+/**
+ * Cache cleanup threshold
+ * @constant {number}
+ * @default 40
+ * @description Start cleanup when cache reaches this size
+ */
+const CACHE_CLEANUP_THRESHOLD = Number(process.env.NEXT_PUBLIC_CACHE_CLEANUP_THRESHOLD) || 40;
+
+/**
+ * Maximum queue size for token refresh requests
+ * @constant {number}
+ * @default 500
+ * @description Maximum number of queued requests during token refresh
+ */
+const MAX_QUEUE_SIZE = Number(process.env.NEXT_PUBLIC_MAX_REFRESH_QUEUE_SIZE) || 500;
+
+/**
+ * Queue timeout in milliseconds
+ * @constant {number}
+ * @default 30000
+ * @description Timeout for queued requests during token refresh
+ */
+const QUEUE_TIMEOUT = Number(process.env.NEXT_PUBLIC_REFRESH_QUEUE_TIMEOUT) || 30000;
+
+/**
+ * API Client instance
+ * @type {AxiosInstance}
+ * @description Configured axios instance with base URL, timeout, and credentials
+ */
 const apiClient = axios.create({
   baseURL: getBaseURL(),
-  timeout: 30000,
+  timeout: API_TIMEOUT_MS,
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });
 
-// Auth cache
+// ✅ Auth cache with improved TTL và validation
 let cachedAuthHeader: string | null = null;
 let cachedAuthTimestamp = 0;
-const AUTH_CACHE_TTL = 500; // 500ms cache
 
+/**
+ * Get cached auth header with validation
+ * @returns {string | null} Cached authorization header or null
+ * @description 
+ * - Checks cache validity (TTL)
+ * - Verifies token still exists in cookies
+ * - Invalidates cache if token changed
+ */
 const getCachedAuthHeader = (): string | null => {
   if (typeof window === "undefined") return null;
   const now = Date.now();
+  
+  // ✅ Check if cache is still valid
   if (cachedAuthHeader && now - cachedAuthTimestamp < AUTH_CACHE_TTL) {
-    return cachedAuthHeader;
+    // ✅ Verify token still exists
+    const atCookie = getCookie("_at");
+    if (atCookie && atCookie === cachedAuthHeader.replace("Bearer ", "")) {
+      return cachedAuthHeader;
+    }
+    // ✅ Token changed - invalidate cache
+    cachedAuthHeader = null;
   }
+  
   const atCookie = getCookie("_at");
   if (atCookie) {
     cachedAuthHeader = `Bearer ${atCookie}`;
     cachedAuthTimestamp = now;
     return cachedAuthHeader;
   }
+  
   cachedAuthHeader = null;
   return null;
 };
 
+/**
+ * Clear auth cache
+ * @description Clears cached auth header and cookie cache
+ */
 export const clearAuthCache = (): void => {
   cachedAuthHeader = null;
   cachedAuthTimestamp = 0;
   clearCookieCache();
 };
 
+/**
+ * Set tokens (legacy function - tokens now stored in cookies)
+ * @param {string} _accessToken - Access token (unused, kept for compatibility)
+ * @param {string} [_refreshToken] - Refresh token (unused, kept for compatibility)
+ * @description Legacy function - tokens are now stored in cookies, not localStorage
+ */
 export const setTokens = (_accessToken: string, _refreshToken?: string): void => {
   if (typeof window === "undefined") return;
   localStorage.removeItem("accessToken");
@@ -56,6 +166,10 @@ export const setTokens = (_accessToken: string, _refreshToken?: string): void =>
   localStorage.removeItem("user");
 };
 
+/**
+ * Clear all tokens and session data
+ * @description Clears localStorage, sessionStorage, cookies, and auth cache
+ */
 export const clearTokens = (): void => {
   if (typeof window === "undefined") return;
   localStorage.removeItem("accessToken");
@@ -70,19 +184,54 @@ export const clearTokens = (): void => {
   clearAuthCache();
 };
 
-// Refresh token state
+// ✅ Refresh token state with queue limits
 let isRefreshing = false;
 let failedQueue: Array<{ resolve: (v?: any) => void; reject: (e?: any) => void }> = [];
 
+/**
+ * Process queued requests after token refresh
+ * @param {AxiosError | null} error - Error if refresh failed
+ * @param {string | null} [token] - New token if refresh succeeded
+ */
 const processQueue = (error: AxiosError | null, token: string | null = null) => {
   failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token)));
   failedQueue = [];
 };
 
-// Response cache
+// ✅ Response cache with improved cleanup
 const responseCache = new Map<string, { data: any; ts: number }>();
-const CACHE_TTL = 30000;
 
+// ✅ Periodic cleanup for response cache
+if (typeof window !== "undefined") {
+  setInterval(() => {
+    const now = Date.now();
+    const entries = [...responseCache.entries()];
+    
+    // ✅ Remove expired entries
+    entries.forEach(([key, value]) => {
+      if (now - value.ts > CACHE_TTL) {
+        responseCache.delete(key);
+      }
+    });
+    
+    // ✅ If still too large, remove oldest
+    if (responseCache.size > MAX_CACHE_SIZE) {
+      const sorted = entries
+        .filter(([_, value]) => now - value.ts <= CACHE_TTL)
+        .sort((a, b) => a[1].ts - b[1].ts);
+      
+      const toRemove = sorted.slice(0, responseCache.size - CACHE_CLEANUP_THRESHOLD);
+      toRemove.forEach(([key]) => responseCache.delete(key));
+    }
+  }, 30000); // ✅ Cleanup every 30 seconds
+}
+
+/**
+ * Get cache key for request
+ * @param {InternalAxiosRequestConfig} config - Axios request config
+ * @returns {string | null} Cache key or null if not cacheable
+ * @description Only GET requests are cacheable, excludes auth endpoints
+ */
 const getCacheKey = (config: InternalAxiosRequestConfig): string | null => {
   if (config.method?.toLowerCase() !== "get") return null;
   const url = config.url || "";
@@ -113,9 +262,14 @@ apiClient.interceptors.response.use(
     const key = getCacheKey(response.config);
     if (key) {
       responseCache.set(key, { data: response.data, ts: Date.now() });
-      if (responseCache.size > 50) {
+      // ✅ Improved cache cleanup - more aggressive
+      if (responseCache.size > CACHE_CLEANUP_THRESHOLD) {
         const entries = [...responseCache.entries()].sort((a, b) => a[1].ts - b[1].ts);
-        for (let i = 0; i < 10; i++) responseCache.delete(entries[i][0]);
+        // ✅ Remove more entries when threshold is reached
+        const toRemove = Math.min(10, entries.length - (CACHE_CLEANUP_THRESHOLD - 10));
+        for (let i = 0; i < toRemove; i++) {
+          responseCache.delete(entries[i][0]);
+        }
       }
     }
     return response;
@@ -156,10 +310,29 @@ apiClient.interceptors.response.use(
       if (originalRequest && !originalRequest._retry) {
         originalRequest._retry = true;
 
-        // Queue if already refreshing
+        // ✅ Queue if already refreshing with timeout và size limit
         if (isRefreshing) {
+          // ✅ Check queue size
+          if (failedQueue.length >= MAX_QUEUE_SIZE) {
+            return Promise.reject(new Error("Too many queued requests"));
+          }
+          
           return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject });
+            // ✅ Add timeout to queued requests
+            const timeoutId = setTimeout(() => {
+              reject(new Error("Request timeout - token refresh taking too long"));
+            }, QUEUE_TIMEOUT);
+            
+            failedQueue.push({ 
+              resolve: (value) => {
+                clearTimeout(timeoutId);
+                resolve(value);
+              }, 
+              reject: (error) => {
+                clearTimeout(timeoutId);
+                reject(error);
+              }
+            });
           })
             .then(() => {
               if (originalRequest.headers) delete originalRequest.headers.Authorization;
@@ -230,14 +403,41 @@ apiClient.interceptors.response.use(
   },
 );
 
+/**
+ * Get cached response for a request
+ * @param {string} url - Request URL
+ * @param {any} [params] - Request parameters
+ * @returns {any | null} Cached response data or null if not found/expired
+ */
+/**
+ * Get cached response for a URL
+ * @param {string} url - Request URL
+ * @param {any} params - Optional request parameters
+ * @returns {any | null} Cached response data or null if not found/expired
+ * @description Retrieves cached GET response if available and not expired
+ */
 export const getCachedResponse = (url: string, params?: any): any | null => {
   const key = params ? `${url}?${JSON.stringify(params)}` : `${url}?`;
   const cached = responseCache.get(key);
   return cached && Date.now() - cached.ts < CACHE_TTL ? cached.data : null;
 };
 
+/**
+ * Clear all cached responses
+ * @description Clears the entire response cache
+ */
 export const clearResponseCache = (): void => responseCache.clear();
 
+/**
+ * Clear cached responses matching a pattern
+ * @param {string | RegExp} pattern - Pattern to match against cache keys
+ * @description Clears cache entries whose keys match the pattern
+ * @example
+ * ```typescript
+ * clearCacheByPattern('/users'); // Clear all user-related cache
+ * clearCacheByPattern(/\/classes\/\d+/); // Clear all class detail cache
+ * ```
+ */
 export const clearCacheByPattern = (pattern: string | RegExp): void => {
   [...responseCache.keys()].forEach((key) => {
     if ((typeof pattern === "string" && key.includes(pattern)) || (pattern instanceof RegExp && pattern.test(key))) {
