@@ -1,19 +1,63 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { App } from "antd";
 
+/**
+ * Violation record interface
+ * @interface Violation
+ * @description Represents an anti-cheat violation event
+ */
 export interface Violation {
+  /** Unique violation identifier */
   id: string;
+  /** Violation type (e.g., 'tab_switch', 'fullscreen_exit', 'copy_paste') */
   type: string;
+  /** Human-readable violation message */
   message: string;
+  /** ISO timestamp when violation occurred */
   timestamp: string;
 }
 
+/**
+ * Options for useAntiCheat hook
+ * @interface UseAntiCheatProps
+ */
 interface UseAntiCheatProps {
+  /** Callback function when violation is detected */
   onViolation?: (type: string, message: string) => void;
+  /** Enable/disable anti-cheat detection (default: true) */
   enable?: boolean;
+  /** Initial violations count (for resuming exams) */
   initialViolationsCount?: number;
 }
 
+/**
+ * Hook for anti-cheat detection during exams
+ * @param {UseAntiCheatProps} props - Anti-cheat configuration
+ * @returns {Object} Object containing violations, fullscreen state, and handlers
+ * @returns {Violation[]} returns.violations - List of detected violations
+ * @returns {boolean} returns.isFullScreen - Whether exam is in fullscreen mode
+ * @returns {Function} returns.enterFullScreen - Function to enter fullscreen
+ * @returns {Function} returns.exitFullScreen - Function to exit fullscreen
+ * 
+ * @description
+ * Monitors and detects cheating behaviors:
+ * - Tab switching
+ * - Fullscreen exit
+ * - Copy/paste attempts
+ * - Developer tools access
+ * - Window focus loss
+ * 
+ * @example
+ * ```typescript
+ * const { violations, isFullScreen, enterFullScreen } = useAntiCheat({
+ *   onViolation: (type, message) => {
+ *     console.warn(`Violation: ${type} - ${message}`);
+ *   },
+ *   enable: true,
+ *   initialViolationsCount: 0
+ * });
+ * ```
+ */
 export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCount = 0 }: UseAntiCheatProps = {}) => {
   const { modal, message } = App.useApp();
   const [violations, setViolations] = useState<Violation[]>([]);
@@ -47,11 +91,18 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
       }
   }, [initialViolationsCount]);
   
+  // ✅ Constants for magic numbers
+  const VIOLATION_COOLDOWN_MS = 1000;
+  const DEVTOOLS_THRESHOLD = 200;
+  const DEVTOOLS_CHECK_INTERVAL_MS = 2000;
+  const INCIDENT_COOLDOWN_MS = 1000;
+
   // Helper to record violation
   const recordViolation = useCallback((type: string, message: string) => {
     const now = Date.now();
+    // ✅ Fix: Use constant instead of magic number
     // If paused, overlay is already showing, OR a violation was recorded < 1 second ago, ignore.
-    if (paused || overlayRef.current || (now - lastViolationTimeRef.current < 1000)) return; 
+    if (paused || overlayRef.current || (now - lastViolationTimeRef.current < VIOLATION_COOLDOWN_MS)) return; 
 
     lastViolationTimeRef.current = now;
     const newViolation: Violation = {
@@ -98,14 +149,29 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
                 btnText = "Quay lại";
             }
 
-            div.innerHTML = `
-              <div style="font-size: 60px; margin-bottom: 20px;">${icon}</div>
-              <h2 style="color: ${titleColor}; font-weight: bold; font-size: 32px; margin-bottom: 15px;">${title}</h2>
-              <p id="overlay-msg" style="margin: 10px 0; font-size: 20px; line-height: 1.6;">${msg}</p>
-              <button id="resume-btn" style="margin-top: 40px; padding: 14px 50px; font-size: 18px; background: linear-gradient(135deg, ${isInfo ? '#6366f1 0%, #4f46e5 100%' : '#4f46e5 0%, #7c3aed 100%'}); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4); transition: transform 0.2s;">
-                ${btnText}
-              </button>
-            `;
+            // ✅ Fix XSS: Use textContent và createElement instead of innerHTML
+            const iconDiv = document.createElement("div");
+            iconDiv.style.cssText = "font-size: 60px; margin-bottom: 20px;";
+            iconDiv.textContent = icon;
+
+            const titleEl = document.createElement("h2");
+            titleEl.style.cssText = `color: ${titleColor}; font-weight: bold; font-size: 32px; margin-bottom: 15px;`;
+            titleEl.textContent = title; // ✅ textContent escapes HTML
+
+            const msgEl = document.createElement("p");
+            msgEl.id = "overlay-msg";
+            msgEl.style.cssText = "margin: 10px 0; font-size: 20px; line-height: 1.6;";
+            msgEl.textContent = msg; // ✅ textContent escapes HTML
+
+            const btnEl = document.createElement("button");
+            btnEl.id = "resume-btn";
+            btnEl.style.cssText = `margin-top: 40px; padding: 14px 50px; font-size: 18px; background: linear-gradient(135deg, ${isInfo ? '#6366f1 0%, #4f46e5 100%' : '#4f46e5 0%, #7c3aed 100%'}); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4); transition: transform 0.2s;`;
+            btnEl.textContent = btnText; // ✅ textContent escapes HTML
+
+            div.appendChild(iconDiv);
+            div.appendChild(titleEl);
+            div.appendChild(msgEl);
+            div.appendChild(btnEl);
             document.body.appendChild(div);
             overlayRef.current = div;
             
@@ -117,8 +183,9 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
                 }
             });
           } else {
+             // ✅ Fix XSS: Use textContent instead of innerHTML
              const p = overlayRef.current.querySelector("#overlay-msg") as HTMLElement;
-             if (p) p.innerHTML = msg;
+             if (p) p.textContent = msg; // ✅ textContent escapes HTML
           }
       } else {
           if (overlayRef.current && document.body.contains(overlayRef.current)) {
@@ -177,25 +244,45 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
   }, [enable]);
 
 
+  // ✅ Fix: Use refs để prevent handler recreation
+  const checkDevToolsRef = useRef<() => void>();
+  const recordViolationRef = useRef(recordViolation);
+  const toggleBlockingOverlaySecureRef = useRef(toggleBlockingOverlaySecure);
+
+  useEffect(() => {
+    recordViolationRef.current = recordViolation;
+    toggleBlockingOverlaySecureRef.current = toggleBlockingOverlaySecure;
+  }, [recordViolation, toggleBlockingOverlaySecure]);
+
   // 1. Monitor DevTools (Relaxed Threshold)
   useEffect(() => {
     if (!enable || paused) return;
+    
+    // ✅ Fix: Define checkDevTools inside useEffect để có stable reference
     const checkDevTools = () => {
         if (paused) return; // Add check inside interval as well
-        const threshold = 200; // Increased to reduce false positives
-        const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-        const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+        // ✅ Fix: Use constant instead of magic number
+        const widthThreshold = window.outerWidth - window.innerWidth > DEVTOOLS_THRESHOLD;
+        const heightThreshold = window.outerHeight - window.innerHeight > DEVTOOLS_THRESHOLD;
         
         if (widthThreshold || heightThreshold) {
             const msg = "Phát hiện hành vi gian lận!";
-            recordViolation("devtools_open", msg);
-            toggleBlockingOverlaySecure(true, msg);
+            recordViolationRef.current("devtools_open", msg);
+            toggleBlockingOverlaySecureRef.current(true, msg);
         }
     };
-    const interval = setInterval(checkDevTools, 2000);
+    
+    checkDevToolsRef.current = checkDevTools;
+    
+    // ✅ Fix: Use constant instead of magic number
+    const interval = setInterval(checkDevTools, DEVTOOLS_CHECK_INTERVAL_MS);
     window.addEventListener('resize', checkDevTools);
-    return () => { clearInterval(interval); window.removeEventListener('resize', checkDevTools); };
-  }, [enable, recordViolation, toggleBlockingOverlaySecure, paused]);
+    
+    return () => { 
+      clearInterval(interval); 
+      window.removeEventListener('resize', checkDevTools); 
+    };
+  }, [enable, paused]); // ✅ Remove callbacks from dependencies, use refs instead
 
   // 2. Incident Monitor (Shared for Fullscreen & Focus Loss)
   const lastIncidentTimeRef = useRef<number>(0);
@@ -212,8 +299,9 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
     if (overlayRef.current) return;
 
     const now = Date.now();
+    // ✅ Fix: Use constant instead of magic number
     // Protect against rapid firing
-    if (now - lastIncidentTimeRef.current < 1000) return;
+    if (now - lastIncidentTimeRef.current < INCIDENT_COOLDOWN_MS) return;
     lastIncidentTimeRef.current = now;
 
     // 1. Increment incident counter

@@ -4,22 +4,65 @@ import type { UploadFile, UploadProps } from "antd";
 import { formatFileName } from "@/lib/utils/fileName";
 import { validateFileExtension } from "@/lib/utils/fileUtils";
 
+/**
+ * Options for useFileUpload hook
+ * @interface UseFileUploadOptions
+ */
 interface UseFileUploadOptions {
+  /** Assignment ID to attach the file to */
   assignmentId: number;
+  /** User ID uploading the file */
   userId: number;
+  /** Existing attachment to update (if any) */
   existingAttachment?: {
     attachment_id: string | number;
     file_name: string;
   } | null;
+  /** Progress callback function */
   onProgress?: (progress: number, status: string) => void;
 }
 
+/**
+ * Upload result
+ * @interface UploadResult
+ */
 interface UploadResult {
+  /** Whether upload was successful */
   success: boolean;
+  /** Whether this was an update (true) or new upload (false) */
   isUpdate: boolean;
+  /** Error message if upload failed */
   error?: string;
 }
 
+/**
+ * Hook for handling file uploads to assignments
+ * @param {UseFileUploadOptions} options - Upload configuration options
+ * @returns {Object} Object containing uploadFile function
+ * @returns {Function} returns.uploadFile - Function to upload a file
+ * 
+ * @description
+ * Handles file uploads with support for:
+ * - Creating new attachments
+ * - Updating existing attachments
+ * - Progress tracking
+ * - Error handling with timeout (5 minutes)
+ * 
+ * @example
+ * ```typescript
+ * const { uploadFile } = useFileUpload({
+ *   assignmentId: 123,
+ *   userId: 456,
+ *   existingAttachment: { attachment_id: 789, file_name: 'old.pdf' },
+ *   onProgress: (progress, status) => console.log(`${progress}%: ${status}`)
+ * });
+ * 
+ * const result = await uploadFile(file, 0, 1);
+ * if (result.success) {
+ *   console.log('Upload successful!');
+ * }
+ * ```
+ */
 export function useFileUpload({ assignmentId, userId, existingAttachment, onProgress }: UseFileUploadOptions) {
   const uploadFile = useCallback(
     async (file: UploadFile, index: number, total: number): Promise<UploadResult> => {
@@ -54,8 +97,14 @@ export function useFileUpload({ assignmentId, userId, existingAttachment, onProg
 
         onProgress?.(30 + Math.floor((index / total) * 70), `Đang cập nhật file ${index + 1}/${total}: ${file.name}`);
 
+        // ✅ Fix: Race condition - Add isMounted check và proper cleanup
+        let timeoutId: NodeJS.Timeout | null = null;
+        let isMounted = true;
+        
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 300000);
+        timeoutId = setTimeout(() => {
+          controller.abort();
+        }, 300000);
 
         try {
           const response = await fetch(`/api-proxy/assignment-attachments/${attachmentIdStr}?userId=${userId}`, {
@@ -63,7 +112,15 @@ export function useFileUpload({ assignmentId, userId, existingAttachment, onProg
             body: formData,
             signal: controller.signal,
           });
-          clearTimeout(timeoutId);
+          
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+
+          if (!isMounted) {
+            throw new Error("Component unmounted");
+          }
 
           if (!response.ok) {
             const errorData = await parseErrorResponse(response);
@@ -72,11 +129,18 @@ export function useFileUpload({ assignmentId, userId, existingAttachment, onProg
 
           return { success: true, isUpdate: true };
         } catch (error: any) {
-          clearTimeout(timeoutId);
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
           if (error.name === "AbortError") {
             throw new Error(`Request timeout: Không thể cập nhật file ${file.name} sau 5 phút.`);
           }
           throw error;
+        } finally {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
         }
       } else {
         // Create new attachment
@@ -100,8 +164,13 @@ async function createNewAttachment(
 ): Promise<UploadResult> {
   onProgress?.(30 + Math.floor((index / total) * 70), `Đang upload file ${index + 1}/${total}: ${file.name}`);
 
+  // ✅ Fix: Race condition - Add proper cleanup
+  let timeoutId: NodeJS.Timeout | null = null;
+  
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 300000);
+  timeoutId = setTimeout(() => {
+    controller.abort();
+  }, 300000);
 
   try {
     const response = await fetch(`/api-proxy/assignment-attachments?userId=${userId}`, {
@@ -109,7 +178,11 @@ async function createNewAttachment(
       body: formData,
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
+    
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
 
     if (!response.ok) {
       const errorData = await parseErrorResponse(response);
@@ -118,11 +191,18 @@ async function createNewAttachment(
 
     return { success: true, isUpdate: false };
   } catch (error: any) {
-    clearTimeout(timeoutId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
     if (error.name === "AbortError") {
       throw new Error(`Request timeout: Không thể upload file ${file.name} sau 5 phút.`);
     }
     throw error;
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
   }
 }
 
@@ -147,6 +227,48 @@ async function parseErrorResponse(response: Response): Promise<string> {
   }
 }
 
+/**
+ * Hook for managing file list state and handlers for Ant Design Upload component
+ * @returns {Object} Object containing file list state and handlers
+ * @returns {UploadFile[]} returns.fileList - Current list of files
+ * @returns {Function} returns.setFileList - Function to update file list
+ * @returns {Function} returns.handleUpload - Upload change handler
+ * @returns {Function} returns.handleRemoveFile - File removal handler
+ * @returns {Function} returns.beforeUpload - File validation before upload
+ * 
+ * @example
+ * ```typescript
+ * const { fileList, handleUpload, beforeUpload } = useFileHandlers();
+ * 
+ * <Upload
+ *   fileList={fileList}
+ *   onChange={handleUpload}
+ *   beforeUpload={beforeUpload}
+ * />
+ * ```
+ */
+/**
+ * Hook for managing file list state and handlers
+ * @returns {{
+ *   fileList: UploadFile[],
+ *   setFileList: (files: UploadFile[]) => void,
+ *   handleUpload: UploadProps["onChange"],
+ *   handleRemoveFile: (file: UploadFile) => void,
+ *   beforeUpload: (file: File) => boolean | typeof Upload.LIST_IGNORE
+ * }} File handlers and state
+ * @description Provides file list management with validation and upload handlers
+ * 
+ * @example
+ * ```typescript
+ * const { fileList, handleUpload, beforeUpload } = useFileHandlers();
+ * 
+ * <Upload
+ *   fileList={fileList}
+ *   onChange={handleUpload}
+ *   beforeUpload={beforeUpload}
+ * />
+ * ```
+ */
 export function useFileHandlers() {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 

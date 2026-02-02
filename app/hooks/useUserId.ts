@@ -2,9 +2,22 @@ import { useState, useEffect } from "react";
 import { getUserIdFromCookieAsync, getUserIdFromSession } from "@/lib/utils/cookies";
 
 /**
- * Hook để lấy user_id từ cookie (đợi decrypt hoàn thành)
- * Sử dụng sessionStorage để tối ưu, tránh gọi API decrypt nhiều lần
- * SessionStorage tự động xóa khi đóng trình duyệt
+ * Hook to get user ID from cookie (waits for decrypt to complete)
+ * @description Uses sessionStorage for optimization to avoid calling decrypt API multiple times.
+ * SessionStorage is automatically cleared when browser is closed.
+ * 
+ * @returns {Object} Object containing userId and loading state
+ * @returns {number | string | null} returns.userId - User ID or null if not available
+ * @returns {boolean} returns.loading - Loading state (true while fetching/decrypting)
+ * 
+ * @example
+ * ```typescript
+ * const { userId, loading } = useUserId();
+ * 
+ * if (loading) return <Spinner />;
+ * if (!userId) return <LoginPrompt />;
+ * return <Dashboard userId={userId} />;
+ * ```
  */
 export function useUserId() {
   // Kiểm tra sessionStorage ngay lập tức (sync, không cần đợi)
@@ -51,9 +64,10 @@ export function useUserId() {
 
     fetchUserId();
 
-    // Listen for cache events (khi decrypt xong từ component khác)
+    // ✅ Listen for cache events (khi decrypt xong từ component khác)
+    // ✅ Fix: Define handleCacheEvent inside useEffect để có stable reference
     const handleCacheEvent = () => {
-      if (mounted) {
+      if (!mounted) return;
         const sessionId = getUserIdFromSession();
         if (sessionId) {
           setUserId(sessionId);
@@ -65,7 +79,6 @@ export function useUserId() {
               setLoading(false);
             }
           });
-        }
       }
     };
 
@@ -75,7 +88,7 @@ export function useUserId() {
       mounted = false;
       window.removeEventListener("user_id_cached", handleCacheEvent);
     };
-  }, []); // Chỉ chạy 1 lần khi mount
+  }, []); // ✅ Stable dependencies - handleCacheEvent defined inside
 
   return { userId, loading };
 }
