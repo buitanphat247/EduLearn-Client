@@ -13,6 +13,7 @@ import {
 } from "@ant-design/icons";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { useUserId } from "@/app/hooks/useUserId";
+import SettingsSkeleton from "@/app/components/settings/SettingsSkeleton";
 
 interface SettingsFormData {
   fullname: string;
@@ -124,11 +125,7 @@ export default function AdminSettings() {
   );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Spin size="large" />
-      </div>
-    );
+    return <SettingsSkeleton />;
   }
 
   return (
