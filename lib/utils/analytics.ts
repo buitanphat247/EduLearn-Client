@@ -1,18 +1,36 @@
 /**
  * Analytics Utility
- * Track events và page views
+ * @module lib/utils/analytics
+ * @description Track events and page views with support for Google Analytics and custom endpoints
  */
 
+/**
+ * Analytics event structure
+ * @interface AnalyticsEvent
+ */
 interface AnalyticsEvent {
+  /** Event name (e.g., 'page_not_found', 'button_click') */
   event_name: string;
+  /** Event category for grouping */
   event_category?: string;
+  /** Event label for additional context */
   event_label?: string;
+  /** Numeric value associated with event */
   value?: number;
+  /** Additional event properties */
   [key: string]: any;
 }
 
 /**
  * Track 404 page với referrer URL
+ * @param {string} pathname - Path that was not found
+ * @param {string} [referrer] - Optional referrer URL (defaults to document.referrer)
+ * @description Tracks 404 pages with referrer information to identify broken links
+ * 
+ * @example
+ * ```typescript
+ * track404('/invalid-page', 'https://example.com/old-link');
+ * ```
  */
 export function track404(pathname: string, referrer?: string) {
   if (typeof window === 'undefined') return;
@@ -60,6 +78,18 @@ export function track404(pathname: string, referrer?: string) {
 
 /**
  * Track custom event
+ * @param {AnalyticsEvent} event - Event object with name, category, label, and value
+ * @description Tracks custom events to analytics services (Google Analytics, custom endpoint)
+ * 
+ * @example
+ * ```typescript
+ * trackEvent({
+ *   event_name: 'button_click',
+ *   event_category: 'User Interaction',
+ *   event_label: 'Submit Button',
+ *   value: 1
+ * });
+ * ```
  */
 export function trackEvent(event: AnalyticsEvent) {
   if (typeof window === 'undefined') return;

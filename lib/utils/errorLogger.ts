@@ -1,18 +1,51 @@
 /**
  * Error logging utility
- * Centralized error logging với support cho multiple services
+ * @module lib/utils/errorLogger
+ * @description Centralized error logging với support cho multiple services (Sentry, Google Analytics, custom endpoint)
  */
 
+/**
+ * Error context information
+ * @interface ErrorContext
+ */
 interface ErrorContext {
+  /** React component stack trace */
   componentStack?: string;
+  /** User ID who encountered the error */
   userId?: string | number;
+  /** Pathname where error occurred */
   pathname?: string;
+  /** User agent string */
   userAgent?: string;
+  /** ISO timestamp of error */
   timestamp?: string;
+  /** Route name where error occurred */
   route?: string;
+  /** Additional context properties */
   [key: string]: any;
 }
 
+/**
+ * Log error to multiple services
+ * @param {Error} error - Error object to log
+ * @param {React.ErrorInfo} [errorInfo] - React error info with component stack
+ * @param {ErrorContext} [context] - Additional error context
+ * @description 
+ * Logs errors to:
+ * - Console (development only)
+ * - Sentry (if available)
+ * - Google Analytics (if available)
+ * - Custom analytics endpoint
+ * 
+ * @example
+ * ```typescript
+ * logError(error, errorInfo, {
+ *   pathname: '/admin/users',
+ *   userId: 123,
+ *   route: 'admin'
+ * });
+ * ```
+ */
 export const logError = (
   error: Error,
   errorInfo?: React.ErrorInfo,
