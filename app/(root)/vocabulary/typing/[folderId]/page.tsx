@@ -42,26 +42,6 @@ export default function VocabularyTyping() {
     const inputRef = useRef<any>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
-    const fetchVocabularies = useCallback(async () => {
-        if (!folderId) return;
-
-        setLoading(true);
-        try {
-            const data = await getVocabulariesByFolder(folderId);
-            setVocabularies(data);
-
-            if (data.length > 0) {
-                generateQuestions(data);
-            }
-        } catch (error: any) {
-            console.error("Error fetching vocabularies:", error);
-            message.error(error?.message || "Không thể tải danh sách từ vựng");
-            setVocabularies([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [folderId, message, generateQuestions]);
-
     // Parse example để lấy câu
     const parseExample = useCallback((exampleStr: string) => {
         try {
@@ -93,6 +73,26 @@ export default function VocabularyTyping() {
 
         setQuestions(newQuestions);
     }, [parseExample]);
+
+    const fetchVocabularies = useCallback(async () => {
+        if (!folderId) return;
+
+        setLoading(true);
+        try {
+            const data = await getVocabulariesByFolder(folderId);
+            setVocabularies(data);
+
+            if (data.length > 0) {
+                generateQuestions(data);
+            }
+        } catch (error: any) {
+            console.error("Error fetching vocabularies:", error);
+            message.error(error?.message || "Không thể tải danh sách từ vựng");
+            setVocabularies([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [folderId, message, generateQuestions]);
 
     useEffect(() => {
         if (folderId) {

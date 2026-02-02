@@ -155,7 +155,7 @@ export default function AdminSettings() {
           </div>
         </div>
 
-        <Divider className="dark:!border-slate-600" />
+        <Divider className="dark:border-slate-600!" />
 
         <Form form={form} layout="vertical" onFinish={handleSaveProfile}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -168,7 +168,7 @@ export default function AdminSettings() {
                 prefix={<UserOutlined className="text-gray-400 dark:text-gray-500" />}
                 placeholder="Nhập họ và tên"
                 size="large"
-                className="dark:bg-gray-700/50 dark:!border-slate-600 dark:text-white dark:placeholder-gray-500 hover:dark:!border-slate-500 focus:dark:!border-blue-500"
+                className="dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
               />
             </Form.Item>
 
@@ -182,7 +182,7 @@ export default function AdminSettings() {
                 placeholder="Nhập tên đăng nhập"
                 size="large"
                 disabled
-                className="dark:bg-gray-900/50 dark:!border-slate-700 dark:text-gray-400"
+                className="dark:bg-gray-900/50 dark:border-slate-700! dark:text-gray-400"
               />
             </Form.Item>
 
@@ -198,7 +198,7 @@ export default function AdminSettings() {
                 prefix={<MailOutlined className="text-gray-400 dark:text-gray-500" />}
                 placeholder="Nhập email"
                 size="large"
-                className="dark:bg-gray-700/50 dark:!border-slate-600 dark:text-white dark:placeholder-gray-500 hover:dark:!border-slate-500 focus:dark:!border-blue-500"
+                className="dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
               />
             </Form.Item>
 
@@ -207,7 +207,7 @@ export default function AdminSettings() {
                 prefix={<PhoneOutlined className="text-gray-400 dark:text-gray-500" />}
                 placeholder="Nhập số điện thoại"
                 size="large"
-                className="dark:bg-gray-700/50 dark:!border-slate-600 dark:text-white dark:placeholder-gray-500 hover:dark:!border-slate-500 focus:dark:!border-blue-500"
+                className="dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
               />
             </Form.Item>
           </div>
@@ -238,7 +238,7 @@ export default function AdminSettings() {
       >
         <div className="space-y-4">
           <div
-            className="flex items-center justify-between py-3 border-b border-gray-100 dark:!border-slate-600 cursor-pointer"
+            className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-slate-600! cursor-pointer"
             onClick={() => messageApi.info("Tính năng đang phát triển")}
           >
             <div>
@@ -253,7 +253,7 @@ export default function AdminSettings() {
           </div>
 
           <div
-            className="flex items-center justify-between py-3 border-b border-gray-100 dark:!border-slate-600 cursor-pointer"
+            className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-slate-600! cursor-pointer"
             onClick={() => messageApi.info("Tính năng đang phát triển")}
           >
             <div>
@@ -309,7 +309,7 @@ export default function AdminSettings() {
       >
         <div className="space-y-4">
           <div
-            className="flex items-center justify-between py-3 border-b border-gray-100 dark:!border-slate-600 cursor-pointer"
+            className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-slate-600! cursor-pointer"
             onClick={() => messageApi.info("Tính năng đang phát triển")}
           >
             <div>
@@ -361,7 +361,7 @@ export default function AdminSettings() {
               prefix={<LockOutlined className="text-gray-400 dark:text-gray-500" />}
               placeholder="Nhập mật khẩu hiện tại"
               size="large"
-              className="dark:bg-gray-700/50 dark:!border-slate-600 dark:text-white dark:placeholder-gray-500 hover:dark:!border-slate-500 focus:dark:!border-blue-500"
+              className="dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
             />
           </Form.Item>
 
@@ -377,7 +377,7 @@ export default function AdminSettings() {
               prefix={<LockOutlined className="text-gray-400 dark:text-gray-500" />}
               placeholder="Nhập mật khẩu mới"
               size="large"
-              className="dark:bg-gray-700/50 dark:!border-slate-600 dark:text-white dark:placeholder-gray-500 hover:dark:!border-slate-500 focus:dark:!border-blue-500"
+              className="dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
             />
           </Form.Item>
 
@@ -401,7 +401,7 @@ export default function AdminSettings() {
               prefix={<LockOutlined className="text-gray-400 dark:text-gray-500" />}
               placeholder="Xác nhận mật khẩu mới"
               size="large"
-              className="dark:bg-gray-700/50 dark:!border-slate-600 dark:text-white dark:placeholder-gray-500 hover:dark:!border-slate-500 focus:dark:!border-blue-500"
+              className="dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
             />
           </Form.Item>
 

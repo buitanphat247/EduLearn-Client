@@ -1,26 +1,24 @@
 "use client";
 
 import { Input, Select, ConfigProvider, theme } from "antd";
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import NewsCard from "@/app/components/news/NewsCard";
 import { SearchOutlined } from "@ant-design/icons";
 import DarkPagination from "@/app/components/common/DarkPagination";
-import ScrollAnimation from "@/app/components/common/ScrollAnimation";
 import { news } from "./mock_data";
 import { useTheme } from "@/app/context/ThemeContext";
+import PageSkeleton from "@/app/components/common/PageSkeleton";
 
 // Constants
 const DEFAULT_PAGE_SIZE = 18;
-const SCROLL_DELAY_MS = 500;
 
 export default function News() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [isScrolling, setIsScrolling] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { theme: currentTheme } = useTheme();
   const pageSize = DEFAULT_PAGE_SIZE;
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const filteredNews = useMemo(() => {
     return news.filter((item) => {
@@ -38,43 +36,34 @@ export default function News() {
 
   const categories = Array.from(new Set(news.map((item) => item.category)));
 
-  const handleSearch = (value: string) => {
+  const handleSearch = useCallback((value: string) => {
+    setIsLoading(true);
     setSearchText(value);
     setCurrentPage(1);
-  };
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 300);
+  }, []);
 
-  const handleCategoryChange = (value: string) => {
+  const handleCategoryChange = useCallback((value: string) => {
+    setIsLoading(true);
     setSelectedCategory(value);
     setCurrentPage(1);
-  };
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 300);
+  }, []);
 
-  // Handle page change with proper cleanup
+  // Handle page change
   const handlePageChange = useCallback((page: number) => {
-    // Clear any existing timeout
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-
-    setIsScrolling(true);
+    setIsLoading(true);
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // Wait for scroll to complete before showing animation
-    scrollTimeoutRef.current = setTimeout(() => {
-      setIsScrolling(false);
-      scrollTimeoutRef.current = null;
-    }, SCROLL_DELAY_MS);
-  }, []);
-
-  // Cleanup timeout and state on unmount
-  useEffect(() => {
-    return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-        scrollTimeoutRef.current = null;
-      }
-      setIsScrolling(false); // Cleanup state on unmount
-    };
+    // Simulate loading delay for skeleton
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 300);
   }, []);
 
   return (
@@ -134,28 +123,22 @@ export default function News() {
           </div>
         </ConfigProvider>
 
-        {currentNews.length > 0 ? (
+        {isLoading ? (
+          <PageSkeleton itemCount={pageSize} variant="grid" columns={3} showHeader={false} />
+        ) : currentNews.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {useMemo(() => 
-                currentNews.map((item, index) => (
-                  <ScrollAnimation
-                    key={item.id}
-                    direction="up"
-                    delay={index * 50}
-                  >
-                    <NewsCard
-                      id={item.id}
-                      title={item.title}
-                      excerpt={item.excerpt}
-                      image={item.image}
-                      date={item.date}
-                      category={item.category}
-                    />
-                  </ScrollAnimation>
-                )),
-                [currentNews]
-              )}
+              {currentNews.map((item) => (
+                <NewsCard
+                  key={item.id}
+                  id={item.id}
+                  title={item.title}
+                  excerpt={item.excerpt}
+                  image={item.image}
+                  date={item.date}
+                  category={item.category}
+                />
+              ))}
             </div>
 
             {total > pageSize && (
