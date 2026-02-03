@@ -284,6 +284,7 @@ apiClient.interceptors.response.use(
     const errorCode = (data as any)?.code;
     const errorMessage = (data as any)?.message || "Có lỗi xảy ra";
 
+    // 🔴 DEBUG BREAKPOINT 1: Kiểm tra khi nhận 401 error
     if (status !== 401) {
       return Promise.reject({ ...error, message: errorMessage, code: errorCode });
     }
@@ -343,10 +344,12 @@ apiClient.interceptors.response.use(
         }
 
         // Start refresh
+        // 🔴 DEBUG BREAKPOINT 2: Bắt đầu refresh token
         isRefreshing = true;
         if (isDev) console.log("[API] Refreshing token...");
 
         try {
+          // 🔴 DEBUG BREAKPOINT 3: Gọi API refresh
           const response = await axios.post(
             "/api-proxy/auth/refresh",
             {},
@@ -356,12 +359,14 @@ apiClient.interceptors.response.use(
             },
           );
 
+          // 🔴 DEBUG BREAKPOINT 4: Nhận response từ refresh - Kiểm tra accessToken
           const accessToken =
             response.data?.access_token || response.data?.data?.access_token || response.data?.accessToken || response.data?.cookies?._at?.value;
 
           if (!accessToken) throw new Error("No access token received from server");
 
           // Set cookies from response body (fallback for proxy issues)
+          // 🔴 DEBUG BREAKPOINT 5: Kiểm tra cookies từ response
           const cookies = response.data?.cookies;
           if (cookies?._at) {
             const exp = new Date(Date.now() + cookies._at.maxAge);
@@ -380,6 +385,7 @@ apiClient.interceptors.response.use(
           if (isDev) console.log("[API] Token refreshed successfully");
           return apiClient(originalRequest);
         } catch (refreshError: any) {
+          // 🔴 DEBUG BREAKPOINT 6: Xử lý lỗi refresh
           const code = refreshError?.response?.data?.code;
           if (isDev) console.log("[API] Refresh failed:", code);
 

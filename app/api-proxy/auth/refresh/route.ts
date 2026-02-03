@@ -9,8 +9,21 @@ export async function POST(request: NextRequest) {
   const url = `${backendUrl}/auth/refresh`;
 
   try {
+    // 🔴 DEBUG BREAKPOINT 7: Nhận request từ frontend - Kiểm tra cookies
     const cookieHeader = request.headers.get('cookie') || '';
     const authHeader = request.headers.get('authorization');
+    
+    // Debug logging
+    const isDev = process.env.NODE_ENV !== 'production';
+    if (isDev) {
+      console.log('[API Proxy Refresh] cookieHeader exists:', !!cookieHeader);
+      console.log('[API Proxy Refresh] cookieHeader length:', cookieHeader.length);
+      console.log('[API Proxy Refresh] authHeader exists:', !!authHeader);
+      if (cookieHeader) {
+        const cookies = cookieHeader.split(';').map(c => c.trim().split('=')[0]);
+        console.log('[API Proxy Refresh] Cookie names:', cookies);
+      }
+    }
     
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (authHeader) headers['Authorization'] = authHeader;
@@ -19,6 +32,7 @@ export async function POST(request: NextRequest) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.PROFILE);
 
+    // 🔴 DEBUG BREAKPOINT 8: Gọi backend API
     const backendResponse = await fetch(url, {
       method: 'POST',
       headers,
@@ -32,10 +46,20 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Invalid response format', 500);
     }
 
+    // 🔴 DEBUG BREAKPOINT 9: Nhận response từ backend
     const data = await backendResponse.json();
+    
+    // Debug logging
+    if (isDev) {
+      console.log('[API Proxy Refresh] Backend status:', backendResponse.status);
+      console.log('[API Proxy Refresh] Response has access_token:', !!data?.access_token);
+      console.log('[API Proxy Refresh] Response has cookies:', !!data?.cookies);
+    }
+    
     const responseHeaders = new Headers({ 'Content-Type': 'application/json' });
 
     // Forward Set-Cookie headers
+    // 🔴 DEBUG BREAKPOINT 10: Xử lý Set-Cookie headers
     const setCookies = typeof backendResponse.headers.getSetCookie === 'function'
       ? backendResponse.headers.getSetCookie()
       : [];
