@@ -6,6 +6,12 @@ import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
 async function getInitialUserData() {
   try {
     const cookieStore = await cookies();
+    // Ensure cookieStore exists
+    if (!cookieStore) {
+      console.error("Cookie store is undefined");
+      return null;
+    }
+    
     // Đọc cookie mới với tên đã đổi (_u)
     const userCookie = cookieStore.get("_u");
 
