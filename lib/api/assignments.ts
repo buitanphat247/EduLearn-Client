@@ -31,6 +31,7 @@ export interface AssignmentResponse {
   title: string;
   description: string;
   due_at: string | null;
+  status?: "draft" | "published" | "closed";
   created_by?: number | string;
   created_at: string;
   creator?: AssignmentCreator;
@@ -71,30 +72,24 @@ export interface GetAssignmentsByClassApiResponse {
   timestamp: string;
 }
 
-export const getAssignmentsByClass = async (
-  classId: number | string,
-  params?: GetAssignmentsByClassParams
-): Promise<GetAssignmentsByClassResult> => {
+export const getAssignmentsByClass = async (classId: number | string, params?: GetAssignmentsByClassParams): Promise<GetAssignmentsByClassResult> => {
   try {
     const numericClassId = typeof classId === "string" ? Number(classId) : classId;
-    
+
     if (isNaN(numericClassId)) {
       throw new Error("ID lớp học không hợp lệ");
     }
 
-    const response = await apiClient.get<GetAssignmentsByClassApiResponse>(
-      `/assignments/by-class/${numericClassId}`,
-      {
-        params: {
-          page: params?.page,
-          limit: params?.limit,
-          search: params?.search,
-        },
-      }
-    );
+    const response = await apiClient.get<GetAssignmentsByClassApiResponse>(`/assignments/by-class/${numericClassId}`, {
+      params: {
+        page: params?.page,
+        limit: params?.limit,
+        search: params?.search,
+      },
+    });
 
     const result = response.data?.data;
-    
+
     if (!result) {
       return {
         data: [],
@@ -111,8 +106,7 @@ export const getAssignmentsByClass = async (
       limit: result.limit || params?.limit || 10,
     };
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể lấy danh sách bài tập";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách bài tập";
     throw new Error(errorMessage);
   }
 };
@@ -146,10 +140,7 @@ export interface UpdateAssignmentParams {
   due_at?: string | null;
 }
 
-export const updateAssignment = async (
-  assignmentId: number | string,
-  params: UpdateAssignmentParams
-): Promise<AssignmentDetailResponse> => {
+export const updateAssignment = async (assignmentId: number | string, params: UpdateAssignmentParams): Promise<AssignmentDetailResponse> => {
   try {
     const numericAssignmentId = typeof assignmentId === "string" ? Number(assignmentId) : assignmentId;
 
@@ -228,57 +219,52 @@ export interface GetAssignmentStudentsResult {
   search?: string;
 }
 
-export const getAssignmentStudents = async (
-  params: GetAssignmentStudentsParams
-): Promise<GetAssignmentStudentsResult> => {
-// ... (code omitted, keep existing implementation)
+export const getAssignmentStudents = async (params: GetAssignmentStudentsParams): Promise<GetAssignmentStudentsResult> => {
+  // ... (code omitted, keep existing implementation)
   try {
-    const response = await apiClient.get<any>(
-      `/assignment-students`,
-      {
-        params: {
-          page: params.page,
-          limit: params.limit,
-          assignmentId: params.assignmentId,
-          classId: params.classId,
-          status: params.status,
-          search: params.search,
-        },
-      }
-    );
+    const response = await apiClient.get<any>(`/assignment-students`, {
+      params: {
+        page: params.page,
+        limit: params.limit,
+        assignmentId: params.assignmentId,
+        classId: params.classId,
+        status: params.status,
+        search: params.search,
+      },
+    });
 
     // Handle NestJS response structure (often wrapped in data or directly returned)
     const apiResponse = response.data; // This is the full body
-    
+
     // Case 1: Wrapped response { status: true, data: { data: [...], total: ... } }
-    if (apiResponse && apiResponse.data && typeof apiResponse.data === 'object' && 'data' in apiResponse.data) {
-        const innerData = apiResponse.data;
-        return {
-            data: Array.isArray(innerData.data) ? innerData.data : [],
-            total: innerData.total || 0,
-            page: innerData.page || params.page || 1,
-            limit: innerData.limit || params.limit || 10,
-        };
+    if (apiResponse && apiResponse.data && typeof apiResponse.data === "object" && "data" in apiResponse.data) {
+      const innerData = apiResponse.data;
+      return {
+        data: Array.isArray(innerData.data) ? innerData.data : [],
+        total: innerData.total || 0,
+        page: innerData.page || params.page || 1,
+        limit: innerData.limit || params.limit || 10,
+      };
     }
 
     // Case 2: Direct pagination response { data: [...], total: ... }
     if (apiResponse && Array.isArray(apiResponse.data)) {
-        return {
-            data: apiResponse.data,
-            total: apiResponse.total || 0,
-            page: apiResponse.page || params.page || 1,
-            limit: apiResponse.limit || params.limit || 10,
-        };
+      return {
+        data: apiResponse.data,
+        total: apiResponse.total || 0,
+        page: apiResponse.page || params.page || 1,
+        limit: apiResponse.limit || params.limit || 10,
+      };
     }
-    
+
     // Case 3: Just an array (unlikely for paginated, but safeguard)
     if (Array.isArray(apiResponse)) {
-        return {
-            data: apiResponse,
-            total: apiResponse.length,
-            page: params.page || 1,
-            limit: params.limit || 10,
-        };
+      return {
+        data: apiResponse,
+        total: apiResponse.length,
+        page: params.page || 1,
+        limit: params.limit || 10,
+      };
     }
 
     return {
@@ -288,12 +274,10 @@ export const getAssignmentStudents = async (
       limit: params.limit || 10,
     };
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể lấy danh sách bài làm";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách bài làm";
     throw new Error(errorMessage);
   }
 };
-
 
 export interface UpdateAssignmentStudentParams {
   status?: "assigned" | "viewed" | "submitted" | "graded" | "late" | "resubmitted";
@@ -302,17 +286,14 @@ export interface UpdateAssignmentStudentParams {
 
 export const updateAssignmentStudent = async (
   assignmentStudentId: number | string,
-  params: UpdateAssignmentStudentParams
+  params: UpdateAssignmentStudentParams,
 ): Promise<AssignmentStudentResponse> => {
   try {
     const numericId = typeof assignmentStudentId === "string" ? Number(assignmentStudentId) : assignmentStudentId;
     if (isNaN(numericId)) throw new Error("ID không hợp lệ");
 
-    const response = await apiClient.patch(
-      `/assignment-students/${numericId}`,
-      params
-    );
-    
+    const response = await apiClient.patch(`/assignment-students/${numericId}`, params);
+
     // NestJS response commonly wrapped in data
     const data = response.data?.data || response.data;
     return data as AssignmentStudentResponse;
@@ -322,17 +303,13 @@ export const updateAssignmentStudent = async (
   }
 };
 
-export const ungradeAssignmentStudent = async (
-  assignmentStudentId: number | string
-): Promise<AssignmentStudentResponse> => {
+export const ungradeAssignmentStudent = async (assignmentStudentId: number | string): Promise<AssignmentStudentResponse> => {
   try {
     const numericId = typeof assignmentStudentId === "string" ? Number(assignmentStudentId) : assignmentStudentId;
     if (isNaN(numericId)) throw new Error("ID không hợp lệ");
 
-    const response = await apiClient.post(
-      `/assignment-students/${numericId}/ungrade`
-    );
-    
+    const response = await apiClient.post(`/assignment-students/${numericId}/ungrade`);
+
     // NestJS response commonly wrapped in data
     const data = response.data?.data || response.data;
     return data as AssignmentStudentResponse;

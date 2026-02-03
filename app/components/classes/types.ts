@@ -47,7 +47,7 @@ export interface Exercise {
   submitted: number;
   total: number;
   graded: number;
-  status: "open" | "closed" | "completed";
+  status: "open" | "closed" | "completed" | "draft" | "published";
   closedDate?: string;
   classCode?: string;
   className?: string;
@@ -90,4 +90,3 @@ export interface EditClassNotificationModalProps {
   onCancel: () => void;
   onSuccess: () => void;
 }
-

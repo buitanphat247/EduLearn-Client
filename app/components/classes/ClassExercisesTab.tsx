@@ -78,13 +78,21 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
       });
     }
 
-    // Determine status based on due date
-    let status: "open" | "closed" | "completed" = "open";
-    if (assignment.due_at) {
-      const dueDateObj = new Date(assignment.due_at);
-      const now = new Date();
-      if (dueDateObj < now) {
-        status = "closed";
+    // Determine status
+    let status: "open" | "closed" | "completed" | "draft" | "published" = "open";
+
+    // Explicit status from backend
+    if (assignment.status === 'draft') status = 'draft';
+    else if (assignment.status === 'closed') status = 'closed';
+    else {
+      // If published or undefined (legacy), check due date
+      status = 'published';
+      if (assignment.due_at) {
+        const dueDateObj = new Date(assignment.due_at);
+        const now = new Date();
+        if (dueDateObj < now) {
+          status = "closed";
+        }
       }
     }
 
@@ -206,6 +214,17 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
           backgroundColor: "#fff1f0",
           color: "#cf1322",
           borderColor: "#ffa39e",
+          borderWidth: "1px",
+          borderStyle: "solid",
+        },
+      };
+    } else if (exercise.status === "draft") {
+      return {
+        text: "Nháp",
+        style: {
+          backgroundColor: "#fff7e6",
+          color: "#d46b08",
+          borderColor: "#ffd591",
           borderWidth: "1px",
           borderStyle: "solid",
         },
@@ -445,9 +464,8 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
             return (
               <div
                 key={exercise.id}
-                className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:!border-slate-600 p-6 hover:shadow-lg transition-all cursor-pointer relative ${
-                  deletingId === exercise.id ? "opacity-50 pointer-events-none" : ""
-                }`}
+                className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:!border-slate-600 p-6 hover:shadow-lg transition-all cursor-pointer relative ${deletingId === exercise.id ? "opacity-50 pointer-events-none" : ""
+                  }`}
                 onClick={(e) => handleCardClick(exercise, e)}
               >
                 <div className="flex flex-col h-full">
@@ -469,7 +487,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
                           const submissionStatus = submissionStatusMap.get(exercise.id);
                           if (submissionStatus?.status === 'graded') {
                             return (
-                              <Tag 
+                              <Tag
                                 icon={<CheckCircleOutlined />}
                                 className="font-bold border-0 text-md px-2 py-1 m-0 rounded-md"
                                 style={{
@@ -485,7 +503,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
                             );
                           } else if (submissionStatus?.status === 'submitted') {
                             return (
-                              <Tag 
+                              <Tag
                                 icon={<ClockCircleOutlined />}
                                 className="font-bold border-0 text-md px-2 py-1 m-0 rounded-md"
                                 style={{
@@ -524,7 +542,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
                   {/* Content */}
                   <div className="flex-1 space-y-3">
                     <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-lg line-clamp-2 leading-tight">{exercise.title}</h3>
-                    
+
                     {/* Class Info */}
                     {(exercise.className || exercise.classCode) && (
                       <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
@@ -551,7 +569,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
                       {exercise.dueTime && <span className="text-gray-800 dark:text-gray-200 font-semibold"> - {exercise.dueTime}</span>}
                     </div>
 
-                 
+
                   </div>
                 </div>
               </div>

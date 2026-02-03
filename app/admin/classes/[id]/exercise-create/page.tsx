@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { App, Button, Input, Upload, Form, DatePicker, Modal, Spin } from "antd";
+import { App, Button, Input, Upload, Form, DatePicker, Modal, Spin, Select } from "antd";
 import CustomCard from "@/app/components/common/CustomCard";
 import RichTextEditor, { type Editor } from "@/app/components/common/RichTextEditor";
 import { useUserId } from "@/app/hooks/useUserId";
@@ -100,6 +100,7 @@ export default function ExerciseCreatePage() {
         title: values.title.trim(),
         description: description,
         due_at: dueAt,
+        status: values.status || 'published',
       };
 
       const createResponse = await fetch(`/api-proxy/assignments?userId=${numericUserId}`, {
@@ -432,6 +433,23 @@ export default function ExerciseCreatePage() {
             <div className="lg:col-span-1 space-y-6">
               <CustomCard title={<span className="text-base font-bold text-gray-800">Cài đặt bài tập</span>} padding="md" className="sticky top-6">
                 <div className="space-y-5">
+                  {/* Status */}
+                  <Form.Item
+                    name="status"
+                    label={<span className="font-medium text-gray-700">Trạng thái</span>}
+                    initialValue="published"
+                    className="mb-0"
+                  >
+                    <Select
+                      size="large"
+                      options={[
+                        { value: 'published', label: 'Công khai' },
+                        { value: 'draft', label: 'Nháp' },
+                        { value: 'closed', label: 'Đóng' },
+                      ]}
+                    />
+                  </Form.Item>
+
                   {/* Due Date */}
                   <Form.Item
                     name="dueDate"
