@@ -11,7 +11,7 @@ import {
   MailOutlined,
   PhoneOutlined,
 } from "@ant-design/icons";
-import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
+import { getUserInfo, changePassword, type UserInfoResponse } from "@/lib/api/users";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
 import SettingsSkeleton from "@/app/components/settings/SettingsSkeleton";
 
@@ -24,7 +24,8 @@ interface SettingsFormData {
 
 export default function UserSettings() {
   const { message: messageApi } = App.useApp();
-  const [form] = Form.useForm();
+  const [profileForm] = Form.useForm();
+  const [passwordForm] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
@@ -51,7 +52,7 @@ export default function UserSettings() {
         setLoading(true);
         const user = await getUserInfo(userId);
         setUserInfo(user);
-        form.setFieldsValue({
+        profileForm.setFieldsValue({
           fullname: user.fullname,
           email: user.email,
           phone: user.phone,
@@ -65,7 +66,7 @@ export default function UserSettings() {
     };
 
     fetchUserInfo();
-  }, [form, messageApi]);
+  }, [profileForm, messageApi]);
 
   const handleSaveProfile = async (values: SettingsFormData) => {
     try {
@@ -155,7 +156,7 @@ export default function UserSettings() {
 
         <Divider className="dark:border-slate-600!" />
 
-        <Form form={form} layout="vertical" onFinish={handleSaveProfile}>
+        <Form form={profileForm} layout="vertical" onFinish={handleSaveProfile}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Form.Item
               label={<span className="text-gray-700 dark:text-gray-300">Họ và tên</span>}
@@ -346,10 +347,27 @@ export default function UserSettings() {
           </div>
         }
       >
-        <Form layout="vertical" onFinish={(values) => {
-          // TODO: Implement password change
-          messageApi.success("Đã đổi mật khẩu thành công");
-        }}>
+        <Form
+          form={passwordForm}
+          layout="vertical"
+          onFinish={async (values) => {
+            try {
+              setSaving(true);
+
+              await changePassword({
+                currentPassword: values.currentPassword,
+                newPassword: values.newPassword,
+              });
+
+              messageApi.success("Đã đổi mật khẩu thành công");
+              passwordForm.resetFields();
+            } catch (error: any) {
+              messageApi.error(error?.message || "Không thể đổi mật khẩu");
+            } finally {
+              setSaving(false);
+            }
+          }}
+        >
           <Form.Item
             label={<span className="text-gray-700 dark:text-gray-300">Mật khẩu hiện tại</span>}
             name="currentPassword"
@@ -409,6 +427,7 @@ export default function UserSettings() {
               htmlType="submit"
               icon={<SaveOutlined />}
               size="large"
+              loading={saving}
               className="bg-blue-600 hover:bg-blue-700 border-none"
             >
               Đổi mật khẩu

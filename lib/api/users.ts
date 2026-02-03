@@ -92,13 +92,15 @@ export interface GetUsersResponse {
 
 // ✅ Type-safe response structure
 interface ApiResponseStructure {
-  data?: GetUsersResponse[] | {
-    users?: GetUsersResponse[];
-    items?: GetUsersResponse[];
-    list?: GetUsersResponse[];
-    results?: GetUsersResponse[];
-    data?: GetUsersResponse[];
-  };
+  data?:
+    | GetUsersResponse[]
+    | {
+        users?: GetUsersResponse[];
+        items?: GetUsersResponse[];
+        list?: GetUsersResponse[];
+        results?: GetUsersResponse[];
+        data?: GetUsersResponse[];
+      };
   users?: GetUsersResponse[];
   items?: GetUsersResponse[];
   list?: GetUsersResponse[];
@@ -107,7 +109,7 @@ interface ApiResponseStructure {
 
 // ✅ Type-safe extraction with proper type guards
 const extractArrayFromResponse = (data: unknown): GetUsersResponse[] | null => {
-  if (!data || typeof data !== 'object') {
+  if (!data || typeof data !== "object") {
     return null;
   }
 
@@ -123,8 +125,8 @@ const extractArrayFromResponse = (data: unknown): GetUsersResponse[] | null => {
     if (Array.isArray(response.data)) {
       return response.data;
     }
-    if (typeof response.data === 'object') {
-      const nestedKeys = ['users', 'items', 'list', 'results', 'data'] as const;
+    if (typeof response.data === "object") {
+      const nestedKeys = ["users", "items", "list", "results", "data"] as const;
       for (const key of nestedKeys) {
         if (Array.isArray(response.data[key])) {
           return response.data[key];
@@ -134,7 +136,7 @@ const extractArrayFromResponse = (data: unknown): GetUsersResponse[] | null => {
   }
 
   // Direct keys
-  const directKeys = ['users', 'items', 'list', 'results'] as const;
+  const directKeys = ["users", "items", "list", "results"] as const;
   for (const key of directKeys) {
     if (Array.isArray(response[key])) {
       return response[key];
@@ -425,6 +427,31 @@ export const getStudentsByUserId = async (userId: number | string, params?: GetS
     throw new Error(response.data.message || "Không thể lấy danh sách học sinh");
   } catch (error: any) {
     const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách học sinh";
+    throw new Error(errorMessage);
+  }
+};
+
+export interface ChangePasswordParams {
+  userId?: number | string; // Optional: endpoint mới không cần userId, lấy từ JWT token
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  message: string;
+}
+
+export const changePassword = async (params: ChangePasswordParams): Promise<ChangePasswordResponse> => {
+  try {
+    // Sử dụng endpoint mới không cần userId trong URL, lấy từ JWT token
+    const response = await apiClient.patch<ChangePasswordResponse>(`/users/password`, {
+      currentPassword: params.currentPassword,
+      newPassword: params.newPassword,
+    });
+
+    return response.data;
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể đổi mật khẩu";
     throw new Error(errorMessage);
   }
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Form, Input, Button, Switch, Divider, Avatar, Spin, App } from "antd";
+import { Form, Input, Button, Switch, Divider, Avatar, App } from "antd";
 import {
   UserOutlined,
   LockOutlined,
@@ -11,7 +11,7 @@ import {
   MailOutlined,
   PhoneOutlined,
 } from "@ant-design/icons";
-import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
+import { getUserInfo, changePassword, type UserInfoResponse } from "@/lib/api/users";
 import { useUserId } from "@/app/hooks/useUserId";
 import SettingsSkeleton from "@/app/components/settings/SettingsSkeleton";
 
@@ -25,7 +25,8 @@ interface SettingsFormData {
 export default function AdminSettings() {
   const { message: messageApi } = App.useApp();
   const { userId, loading: userIdLoading } = useUserId();
-  const [form] = Form.useForm();
+  const [profileForm] = Form.useForm();
+  const [passwordForm] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
@@ -53,7 +54,7 @@ export default function AdminSettings() {
         setLoading(true);
         const user = await getUserInfo(userId);
         setUserInfo(user);
-        form.setFieldsValue({
+        profileForm.setFieldsValue({
           fullname: user.fullname,
           email: user.email,
           phone: user.phone,
@@ -67,7 +68,7 @@ export default function AdminSettings() {
     };
 
     fetchUserInfo();
-  }, [userId, userIdLoading, form, messageApi]);
+  }, [userId, userIdLoading, profileForm, messageApi]);
 
   const handleSaveProfile = async (values: SettingsFormData) => {
     try {
@@ -157,7 +158,7 @@ export default function AdminSettings() {
 
         <Divider className="dark:border-slate-600!" />
 
-        <Form form={form} layout="vertical" onFinish={handleSaveProfile}>
+        <Form form={profileForm} layout="vertical" onFinish={handleSaveProfile}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Form.Item
               label={<span className="text-gray-700 dark:text-gray-300">Họ và tên</span>}
@@ -348,10 +349,27 @@ export default function AdminSettings() {
           </div>
         }
       >
-        <Form layout="vertical" onFinish={(values) => {
-          // TODO: Implement password change
-          messageApi.success("Đã đổi mật khẩu thành công");
-        }}>
+        <Form
+          form={passwordForm}
+          layout="vertical"
+          onFinish={async (values) => {
+            try {
+              setSaving(true);
+
+              await changePassword({
+                currentPassword: values.currentPassword,
+                newPassword: values.newPassword,
+              });
+
+              messageApi.success("Đã đổi mật khẩu thành công");
+              passwordForm.resetFields();
+            } catch (error: any) {
+              messageApi.error(error?.message || "Không thể đổi mật khẩu");
+            } finally {
+              setSaving(false);
+            }
+          }}
+        >
           <Form.Item
             label={<span className="text-gray-700 dark:text-gray-300">Mật khẩu hiện tại</span>}
             name="currentPassword"
@@ -375,7 +393,7 @@ export default function AdminSettings() {
           >
             <Input.Password
               prefix={<LockOutlined className="text-gray-400 dark:text-gray-500" />}
-              placeholder="Nhập mật khẩu mới"
+              placeholder="Nhập mật khẩu hiện tại"
               size="large"
               className="dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
             />
@@ -411,6 +429,7 @@ export default function AdminSettings() {
               htmlType="submit"
               icon={<SaveOutlined />}
               size="large"
+              loading={saving}
               className="bg-blue-600 hover:bg-blue-700 border-none"
             >
               Đổi mật khẩu
