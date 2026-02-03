@@ -1,7 +1,7 @@
 # 📋 ĐÁNH GIÁ MÃ NGUỒN V3: Toàn Bộ Codebase - Review & Cập Nhật Chi Tiết
 
 **Ngày review:** 2026-01-23  
-**Version:** 3.1 (Updated với fixes cho app/(root) issues)  
+**Version:** 3.2 (Updated với refactoring Large Component Files)  
 **Last updated:** 2026-01-23  
 **Scope:** Toàn bộ codebase (app/, interface/, lib/)  
 **Mục tiêu:** Đánh giá lại codebase sau v2.8, tập trung vào security, performance, và code quality improvements
@@ -131,23 +131,59 @@ export default function VocabularyQuiz() {
 - `app/(root)/listening/[id]/page.tsx` (added error boundary)
 - `app/(root)/writing/[id]/page.tsx` (added error boundary)
 
-#### 4. **Large Component Files** 🟢 **Medium Priority**
+#### 4. **Large Component Files** ✅ **FIXED** (v3.2)
 
 **Files:** 
-- `app/(root)/listening/[id]/page.tsx` (~587 lines)
-- `app/(root)/vocabulary/quiz/[folderId]/page.tsx` (~497 lines)
-- `app/(root)/vocabulary/typing/[folderId]/page.tsx` (~615 lines)
+- `app/(root)/listening/[id]/page.tsx` (~587 lines → ~200 lines)
+- `app/(root)/vocabulary/quiz/[folderId]/page.tsx` (~497 lines → ~150 lines)
+- `app/(root)/vocabulary/typing/[folderId]/page.tsx` (~615 lines → ~150 lines)
 
-**Vấn đề:**
-- Components quá lớn, khó maintain
-- Nhiều logic mixed trong một file
+**Status:** ✅ **COMPLETED** - 2026-01-23
 
-**Đề xuất:**
-- Split thành smaller components
-- Extract custom hooks cho business logic
-- Separate UI components từ logic
+**Đã refactor:**
+- ✅ **Listening Page:**
+  - Extracted `useListeningAudio` hook (audio playback logic)
+  - Extracted `useListeningChallenge` hook (challenge logic)
+  - Created `MaskedText` component
+  - Created `AudioPlayer` component
+  - Created `TranscriptPanel` component
+  - Created `InputArea` component
+  - Main page reduced from ~587 to ~200 lines
 
-**Thời gian:** ~4-6 giờ
+- ✅ **Vocabulary Quiz Page:**
+  - Extracted `useVocabularyQuiz` hook (quiz logic)
+  - Created `QuizHeader` component
+  - Created `QuizQuestionCard` component
+  - Created `QuizResultCard` component
+  - Main page reduced from ~497 to ~150 lines
+
+- ✅ **Vocabulary Typing Page:**
+  - Extracted `useVocabularyTyping` hook (typing logic)
+  - Created `TypingHeader` component
+  - Created `TypingQuestionCard` component
+  - Reused `QuizResultCard` component
+  - Main page reduced from ~615 to ~150 lines
+
+**Files đã tạo:**
+- `app/hooks/useListeningAudio.ts`
+- `app/hooks/useListeningChallenge.ts`
+- `app/hooks/useVocabularyQuiz.ts`
+- `app/hooks/useVocabularyTyping.ts`
+- `app/components/features/listening/MaskedText.tsx`
+- `app/components/features/listening/AudioPlayer.tsx`
+- `app/components/features/listening/TranscriptPanel.tsx`
+- `app/components/features/listening/InputArea.tsx`
+- `app/components/features/vocabulary/QuizHeader.tsx`
+- `app/components/features/vocabulary/QuizQuestionCard.tsx`
+- `app/components/features/vocabulary/QuizResultCard.tsx`
+- `app/components/features/vocabulary/TypingHeader.tsx`
+- `app/components/features/vocabulary/TypingQuestionCard.tsx`
+
+**Cải thiện:**
+- ✅ Better code organization và maintainability
+- ✅ Reusable hooks và components
+- ✅ Easier testing và debugging
+- ✅ Improved code readability
 
 #### 5. **Missing Loading States** 🟢 **Medium Priority**
 
@@ -744,16 +780,22 @@ useEffect(() => {
 
 ## 🟢 MEDIUM PRIORITY ISSUES (v3.0)
 
-### 1. **Large Component Files** 🟢 **Medium Priority**
+### 1. **Large Component Files** ✅ **FIXED** (v3.2)
 
 **Files:** `app/(root)/listening/[id]/page.tsx`, `app/(root)/vocabulary/**/*.tsx`  
-**Status:** ⚠️ **REFACTOR NEEDED**
+**Status:** ✅ **COMPLETED** - 2026-01-23
 
-**Vấn đề:**
-- Components quá lớn (>500 lines)
-- Khó maintain
+**Đã refactor:**
+- ✅ Split listening page thành smaller components và hooks
+- ✅ Split vocabulary quiz page thành smaller components và hooks
+- ✅ Split vocabulary typing page thành smaller components và hooks
+- ✅ Tạo reusable hooks cho business logic
+- ✅ Tạo reusable UI components
 
-**Thời gian:** ~4-6 giờ mỗi file
+**Cải thiện:**
+- ✅ Code size giảm từ ~500-600 lines xuống ~150-200 lines mỗi page
+- ✅ Better maintainability và testability
+- ✅ Improved code organization
 
 ### 2. **Missing Error Boundaries** ✅ **FIXED** (v3.1)
 
@@ -965,6 +1007,29 @@ Codebase đã được cải thiện trong v3.1:
 ---
 
 ## 📝 CHANGELOG
+
+### v3.2 (2026-01-23) - Large Component Files Refactoring
+
+**✅ Completed:**
+- Refactored `app/(root)/listening/[id]/page.tsx` (587 → 200 lines)
+  - Extracted `useListeningAudio` hook
+  - Extracted `useListeningChallenge` hook
+  - Created `MaskedText`, `AudioPlayer`, `TranscriptPanel`, `InputArea` components
+- Refactored `app/(root)/vocabulary/quiz/[folderId]/page.tsx` (497 → 150 lines)
+  - Extracted `useVocabularyQuiz` hook
+  - Created `QuizHeader`, `QuizQuestionCard`, `QuizResultCard` components
+- Refactored `app/(root)/vocabulary/typing/[folderId]/page.tsx` (615 → 150 lines)
+  - Extracted `useVocabularyTyping` hook
+  - Created `TypingHeader`, `TypingQuestionCard` components
+  - Reused `QuizResultCard` component
+
+**Impact:**
+- ✅ Improved code maintainability
+- ✅ Better code organization
+- ✅ Reusable hooks and components
+- ✅ Easier testing and debugging
+
+### v3.1 (2026-01-23) - app/(root) Critical Fixes
 
 ### v3.1 (2026-01-23)
 
