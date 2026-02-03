@@ -2,11 +2,13 @@
 
 import dynamic from "next/dynamic";
 import FeaturesHeader from "@/app/components/features/FeaturesHeader";
+import WritingFeatureSkeleton from "@/app/components/features/writing/WritingFeatureSkeleton";
 
 const WritingFeature = dynamic(
     () => import("@/app/components/features/writing/WritingFeature"),
     {
-        ssr: true
+        ssr: true,
+        loading: () => <WritingFeatureSkeleton />
     }
 );
 

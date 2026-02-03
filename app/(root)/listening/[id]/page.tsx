@@ -111,6 +111,7 @@ export default function ListeningPage() {
   const {
     audioRef,
     isPlaying,
+    setIsPlaying,
     currentTime,
     setCurrentTime,
     duration,
@@ -130,7 +131,12 @@ export default function ListeningPage() {
     resetStateForIndex(currentIdx);
     setIsPlaying(false);
     setCurrentTime(0);
-  }, [currentIdx, resetStateForIndex, setCurrentTime]);
+    // Pause audio when changing challenge
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  }, [currentIdx, resetStateForIndex, setCurrentTime, setIsPlaying, audioRef]);
 
   // Handle speed change
   const handleSpeedChange = () => {

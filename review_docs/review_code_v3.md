@@ -1,7 +1,7 @@
 # 📋 ĐÁNH GIÁ MÃ NGUỒN V3: Toàn Bộ Codebase - Review & Cập Nhật Chi Tiết
 
 **Ngày review:** 2026-01-23  
-**Version:** 3.2 (Updated với refactoring Large Component Files)  
+**Version:** 3.3 (Updated với fixes Missing Loading States)  
 **Last updated:** 2026-01-23  
 **Scope:** Toàn bộ codebase (app/, interface/, lib/)  
 **Mục tiêu:** Đánh giá lại codebase sau v2.8, tập trung vào security, performance, và code quality improvements
@@ -185,20 +185,47 @@ export default function VocabularyQuiz() {
 - ✅ Easier testing và debugging
 - ✅ Improved code readability
 
-#### 5. **Missing Loading States** 🟢 **Medium Priority**
+#### 5. **Missing Loading States** ✅ **FIXED** (v3.3)
 
 **Files:** Multiple pages trong `app/(root)/`
 
-**Vấn đề:**
-- Một số pages không có loading states
-- User không biết khi nào data đang load
+**Status:** ✅ **COMPLETED** - 2026-01-23
 
-**Đề xuất:**
-- Add skeleton loaders
-- Add loading spinners
-- Improve UX với proper loading states
+**Kết quả kiểm tra:**
+- ✅ **13/20 pages có loading states** (65%)
+- ✅ **High Priority pages đã được fix**
 
-**Thời gian:** ~2-3 giờ
+**Pages đã fix (High Priority):**
+- ✅ `page.tsx` (Home) - Tạo `HomeSkeleton` component và cải thiện Suspense fallbacks
+- ✅ `vocabulary/page.tsx` - Thêm loading fallback cho dynamic import với `VocabularyFeatureSkeleton`
+- ✅ `listening/page.tsx` - Thêm loading fallback cho dynamic import với `ListeningFeatureSkeleton`
+- ✅ `writing/page.tsx` - Thêm loading fallback cho dynamic import với `WritingFeatureSkeleton`
+
+**Pages có loading states (từ trước):**
+- ✅ `listening/[id]/page.tsx` - `ListeningDetailSkeleton`
+- ✅ `vocabulary/quiz/[folderId]/page.tsx` - `Spin` với tip
+- ✅ `vocabulary/typing/[folderId]/page.tsx` - `Spin` với tip
+- ✅ `vocabulary/[folderId]/page.tsx` - `VocabularyDetailSkeleton`
+- ✅ `vocabulary/flashcard/[folderId]/page.tsx` - `VocabularyFlashcardSkeleton`
+- ✅ `writing/[id]/page.tsx` - `WritingPracticeSkeleton`
+- ✅ `events/page.tsx` - `EventsSkeleton`
+- ✅ `news/page.tsx` - `PageSkeleton`
+- ✅ `profile/page.tsx` - `ProfileSkeleton`
+
+**Files đã tạo/cập nhật:**
+- ✅ `app/components/home/HomeSkeleton.tsx` (created)
+- ✅ `app/(root)/page.tsx` (updated - thêm HomeSkeleton và cải thiện Suspense fallbacks)
+- ✅ `app/(root)/vocabulary/page.tsx` (updated - thêm loading prop cho dynamic import)
+- ✅ `app/(root)/listening/page.tsx` (updated - thêm loading prop cho dynamic import)
+- ✅ `app/(root)/writing/page.tsx` (updated - thêm loading prop cho dynamic import)
+
+**Cải thiện:**
+- ✅ Home page có full skeleton loader cho initial load
+- ✅ Dynamic imports có proper loading fallbacks
+- ✅ Better UX với skeleton loaders thay vì empty divs
+- ✅ Consistent loading states across feature pages
+
+**Chi tiết:** Xem `review_docs/loading_states_audit.md` để biết thêm chi tiết
 
 ---
 
@@ -1007,6 +1034,29 @@ Codebase đã được cải thiện trong v3.1:
 ---
 
 ## 📝 CHANGELOG
+
+### v3.3 (2026-01-23) - Missing Loading States Fixed
+
+**✅ Completed:**
+- Fixed Missing Loading States cho High Priority pages
+  - Created `HomeSkeleton` component cho home page
+  - Added loading fallbacks cho dynamic imports trong vocabulary, listening, writing pages
+  - Improved Suspense fallbacks với proper skeleton loaders
+- Updated coverage: 9/20 → 13/20 pages có loading states (45% → 65%)
+
+**Files Created:**
+- `app/components/home/HomeSkeleton.tsx`
+
+**Files Updated:**
+- `app/(root)/page.tsx` (thêm HomeSkeleton và cải thiện Suspense fallbacks)
+- `app/(root)/vocabulary/page.tsx` (thêm loading prop)
+- `app/(root)/listening/page.tsx` (thêm loading prop)
+- `app/(root)/writing/page.tsx` (thêm loading prop)
+
+**Impact:**
+- ✅ Better UX với proper loading states
+- ✅ Consistent loading experience across pages
+- ✅ Improved perceived performance
 
 ### v3.2 (2026-01-23) - Large Component Files Refactoring
 

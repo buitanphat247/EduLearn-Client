@@ -67,6 +67,7 @@ export function useListeningAudio({ audioSrc, playbackSpeed }: UseListeningAudio
   return {
     audioRef,
     isPlaying,
+    setIsPlaying,
     currentTime,
     setCurrentTime,
     duration,
