@@ -1,9 +1,9 @@
-import FAQClient from './FAQClient';
+import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
-export const metadata = {
-  title: 'Câu hỏi thường gặp - Thư Viện Số',
-  description: 'Giải đáp các thắc mắc về tài khoản, khóa học và thanh toán trên Thư Viện Số.',
-};
+// Cache FAQ data - revalidate every hour
+export const revalidate = 3600;
 
 interface FAQItem {
   id: string | number;
@@ -12,12 +12,8 @@ interface FAQItem {
   answer: string;
 }
 
-async function getFAQData(): Promise<FAQItem[]> {
+function getFAQData(): FAQItem[] {
   try {
-    // Import fs and path for server-side file reading
-    const fs = await import('fs');
-    const path = await import('path');
-    
     const filePath = path.join(process.cwd(), 'app/(root)/faq/docs/README.md');
     
     // Check if file exists to prevent crash
@@ -76,7 +72,15 @@ async function getFAQData(): Promise<FAQItem[]> {
   }
 }
 
-export default async function FAQPage() {
-  const faqData = await getFAQData();
-  return <FAQClient faqData={faqData} />;
+export async function GET() {
+  try {
+    const faqData = getFAQData();
+    return NextResponse.json({ status: true, data: faqData });
+  } catch (error) {
+    console.error('Error fetching FAQ data:', error);
+    return NextResponse.json(
+      { status: false, message: 'Không thể tải dữ liệu FAQ', data: [] },
+      { status: 500 }
+    );
+  }
 }

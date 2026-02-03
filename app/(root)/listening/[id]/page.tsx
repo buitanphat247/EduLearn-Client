@@ -1,6 +1,7 @@
 "use client";
 
 import ListeningDetailSkeleton from "@/app/components/features/listening/ListeningDetailSkeleton";
+import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
 
 import React, { useState, useRef, useEffect } from "react";
 import { FaPlay, FaPause, FaCheck, FaKeyboard, FaLanguage, FaListAlt, FaEllipsisV, FaVolumeUp, FaEye, FaEyeSlash, FaSpinner } from "react-icons/fa";
@@ -304,7 +305,8 @@ export default function ListeningPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] p-4 md:p-8 font-sans text-slate-800 dark:text-slate-200 transition-colors duration-500">
+    <RouteErrorBoundary routeName="listening">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] p-4 md:p-8 font-sans text-slate-800 dark:text-slate-200 transition-colors duration-500">
       <div className="container mx-auto">
         {/* Header & Breadcrumb */}
         <div className="mb-8">
@@ -583,5 +585,6 @@ export default function ListeningPage() {
         </div>
       </div>
     </div>
+    </RouteErrorBoundary>
   );
 }

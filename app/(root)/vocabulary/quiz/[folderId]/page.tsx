@@ -15,6 +15,7 @@ import {
 import { getVocabulariesByFolder, type VocabularyResponse } from "@/lib/api/vocabulary";
 import { IoArrowBackOutline } from "react-icons/io5";
 import { useTheme } from "@/app/context/ThemeContext";
+import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
 
 interface QuizQuestion {
     id: number;
@@ -258,15 +259,16 @@ export default function VocabularyQuiz() {
     }
 
     return (
-        <ConfigProvider
-            theme={{
-                algorithm: currentTheme === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
-                token: {
-                    colorPrimary: "#3b82f6",
-                },
-            }}
-        >
-            <main className="h-full bg-slate-50 dark:bg-[#0f172a] py-8 text-slate-800 dark:text-slate-200 transition-colors duration-500">
+        <RouteErrorBoundary routeName="vocabulary">
+            <ConfigProvider
+                theme={{
+                    algorithm: currentTheme === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
+                    token: {
+                        colorPrimary: "#3b82f6",
+                    },
+                }}
+            >
+                <main className="h-full bg-slate-50 dark:bg-[#0f172a] py-8 text-slate-800 dark:text-slate-200 transition-colors duration-500">
                 <div className=" mx-auto px-4 container">
                     {/* Header & Breadcrumb */}
                     <div className="mb-8">
@@ -493,5 +495,6 @@ export default function VocabularyQuiz() {
                 </div>
             </main>
         </ConfigProvider>
+        </RouteErrorBoundary>
     );
 }

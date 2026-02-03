@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { App, Button, ConfigProvider, theme } from "antd";
+import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
 import {
   getWritingHistoryById,
   updateWritingHistoryIndex,
@@ -281,17 +282,18 @@ export default function WritingPracticePage() {
   }
 
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: currentTheme === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
-        token: {
-          colorPrimary: "#3b82f6",
-          colorBgContainer: currentTheme === "dark" ? "#1e293b" : "#ffffff",
-          colorBorder: currentTheme === "dark" ? "#334155" : "#e2e8f0",
-        },
-      }}
-    >
-      <main className="h-full bg-slate-50 dark:bg-[#0f172a] py-8 text-slate-800 dark:text-slate-200 transition-colors duration-500">
+    <RouteErrorBoundary routeName="writing">
+      <ConfigProvider
+        theme={{
+          algorithm: currentTheme === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
+          token: {
+            colorPrimary: "#3b82f6",
+            colorBgContainer: currentTheme === "dark" ? "#1e293b" : "#ffffff",
+            colorBorder: currentTheme === "dark" ? "#334155" : "#e2e8f0",
+          },
+        }}
+      >
+        <main className="h-full bg-slate-50 dark:bg-[#0f172a] py-8 text-slate-800 dark:text-slate-200 transition-colors duration-500">
         <div className="container mx-auto px-4">
           <WritingPracticeHeader
             formattedTime={formattedTime}
@@ -330,5 +332,6 @@ export default function WritingPracticePage() {
         </div>
       </main>
     </ConfigProvider>
+    </RouteErrorBoundary>
   );
 }
