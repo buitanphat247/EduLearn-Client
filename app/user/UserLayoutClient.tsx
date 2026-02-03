@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Modal, Spin, message } from "antd";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import NotificationBell from "@/app/components/notifications/NotificationBell";
 
 const pageTitles: Record<string, string> = {
   "/user": "Trang chủ",
@@ -118,6 +119,9 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
         </div>
 
         <div className="flex items-center gap-4">
+          {userInfo?.user_id && (
+            <NotificationBell userId={userInfo.user_id} />
+          )}
           <div
             onClick={() => setIsProfileModalOpen(true)}
             className="flex items-center gap-3 pl-4 border-l border-gray-300 dark:border-gray-700 cursor-pointer hover:opacity-80 transition-opacity"

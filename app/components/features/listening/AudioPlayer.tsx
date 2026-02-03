@@ -3,7 +3,7 @@
 import { FaPlay, FaPause, FaVolumeUp, FaEllipsisV } from "react-icons/fa";
 
 interface AudioPlayerProps {
-  audioRef: React.RefObject<HTMLAudioElement>;
+  audioRef: React.RefObject<HTMLAudioElement | null>;
   audioSrc: string;
   isPlaying: boolean;
   currentTime: number;
@@ -47,8 +47,8 @@ export default function AudioPlayer({
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={onLoadedMetadata}
         onEnded={onEnded}
-        onPlay={() => {}}
-        onPause={() => {}}
+        onPlay={() => { }}
+        onPause={() => { }}
         className="hidden"
       />
 

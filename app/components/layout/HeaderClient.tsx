@@ -16,6 +16,7 @@ import type { AuthState } from "@/lib/utils/auth-server";
 import { useTheme } from "@/app/context/ThemeContext";
 import { saveUserDataToSession, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
 import ScrollProgress from "./ScrollProgress";
+import NotificationBell from "@/app/components/notifications/NotificationBell";
 import "./Header.css";
 
 /**
@@ -536,7 +537,9 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
           {/* Right Side: User Menu */}
           <div className="flex items-center gap-5">
             {user ? (
-              <Dropdown
+              <>
+                <NotificationBell userId={user.user_id || user.userId} />
+                <Dropdown
                 menu={{
                   items: userMenuItems,
                   className: "user-dropdown-menu",
@@ -588,6 +591,7 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
                   </svg>
                 </div>
               </Dropdown>
+              </>
             ) : (
               <Button
                 type="default"

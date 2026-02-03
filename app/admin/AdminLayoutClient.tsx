@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Spin, message, Modal } from "antd";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { useUserId } from "@/app/hooks/useUserId";
+import NotificationBell from "@/app/components/notifications/NotificationBell";
 
 const pageTitles: Record<string, string> = {
   "/admin": "Dashboard",
@@ -124,6 +125,9 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
         </div>
 
         <div className="flex items-center gap-4">
+          {userId && (
+            <NotificationBell userId={userId} />
+          )}
           <div
             onClick={() => setIsProfileModalOpen(true)}
             className="flex items-center gap-3 pl-4 cursor-pointer hover:opacity-80 transition-opacity"

@@ -312,4 +312,162 @@ export const getNotificationsByScopeId = async (
   }
 };
 
+export interface GetNotificationsByUserIdParams {
+  page?: number;
+  limit?: number;
+  is_read?: boolean;
+}
+
+export interface GetNotificationsByUserIdResult {
+  data: NotificationResponse[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export const getNotificationsByUserId = async (
+  userId: number | string,
+  params?: GetNotificationsByUserIdParams
+): Promise<GetNotificationsByUserIdResult> => {
+  try {
+    const numericId = typeof userId === "string" ? parseInt(userId, 10) : userId;
+    if (Number.isNaN(numericId)) {
+      throw new Error("User ID không hợp lệ");
+    }
+
+    const requestParams: Record<string, any> = {
+      page: params?.page ?? 1,
+      limit: params?.limit ?? 20,
+    };
+
+    if (params?.is_read !== undefined) {
+      requestParams.is_read = params.is_read;
+    }
+
+    const response = await apiClient.get(`/notifications/by-user/${numericId}`, {
+      params: requestParams,
+    });
+
+    const responseData = response.data?.data || response.data || {};
+    const list = Array.isArray(responseData.data) ? responseData.data : Array.isArray(responseData) ? responseData : [];
+
+    return {
+      data: list,
+      total: responseData.total ?? 0,
+      page: responseData.page ?? params?.page ?? 1,
+      limit: responseData.limit ?? params?.limit ?? 20,
+    };
+  } catch (error: any) {
+    const errorMessage =
+      error?.response?.data?.message || error?.message || "Không thể lấy danh sách thông báo";
+    throw new Error(errorMessage);
+  }
+};
+
+export interface MarkNotificationReadParams {
+  notification_id: number;
+  user_id: number;
+}
+
+export const markNotificationAsRead = async (
+  notificationId: number | string,
+  userId: number | string
+): Promise<void> => {
+  try {
+    const notifId = typeof notificationId === "string" ? parseInt(notificationId, 10) : notificationId;
+    const userIdNum = typeof userId === "string" ? parseInt(userId, 10) : userId;
+    
+    if (isNaN(notifId) || isNaN(userIdNum)) {
+      throw new Error("ID không hợp lệ");
+    }
+
+    // Get all recipients for this notification
+    const recipientsResponse = await apiClient.get(`/notification-recipients/by-notification/${notifId}`);
+    const recipients = recipientsResponse.data?.data || recipientsResponse.data || [];
+    
+    // Find the recipient with matching user_id
+    const recipient = Array.isArray(recipients) 
+      ? recipients.find((r: any) => {
+          // Check both direct user_id and nested user.user_id
+          const rUserId = r.user_id || r.user?.user_id;
+          return rUserId === userIdNum || rUserId === String(userIdNum);
+        })
+      : null;
+
+    if (!recipient) {
+      throw new Error("Không tìm thấy thông báo cho user này");
+    }
+
+    // Update the recipient
+    const recipientId = recipient.id || recipient.recipient_id;
+    if (!recipientId) {
+      throw new Error("Không tìm thấy ID của recipient");
+    }
+
+    await apiClient.patch(`/notification-recipients/${recipientId}`, {
+      is_read: true,
+    });
+  } catch (error: any) {
+    const errorMessage =
+      error?.response?.data?.message || error?.message || "Không thể đánh dấu đã đọc";
+    throw new Error(errorMessage);
+  }
+};
+
+export const markMultipleNotificationsAsRead = async (
+  notificationIds: (number | string)[],
+  userId: number | string
+): Promise<void> => {
+  try {
+    const userIdNum = typeof userId === "string" ? parseInt(userId, 10) : userId;
+    
+    if (isNaN(userIdNum)) {
+      throw new Error("User ID không hợp lệ");
+    }
+
+    // Mark each notification as read
+    await Promise.all(
+      notificationIds.map((id) => {
+        const notifId = typeof id === "string" ? parseInt(id, 10) : id;
+        if (isNaN(notifId)) return Promise.resolve();
+        return markNotificationAsRead(notifId, userIdNum);
+      })
+    );
+  } catch (error: any) {
+    const errorMessage =
+      error?.response?.data?.message || error?.message || "Không thể đánh dấu đã đọc";
+    throw new Error(errorMessage);
+  }
+};
+
+export interface NotificationRecipientResponse {
+  id: number;
+  notification_id: number;
+  user_id: number;
+  is_read: boolean;
+  read_at: string | null;
+  delivered_at: string | null;
+  notification?: NotificationResponse;
+}
+
+export const getNotificationRecipientsByUserId = async (
+  userId: number | string
+): Promise<NotificationRecipientResponse[]> => {
+  try {
+    const userIdNum = typeof userId === "string" ? parseInt(userId, 10) : userId;
+    if (Number.isNaN(userIdNum)) {
+      throw new Error("User ID không hợp lệ");
+    }
+
+    const response = await apiClient.get(`/notification-recipients/by-user/${userIdNum}`);
+    const data = response.data?.data || response.data || [];
+    
+    return Array.isArray(data) ? data : [];
+  } catch (error: any) {
+    const errorMessage =
+      error?.response?.data?.message || error?.message || "Không thể lấy danh sách recipients";
+    throw new Error(errorMessage);
+  }
+};
+
 

@@ -1,12 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Suspense, useState, useEffect } from "react";
 import Features from "@/app/components/home/Features";
 import Hero from "@/app/components/home/Hero";
 import Stats from "@/app/components/home/Stats";
 import ScrollAnimation from "@/app/components/common/ScrollAnimation";
-import HomeSkeleton from "@/app/components/home/HomeSkeleton";
 
 // Dynamic imports for below-the-fold components to reduce initial bundle size
 const Testimonials = dynamic(() => import("@/app/components/home/Testimonials"), {
@@ -88,20 +86,6 @@ const CallToAction = dynamic(() => import("@/app/components/home/CallToAction"),
 });
 
 export default function Home() {
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-
-  useEffect(() => {
-    // Simulate initial load to show skeleton
-    const timer = setTimeout(() => {
-      setIsInitialLoading(false);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isInitialLoading) {
-    return <HomeSkeleton />;
-  }
-
   return (
     <div className="min-h-screen bg-[#fafbfc] dark:bg-[#0f172a] transition-all duration-500 ease-in-out">
       <Hero />
