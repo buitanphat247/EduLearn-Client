@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, memo } from "react";
 import { Button, Dropdown, Avatar } from "antd"; // Added Avatar
@@ -553,7 +554,7 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
             aria-label="Trang chủ - Thư viện số"
           >
             <div className="w-12 h-12 relative flex items-center justify-center">
-              <img
+              <Image
                 src="/images/logo/1.png"
                 alt="Logo Thư viện số"
                 width={48}

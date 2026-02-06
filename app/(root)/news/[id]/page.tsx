@@ -2,11 +2,12 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { Tag } from "antd";
 import { CalendarOutlined, UserOutlined } from "@ant-design/icons";
 import NewsCard from "@/app/components/news/NewsCard";
-import NewsDetailSkeleton from "@/app/components/news/NewsDetailSkeleton";
+
 import { newsDetailData, allNews, featuredNews } from "./mock_data";
 
 const newsData = newsDetailData;
@@ -19,12 +20,12 @@ export default function NewsDetail() {
   const news = newsData[newsId];
 
   // Memoize filtered lists to prevent recalculation on every render
-  const featuredNewsList = useMemo(() => 
+  const featuredNewsList = useMemo(() =>
     allNews.filter((item) => featuredNews.includes(item.id)),
     [] // allNews và featuredNews are constants
   );
 
-  const relatedNewsList = useMemo(() => 
+  const relatedNewsList = useMemo(() =>
     allNews.filter((item) => news?.relatedNews?.includes(item.id) || false),
     [news?.relatedNews]
   );
@@ -98,9 +99,11 @@ export default function NewsDetail() {
               </div>
 
               <div className="mb-8">
-                <img
+                <Image
                   src={news.image}
                   alt={news.title}
+                  width={800}
+                  height={400}
                   className="w-full h-[400px] object-cover rounded-xl shadow-lg"
                 />
               </div>

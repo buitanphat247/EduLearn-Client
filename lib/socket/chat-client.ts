@@ -1,8 +1,11 @@
 "use client";
 
 import io from "socket.io-client";
+import { SocketAuthResponse, SocketErrorResponse, SocketEventData } from "./types";
 
 type SocketInstance = ReturnType<typeof io>;
+
+const isDev = process.env.NODE_ENV === "development";
 
 /**
  * Socket client cho Chat namespace (/chat)
@@ -41,7 +44,7 @@ class ChatSocketClient {
         if (user.id) return user.id;
       }
     } catch (error) {
-      console.error("Error getting user ID:", error);
+      if (isDev) console.error("[ChatSocket] Error getting user ID:", error);
     }
     return null;
   }
@@ -59,7 +62,7 @@ class ChatSocketClient {
       const encryptedUser = getCookie("_u");
       if (encryptedUser) return encryptedUser;
     } catch (e) {
-      console.error("Error getting encrypted user:", e);
+      if (isDev) console.error("[ChatSocket] Error getting encrypted user:", e);
     }
 
     return null;
@@ -78,7 +81,7 @@ class ChatSocketClient {
 
     const socketUrl = this.getSocketUrl();
     if (!socketUrl) {
-      console.warn("Socket URL not configured");
+      if (isDev) console.warn("[ChatSocket] Socket URL not configured");
       return null;
     }
 
@@ -86,14 +89,14 @@ class ChatSocketClient {
     const encryptedUser = this.getEncryptedUser();
 
     if (!userId) {
-      console.warn("[ChatSocket] No user ID found, cannot connect");
+      if (isDev) console.warn("[ChatSocket] No user ID found, cannot connect");
       return null;
     }
 
     this.isConnecting = true;
 
     try {
-      console.log("[ChatSocket] Connecting to:", socketUrl);
+      if (isDev) console.log("[ChatSocket] Connecting to:", socketUrl);
 
       // Connect to /chat namespace
       this.socket = io(`${socketUrl}/chat`, {
@@ -110,16 +113,12 @@ class ChatSocketClient {
         timeout: 20000,
       });
 
-      // Connection event handlers
       this.socket.on("connect", () => {
-        console.log("Chat socket connected:", this.socket?.id);
+        if (isDev) console.log("[ChatSocket] Connected:", this.socket?.id);
 
         // Authenticate using encrypted user data
         if (encryptedUser) {
-          console.log("[ChatSocket] Authenticating with encrypted user data...");
           this.socket?.emit("authenticate", { encryptedData: encryptedUser });
-        } else {
-          console.warn("[ChatSocket] Connected but no encrypted user data found!");
         }
 
         this.isConnecting = false;
@@ -128,12 +127,12 @@ class ChatSocketClient {
         this.connectionListeners.forEach((listener) => listener(true));
       });
 
-      this.socket.on("chat:authenticated", (data: any) => {
-        console.log("[ChatSocket] Authentication successful:", data);
+      this.socket.on("chat:authenticated", (data: SocketAuthResponse) => {
+        if (isDev) console.log("[ChatSocket] Authenticated:", data.user_id);
       });
 
       this.socket.on("disconnect", (reason: string) => {
-        console.log("Chat socket disconnected:", reason);
+        if (isDev) console.log("[ChatSocket] Disconnected:", reason);
         this.isConnecting = false;
 
         // Notify all listeners
@@ -141,18 +140,18 @@ class ChatSocketClient {
       });
 
       this.socket.on("connect_error", (error: Error) => {
-        console.error("Chat socket connection error:", error);
+        if (isDev) console.error("[ChatSocket] Connection error:", error.message);
         this.isConnecting = false;
 
         // Notify all listeners
         this.connectionListeners.forEach((listener) => listener(false));
       });
 
-      this.socket.on("chat:error", (data: any) => {
-        console.error("[ChatSocket] Server error:", data);
+      this.socket.on("chat:error", (data: SocketErrorResponse) => {
+        if (isDev) console.error("[ChatSocket] Error:", data.message);
       });
     } catch (error) {
-      console.error("Error creating chat socket connection:", error);
+      if (isDev) console.error("[ChatSocket] Creation failed:", error);
       this.isConnecting = false;
       return null;
     }
@@ -197,7 +196,7 @@ class ChatSocketClient {
     };
   }
 
-  emit(event: string, data: any): void {
+  emit(event: string, data: SocketEventData): void {
     if (!this.socket) {
       this.connect();
     }
@@ -207,25 +206,25 @@ class ChatSocketClient {
     }
   }
 
-  on(event: string, callback: (...args: any[]) => void): () => void {
+  on<T = unknown>(event: string, callback: (data: T) => void): () => void {
     if (!this.socket) {
       this.connect();
     }
 
     // Wait for socket to be initialized
     if (this.socket) {
-      this.socket.on(event, callback);
+      this.socket.on(event, callback as (...args: unknown[]) => void);
       return () => {
-        this.socket?.off(event, callback);
+        this.socket?.off(event, callback as (...args: unknown[]) => void);
       };
     }
     return () => {};
   }
 
-  off(event: string, callback?: (...args: any[]) => void): void {
+  off<T = unknown>(event: string, callback?: (data: T) => void): void {
     if (!this.socket) return;
     if (callback) {
-      this.socket.off(event, callback);
+      this.socket.off(event, callback as (...args: unknown[]) => void);
     } else {
       this.socket.off(event);
     }

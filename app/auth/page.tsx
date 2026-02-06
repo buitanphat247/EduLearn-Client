@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Form, Input, Button, Divider, Checkbox, App, ConfigProvider, theme, Select } from "antd";
+import { Form, Input, Button, Checkbox, App, ConfigProvider, theme, Select } from "antd";
 import { UserOutlined, LockOutlined, MailOutlined, GoogleOutlined, FacebookFilled } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { signIn, signUp } from "@/lib/api/auth";
 import { getCurrentUser } from "@/lib/api/users";
 import { useTheme } from "@/app/context/ThemeContext";
@@ -18,7 +19,7 @@ export default function AuthPage() {
   const [signUpLoading, setSignUpLoading] = useState(false);
   const router = useRouter();
   const { message } = App.useApp();
-  const isFirstMount = useRef(true); // Track first mount to skip animation on refresh
+
   const [shouldAnimate, setShouldAnimate] = useState(false); // Control animation state
 
   // ✅ Fix race condition - Add isMounted check và cleanup
@@ -239,8 +240,14 @@ export default function AuthPage() {
           <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-sm font-medium transition-colors">
             <div className="flex -space-x-3">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="w-10 h-10 rounded-full border-2 border-slate-50 dark:border-[#0f172a] bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center text-xs text-slate-600 dark:text-white transition-colors">
-                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i}`} alt="user" />
+                <div key={i} className="w-10 h-10 relative rounded-full border-2 border-slate-50 dark:border-[#0f172a] bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center text-xs text-slate-600 dark:text-white transition-colors">
+                  <Image
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i}`}
+                    alt="user"
+                    fill
+                    className="object-cover"
+                    sizes="40px"
+                  />
                 </div>
               ))}
               <div className="w-10 h-10 rounded-full border-2 border-slate-50 dark:border-[#0f172a] bg-blue-600 flex items-center justify-center text-white text-xs font-bold z-10 transition-colors">

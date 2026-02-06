@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import io from "socket.io-client";
+import io, { Socket } from "socket.io-client";
 
 /**
  * Socket.IO connection URL for exam real-time features
@@ -25,6 +25,18 @@ interface UseExamSocketProps {
   onDisconnect?: () => void;
 }
 
+/** Socket event data types */
+interface JoinSuccessData {
+  room?: string;
+  message?: string;
+}
+
+interface ViolationData {
+  type: string;
+  message?: string;
+  timestamp?: string;
+}
+
 /**
  * Hook for managing Socket.IO connection during exams
  * @param {UseExamSocketProps} props - Socket configuration
@@ -41,26 +53,23 @@ interface UseExamSocketProps {
  * const { isConnected, socket } = useExamSocket({
  *   examId: '123',
  *   studentId: '456',
-
  * });
  * ```
  */
 export const useExamSocket = ({ examId, attemptId, studentId, onConnect, onDisconnect }: UseExamSocketProps) => {
-  // ✅ Fix: Use proper Socket type instead of any
-  const socketRef = useRef<any>(null);
+  const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     if ((!examId && !attemptId) || !studentId) return;
 
-    // ✅ Fix: Disconnect previous socket if exists
+    // Disconnect previous socket if exists
     if (socketRef.current) {
       socketRef.current.removeAllListeners();
       socketRef.current.disconnect();
       socketRef.current = null;
     }
 
-    // ✅ Fix: Use proper io import (no need for (io as any).default check)
     const socket = io(SOCKET_URL, {
       transports: ["websocket"],
       reconnectionAttempts: 5,
@@ -69,9 +78,8 @@ export const useExamSocket = ({ examId, attemptId, studentId, onConnect, onDisco
 
     socketRef.current = socket;
 
-    // ✅ Fix: Define handlers separately để có thể remove đúng
+    // Define handlers separately for proper cleanup
     const handleConnect = () => {
-      console.log("✅ Socket Connected:", socket.id);
       setIsConnected(true);
 
       // Join the specific exam room
@@ -85,17 +93,16 @@ export const useExamSocket = ({ examId, attemptId, studentId, onConnect, onDisco
     };
 
     const handleDisconnect = () => {
-      console.log("❌ Socket Disconnected");
       setIsConnected(false);
       if (onDisconnect) onDisconnect();
     };
 
-    const handleJoinSuccess = (data: any) => {
-      console.log("Exam/Attempt Joined:", data);
+    const handleJoinSuccess = (_data: JoinSuccessData) => {
+      // Join success handled silently - use socket events for debugging
     };
 
-    const handleViolationRecorded = (data: any) => {
-      console.log("Violation Ack:", data);
+    const handleViolationRecorded = (_data: ViolationData) => {
+      // Violation acknowledgement handled silently
     };
 
     socket.on("connect", handleConnect);
@@ -103,7 +110,7 @@ export const useExamSocket = ({ examId, attemptId, studentId, onConnect, onDisco
     socket.on("join_success", handleJoinSuccess);
     socket.on("violation_recorded", handleViolationRecorded);
 
-    // ✅ Fix: Proper cleanup - remove all listeners before disconnect
+    // Proper cleanup - remove all listeners before disconnect
     return () => {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
@@ -113,7 +120,7 @@ export const useExamSocket = ({ examId, attemptId, studentId, onConnect, onDisco
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [examId, attemptId, studentId, onConnect, onDisconnect]); // ✅ Include callbacks in dependencies
+  }, [examId, attemptId, studentId, onConnect, onDisconnect]);
 
   const reportViolation = useCallback(
     (type: string, message: string) => {
@@ -132,9 +139,8 @@ export const useExamSocket = ({ examId, attemptId, studentId, onConnect, onDisco
             message,
           });
         }
-      } else {
-        console.warn("Socket not connected, cannot report violation:", type);
       }
+      // Note: If socket not connected, violation reporting is silently skipped
     },
     [examId, attemptId, studentId, isConnected],
   );

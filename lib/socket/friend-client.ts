@@ -1,8 +1,11 @@
 "use client";
 
 import io from "socket.io-client";
+import { SocketAuthResponse, SocketErrorResponse, SocketEventData } from "./types";
 
 type SocketInstance = ReturnType<typeof io>;
+
+const isDev = process.env.NODE_ENV === "development";
 
 /**
  * Socket client cho Friend namespace (/friends)
@@ -48,7 +51,7 @@ class FriendSocketClient {
         if (user.id) return user.id;
       }
     } catch (error) {
-      console.error("Error getting user ID:", error);
+      if (isDev) console.error("[FriendSocket] Error getting user ID:", error);
     }
     return null;
   }
@@ -66,7 +69,7 @@ class FriendSocketClient {
       const encryptedUser = getCookie("_u");
       if (encryptedUser) return encryptedUser;
     } catch (e) {
-      console.error("Error getting encrypted user:", e);
+      if (isDev) console.error("[FriendSocket] Error getting encrypted user:", e);
     }
 
     return null;
@@ -83,7 +86,7 @@ class FriendSocketClient {
       const token = getCookie("_at");
       if (token) return token;
     } catch (e) {
-      console.error("Error getting token:", e);
+      if (isDev) console.error("[FriendSocket] Error getting token:", e);
     }
     return null;
   }
@@ -104,7 +107,7 @@ class FriendSocketClient {
 
     const socketUrl = this.getSocketUrl();
     if (!socketUrl) {
-      console.warn("Socket URL not configured");
+      if (isDev) console.warn("[FriendSocket] Socket URL not configured");
       return null;
     }
 
@@ -113,14 +116,14 @@ class FriendSocketClient {
     const token = this.getToken(); // ✅ Get JWT token
 
     if (!userId) {
-      console.warn("[FriendSocket] No user ID found, cannot connect");
+      if (isDev) console.warn("[FriendSocket] No user ID found, cannot connect");
       return null;
     }
 
     this.isConnecting = true;
 
     try {
-      console.log("[FriendSocket] Connecting to:", socketUrl);
+      if (isDev) console.log("[FriendSocket] Connecting to:", socketUrl);
 
       // Connect to /friends namespace with auth token and userId
       this.socket = io(`${socketUrl}/friends`, {
@@ -138,19 +141,15 @@ class FriendSocketClient {
         timeout: 20000,
       });
 
-      // Connection event handlers
       this.socket.on("connect", () => {
-        console.log("Friend socket connected:", this.socket?.id);
+        if (isDev) console.log("[FriendSocket] Connected:", this.socket?.id);
 
         // Authenticate using encrypted user data
         if (encryptedUser || token) {
-          console.log("[FriendSocket] Authenticating...");
           this.socket?.emit("authenticate", {
             encryptedData: encryptedUser,
             token: token,
           });
-        } else {
-          console.warn("[FriendSocket] Connected but no authentication data found!");
         }
 
         this.isConnecting = false;
@@ -159,12 +158,12 @@ class FriendSocketClient {
         this.connectionListeners.forEach((listener) => listener(true));
       });
 
-      this.socket.on("friend:authenticated", (data: any) => {
-        console.log("[FriendSocket] Authentication successful:", data);
+      this.socket.on("friend:authenticated", (data: SocketAuthResponse) => {
+        if (isDev) console.log("[FriendSocket] Authenticated:", data.user_id);
       });
 
       this.socket.on("disconnect", (reason: string) => {
-        console.log("Friend socket disconnected:", reason);
+        if (isDev) console.log("[FriendSocket] Disconnected:", reason);
         this.isConnecting = false;
 
         // Notify all listeners
@@ -172,18 +171,18 @@ class FriendSocketClient {
       });
 
       this.socket.on("connect_error", (error: Error) => {
-        console.error("Friend socket connection error:", error);
+        if (isDev) console.error("[FriendSocket] Connection error:", error.message);
         this.isConnecting = false;
 
         // Notify all listeners
         this.connectionListeners.forEach((listener) => listener(false));
       });
 
-      this.socket.on("friend:error", (data: any) => {
-        console.error("[FriendSocket] Server error:", data);
+      this.socket.on("friend:error", (data: SocketErrorResponse) => {
+        if (isDev) console.error("[FriendSocket] Error:", data.message);
       });
     } catch (error) {
-      console.error("Error creating friend socket connection:", error);
+      if (isDev) console.error("[FriendSocket] Creation failed:", error);
       this.isConnecting = false;
       return null;
     }
@@ -230,7 +229,7 @@ class FriendSocketClient {
   /**
    * Emit event to server
    */
-  emit(event: string, data: any): void {
+  emit(event: string, data: SocketEventData): void {
     if (!this.socket) {
       this.connect();
     }
@@ -243,18 +242,18 @@ class FriendSocketClient {
   /**
    * Listen to event from server
    */
-  on(event: string, callback: (...args: any[]) => void): () => void {
+  on<T = unknown>(event: string, callback: (data: T) => void): () => void {
     if (!this.socket) {
       this.connect();
     }
 
     if (this.socket) {
-      this.socket.on(event, callback);
+      this.socket.on(event, callback as (...args: unknown[]) => void);
 
       // Return unsubscribe function
       return () => {
         if (this.socket) {
-          this.socket.off(event, callback);
+          this.socket.off(event, callback as (...args: unknown[]) => void);
         }
       };
     }
@@ -264,11 +263,11 @@ class FriendSocketClient {
   /**
    * Remove event listener
    */
-  off(event: string, callback?: (...args: any[]) => void): void {
+  off<T = unknown>(event: string, callback?: (data: T) => void): void {
     if (!this.socket) return;
 
     if (callback) {
-      this.socket.off(event, callback);
+      this.socket.off(event, callback as (...args: unknown[]) => void);
     } else {
       this.socket.off(event);
     }

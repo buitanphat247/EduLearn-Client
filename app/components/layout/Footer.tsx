@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 export default function Footer() {
@@ -10,13 +11,13 @@ export default function Footer() {
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2">
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               prefetch={false}
               onMouseEnter={() => router.prefetch("/")}
               className="flex items-center space-x-3 mb-4"
             >
-              <img src="/images/logo/1.png" alt="Thư viện số" width={48} height={48} className="object-contain" />
+              <Image src="/images/logo/1.png" alt="Thư viện số" width={48} height={48} className="object-contain" />
               <span className="text-2xl font-bold text-slate-800 dark:text-white">Thư viện số</span>
             </Link>
             <p className="text-slate-600 dark:text-slate-400 mb-4 max-w-md">
@@ -78,8 +79,8 @@ export default function Footer() {
             <h3 className="text-slate-800 dark:text-white font-semibold mb-4">Liên kết nhanh</h3>
             <ul className="space-y-2 text-slate-600 dark:text-gray-300">
               <li>
-                <Link 
-                  href="/teachers" 
+                <Link
+                  href="/teachers"
                   prefetch={false}
                   onMouseEnter={() => router.prefetch("/teachers")}
                   className="text-slate-600 dark:text-white hover:text-blue-600 dark:hover:text-white/80 transition-colors"
@@ -88,8 +89,8 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/about" 
+                <Link
+                  href="/about"
                   prefetch={false}
                   onMouseEnter={() => router.prefetch("/about")}
                   className="text-slate-600 dark:text-white hover:text-blue-600 dark:hover:text-white/80 transition-colors"
@@ -98,8 +99,8 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/contact" 
+                <Link
+                  href="/contact"
                   prefetch={false}
                   onMouseEnter={() => router.prefetch("/contact")}
                   className="text-slate-600 dark:text-white hover:text-blue-600 dark:hover:text-white/80 transition-colors"

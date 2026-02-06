@@ -4,7 +4,13 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { App, Button, Input, Form, DatePicker, Skeleton } from "antd";
 import CustomCard from "@/app/components/common/CustomCard";
-import RichTextEditor, { type Editor } from "@/app/components/common/RichTextEditor";
+import dynamic from "next/dynamic";
+import type { Editor } from "@/app/components/common/RichTextEditor";
+
+const RichTextEditor = dynamic(() => import("@/app/components/common/RichTextEditor"), {
+  ssr: false,
+  loading: () => <div className="h-[300px] bg-gray-50 animate-pulse rounded-lg border border-gray-200" />
+});
 import FileUploadSection from "@/app/components/exercises/FileUploadSection";
 import ProgressModal from "@/app/components/exercises/ProgressModal";
 import { useUserId } from "@/app/hooks/useUserId";

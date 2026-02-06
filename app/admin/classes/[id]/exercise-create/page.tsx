@@ -5,7 +5,13 @@ import apiClient from "@/app/config/api";
 import { useRouter, useParams } from "next/navigation";
 import { App, Button, Input, Upload, Form, DatePicker, Modal, Spin, Select } from "antd";
 import CustomCard from "@/app/components/common/CustomCard";
-import RichTextEditor, { type Editor } from "@/app/components/common/RichTextEditor";
+import dynamic from "next/dynamic";
+import type { Editor } from "@/app/components/common/RichTextEditor";
+
+const RichTextEditor = dynamic(() => import("@/app/components/common/RichTextEditor"), {
+  ssr: false,
+  loading: () => <div className="h-[300px] bg-gray-50 animate-pulse rounded-lg border border-gray-200" />
+});
 import { useUserId } from "@/app/hooks/useUserId";
 import { formatFileName } from "@/lib/utils/fileName";
 import {
@@ -33,7 +39,7 @@ export default function ExerciseCreatePage() {
 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<string>("");
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [editorLoading, setEditorLoading] = useState(true);

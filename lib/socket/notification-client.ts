@@ -1,8 +1,11 @@
 "use client";
 
 import io from "socket.io-client";
+import { SocketAuthResponse, SocketConnectedResponse, SocketErrorResponse, SocketEventData } from "./types";
 
 type SocketInstance = ReturnType<typeof io>;
+
+const isDev = process.env.NODE_ENV === "development";
 
 /**
  * Socket client for Notification namespace (/notification)
@@ -101,7 +104,7 @@ class NotificationSocketClient {
     this.isConnecting = true;
 
     try {
-      console.log("[NotificationSocket] Connecting to:", socketUrl);
+      if (isDev) console.log("[NotificationSocket] Connecting to:", socketUrl);
 
       this.socket = io(`${socketUrl}/notification`, {
         auth: {
@@ -119,33 +122,32 @@ class NotificationSocketClient {
       });
 
       this.socket.on("connect", () => {
-        console.log("Notification socket connected:", this.socket?.id);
+        if (isDev) console.log("[NotificationSocket] Connected:", this.socket?.id);
 
         // Reset auth state on connect/reconnect
         this.isAuthenticated = false;
 
-        // ✅ Send both encrypted cookie AND JWT token for robust auth
+        // Send both encrypted cookie AND JWT token for robust auth
         if (encryptedUser || token) {
-          console.log("[NotificationSocket] Authenticating...");
+          if (isDev) console.log("[NotificationSocket] Authenticating...");
           this.socket?.emit("authenticate", {
             encryptedData: encryptedUser,
             token: token,
           });
         } else {
-          console.warn("[NotificationSocket] Connected but no authentication data found!");
+          if (isDev) console.warn("[NotificationSocket] No authentication data found");
         }
 
         this.isConnecting = false;
         this.connectionListeners.forEach((listener) => listener(true));
       });
 
-      this.socket.on("notification:authenticated", (data: any) => {
-        console.log("[NotificationSocket] Authentication successful:", data);
+      this.socket.on("notification:authenticated", (data: SocketAuthResponse) => {
+        if (isDev) console.log("[NotificationSocket] Authenticated:", data.user_id);
         this.isAuthenticated = true;
 
         // Process any room joins that were requested before authentication
         if (this.pendingClassJoins.size > 0) {
-          console.log(`[NotificationSocket] Joining ${this.pendingClassJoins.size} pending class rooms`);
           this.pendingClassJoins.forEach((classId) => {
             this.socket?.emit("join_class_notifications", { class_id: classId });
           });
@@ -154,32 +156,30 @@ class NotificationSocketClient {
       });
 
       this.socket.on("disconnect", (reason: string) => {
-        console.log("Notification socket disconnected:", reason);
+        if (isDev) console.log("[NotificationSocket] Disconnected:", reason);
         this.isConnecting = false;
         this.isAuthenticated = false;
         this.connectionListeners.forEach((listener) => listener(false));
       });
 
       this.socket.on("connect_error", (error: Error) => {
-        console.error("Notification socket connection error:", error);
+        if (isDev) console.error("[NotificationSocket] Connection error:", error.message);
         this.isConnecting = false;
         this.connectionListeners.forEach((listener) => listener(false));
       });
 
       // Listen for server confirmation
-      this.socket.on("notification:connected", (data: any) => {
-        console.log("[NotificationSocket] Server confirmed connection:", data);
+      this.socket.on("notification:connected", (data: SocketConnectedResponse) => {
+        if (isDev) console.log("[NotificationSocket] Server confirmed:", data.socketId);
       });
 
       // Listen for server errors
-      this.socket.on("notification:error", (data: any) => {
-        console.error("[NotificationSocket] Server error:", data);
-        if (data?.code === "AUTH_TIMEOUT") {
-          // Retry auth logic could go here
-        }
+      this.socket.on("notification:error", (data: SocketErrorResponse) => {
+        if (isDev) console.error("[NotificationSocket] Error:", data.message);
+        // AUTH_TIMEOUT and other errors handled silently in production
       });
     } catch (error) {
-      console.error("Error creating notification socket connection:", error);
+      if (isDev) console.error("[NotificationSocket] Creation failed:", error);
       this.isConnecting = false;
       return null;
     }
@@ -210,26 +210,26 @@ class NotificationSocketClient {
     };
   }
 
-  emit(event: string, data: any): void {
+  emit(event: string, data: SocketEventData): void {
     if (!this.socket) this.connect();
     if (this.socket) this.socket.emit(event, data);
   }
 
-  on(event: string, callback: (...args: any[]) => void): () => void {
+  on<T = unknown>(event: string, callback: (data: T) => void): () => void {
     if (!this.socket) this.connect();
     if (this.socket) {
-      this.socket.on(event, callback);
+      this.socket.on(event, callback as (...args: unknown[]) => void);
       return () => {
-        this.socket?.off(event, callback);
+        this.socket?.off(event, callback as (...args: unknown[]) => void);
       };
     }
     return () => {};
   }
 
-  off(event: string, callback?: (...args: any[]) => void): void {
+  off<T = unknown>(event: string, callback?: (data: T) => void): void {
     if (!this.socket) return;
     if (callback) {
-      this.socket.off(event, callback);
+      this.socket.off(event, callback as (...args: unknown[]) => void);
     } else {
       this.socket.off(event);
     }
@@ -237,12 +237,9 @@ class NotificationSocketClient {
 
   joinClassNotifications(classId: string | number) {
     if (this.isAuthenticated && this.socket?.connected) {
-      console.log("[NotificationSocket] Emitting join_class_notifications:", classId);
       this.socket.emit("join_class_notifications", { class_id: classId });
     } else {
-      console.log("[NotificationSocket] Queuing class join until authenticated:", classId);
       this.pendingClassJoins.add(classId);
-      // If we aren't even connecting, trigger it
       if (!this.socket?.connected && !this.isConnecting) {
         this.connect();
       }
@@ -250,7 +247,6 @@ class NotificationSocketClient {
   }
 
   leaveClassNotifications(classId: string | number) {
-    console.log("[NotificationSocket] Emitting leave_class_notifications:", classId);
     this.emit("leave_class_notifications", { class_id: classId });
   }
 }

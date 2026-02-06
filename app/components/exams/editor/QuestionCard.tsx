@@ -1,7 +1,8 @@
 "use client";
 
 import { memo, useCallback, useMemo } from "react";
-import { Button, Input, Select, Tag } from "antd";
+import Image from "next/image";
+import { Button, Select, Tag } from "antd";
 import { FileTextOutlined, InfoCircleOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import CustomCard from "@/app/components/common/CustomCard";
 import { QuestionCardProps } from "./types";
@@ -10,8 +11,9 @@ import { ParsedMathContent } from "./ParsedMathContent";
 import { getQuestionType } from "./utils";
 
 // Memoized Question Card Component
+
 export const QuestionCard = memo<QuestionCardProps>(
-  ({ question, partIndex, partName, questionIndex, onUpdate, onDelete, onAddAnswer, onUpdateAnswer, onRemoveAnswer, onSelectAnswer, onMathClick, mathData }) => {
+  ({ question, partIndex, partName, questionIndex, onDelete, onAddAnswer, onUpdateAnswer, onRemoveAnswer, onSelectAnswer, onMathClick, mathData }) => {
 
     const handleDelete = useCallback(() => {
       onDelete(partIndex, question.id);
@@ -21,12 +23,7 @@ export const QuestionCard = memo<QuestionCardProps>(
       onAddAnswer(partIndex, question.id);
     }, [partIndex, question.id, onAddAnswer]);
 
-    const handleSelectAnswer = useCallback(
-      (answerIndex: number) => {
-        onSelectAnswer(partIndex, question.id, answerIndex);
-      },
-      [partIndex, question.id, onSelectAnswer]
-    );
+
 
     // Determine question type from part name
     const questionType = useMemo(() => {
@@ -206,10 +203,12 @@ export const QuestionCard = memo<QuestionCardProps>(
             </div>
             {question.picture && (
               <div className="mt-3">
-                <img 
-                  src={question.picture} 
-                  alt="Question illustration" 
-                  className="max-w-full h-auto rounded-lg border border-gray-200"
+                <Image
+                  src={question.picture}
+                  alt="Question illustration"
+                  width={800}
+                  height={450}
+                  className="w-full h-auto rounded-lg border border-gray-200 object-contain"
                   style={{ maxHeight: "400px" }}
                 />
               </div>
