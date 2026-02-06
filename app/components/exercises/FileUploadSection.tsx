@@ -33,7 +33,8 @@ export default function FileUploadSection({
       message.error("Chỉ chấp nhận file: pdf, doc, docx, xls, xlsx, ppt, pptx, txt, zip, rar, jpg, jpeg, png, gif!");
       return Upload.LIST_IGNORE;
     }
-    return true;
+    // Return false to prevent automatic upload - we handle upload manually in form submit
+    return false;
   };
 
   return (
@@ -106,6 +107,12 @@ export default function FileUploadSection({
         fileList={[]}
         onChange={onFileChange}
         beforeUpload={beforeUpload || defaultBeforeUpload}
+        customRequest={({ onSuccess }) => {
+          // Prevent automatic upload - we handle upload manually in the form submit
+          setTimeout(() => {
+            onSuccess?.("ok");
+          }, 0);
+        }}
         multiple
         accept={accept}
         className="transition-all group"

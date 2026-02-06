@@ -6,13 +6,16 @@ import { HomeOutlined, AppstoreOutlined, SettingOutlined, LogoutOutlined, FileTe
 import { IoBookOutline } from "react-icons/io5";
 import { Button, App } from "antd";
 
-const menuItems = [
+const completedItems = [
   { path: "/user", icon: HomeOutlined, label: "Trang chủ" },
-  { path: "/user/classes", icon: AppstoreOutlined, label: "Lớp học" },
-  { path: "/user/courses", icon: IoBookOutline, label: "Khóa học của tôi", isComingSoon: true },
-  { path: "/user/courses/overview", icon: BarChartOutlined, label: "Tổng quan khóa học", isComingSoon: true },
+  { path: "/user/classes", icon: AppstoreOutlined, label: "Quản lý lớp học" },
   { path: "/user/documents", icon: FileTextOutlined, label: "Tài liệu hệ thống" },
   { path: "/user/settings", icon: SettingOutlined, label: "Cài đặt" },
+];
+
+const pendingItems = [
+  { path: "/user/courses", icon: IoBookOutline, label: "Khóa học của tôi", isComingSoon: true },
+  { path: "/user/courses/overview", icon: BarChartOutlined, label: "Tổng quan khóa học", isComingSoon: true },
 ];
 
 export default function UserSidebar() {
@@ -24,12 +27,72 @@ export default function UserSidebar() {
     router.push("/");
   };
 
-  const handleMenuItemClick = (item: typeof menuItems[0], e: React.MouseEvent) => {
+  const handleMenuItemClick = (item: { isComingSoon?: boolean }, e: React.MouseEvent) => {
     if (item.isComingSoon) {
       e.preventDefault();
       message.info("Tính năng đang phát triển");
       return;
     }
+  };
+
+  const renderSidebarItem = (item: any) => {
+    const Icon = item.icon;
+    const isExactMatch = item.path === "/user";
+    const isActive = isExactMatch ? pathname === "/user" : pathname?.startsWith(item.path);
+
+    return (
+      <div
+        key={item.path}
+        className={`group flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-300 ease-in-out ${isActive
+          ? "bg-blue-100 dark:bg-blue-900/40"
+          : "hover:bg-blue-50/80 dark:hover:bg-blue-900/15 hover:opacity-100 opacity-90 cursor-pointer"
+          }`}
+      >
+        {item.isComingSoon ? (
+          <div onClick={(e) => handleMenuItemClick(item, e)} className="flex items-center gap-4 w-full cursor-pointer">
+            <Icon
+              className={`text-xl transition-all duration-300 ${isActive
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                }`}
+            />
+            <span
+              className={`text-[14px] transition-all duration-300 ${isActive
+                ? "font-bold text-blue-600 dark:text-blue-400"
+                : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
+                }`}
+            >
+              {item.label}
+            </span>
+          </div>
+        ) : (
+          <Link
+            href={item.path}
+            prefetch={false}
+            onMouseEnter={() => {
+
+              router.prefetch(item.path);
+            }}
+            className="flex items-center gap-4 w-full"
+          >
+            <Icon
+              className={`text-xl transition-all duration-300 ${isActive
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                }`}
+            />
+            <span
+              className={`text-[14px] transition-all duration-300 ${isActive
+                ? "font-bold text-blue-600 dark:text-blue-400"
+                : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
+                }`}
+            >
+              {item.label}
+            </span>
+          </Link>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -43,73 +106,20 @@ export default function UserSidebar() {
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isExactMatch = item.path === "/user";
-          const isActive = isExactMatch ? pathname === "/user" : pathname?.startsWith(item.path);
+      <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto custom-scrollbar">
+        <div className="flex items-center px-2 mb-3 mt-2">
+          <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1"></div>
+          <span className="px-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Hệ thống học tập</span>
+          <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1"></div>
+        </div>
+        {completedItems.map(renderSidebarItem)}
 
-          return (
-            <div
-              key={item.path}
-              className={`group flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-300 ease-in-out ${
-                isActive 
-                  ? "bg-blue-100 dark:bg-blue-900/40" 
-                  : "hover:bg-blue-50/80 dark:hover:bg-blue-900/15 hover:opacity-100 opacity-90 cursor-pointer"
-              }`}
-            >
-              {item.isComingSoon ? (
-                <div onClick={(e) => handleMenuItemClick(item, e)} className="flex items-center gap-4 w-full cursor-pointer">
-                  <Icon
-                    className={`text-xl transition-all duration-300 ${
-                      isActive 
-                        ? "text-blue-600 dark:text-blue-400" 
-                        : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                    }`}
-                  />
-                  <span
-                    className={`text-[14px] transition-all duration-300 ${
-                      isActive 
-                        ? "font-bold text-blue-600 dark:text-blue-400" 
-                        : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
-                    }`}
-                  >
-                    {item.label}
-                  </span>
-                </div>
-              ) : (
-                <Link 
-                  href={item.path} 
-                  prefetch={false}
-                  onMouseEnter={() => {
-                    if (process.env.NODE_ENV === 'development') {
-                      console.log(`🚀 [Prefetch] Hovering over: ${item.path}`);
-                    }
-                    router.prefetch(item.path);
-                  }}
-                  className="flex items-center gap-4 w-full"
-                >
-                  <Icon
-                    className={`text-xl transition-all duration-300 ${
-                      isActive 
-                        ? "text-blue-600 dark:text-blue-400" 
-                        : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                    }`}
-                  />
-                  <span
-                    className={`text-[14px] transition-all duration-300 ${
-                      isActive 
-                        ? "font-bold text-blue-600 dark:text-blue-400" 
-                        : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
-                    }`}
-                  >
-                    {item.label}
-                  </span>
-                </Link>
-              )}
-            </div>
-          );
-        })}
+        <div className="flex items-center px-2 mb-3 mt-6">
+          <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1"></div>
+          <span className="px-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Đang phát triển</span>
+          <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1"></div>
+        </div>
+        {pendingItems.map(renderSidebarItem)}
       </nav>
 
       {/* Go Home Button */}

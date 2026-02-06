@@ -4,12 +4,13 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Empty, App, Modal, ConfigProvider, theme, Button } from "antd";
 import Swal from "sweetalert2";
-import io from "socket.io-client";
+import io, { Socket } from "socket.io-client";
 import { getRagTestDetail, type RagTestDetail, type RagQuestion } from "@/lib/api/rag-exams";
 import { startExamAttempt, submitExamAttempt, logSecurityEvent } from "@/lib/api/exam-attempts";
 import { ExamHeader, QuestionCard, QuestionGrid } from "./components";
 import { useAntiCheat } from "@/app/hooks/useAntiCheat";
 import DataLoadingSplash from "@/app/components/common/DataLoadingSplash";
+import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
 
 const QUESTIONS_PER_PAGE = 5;
 
@@ -550,7 +551,8 @@ export default function ExamSessionPage() {
   }
 
   return (
-    <>
+    <RouteErrorBoundary routeName="exam">
+      <>
       <div
         id="exam-fullscreen-root"
         className="w-full h-screen flex flex-col select-none bg-gray-50 overflow-hidden"
@@ -689,6 +691,7 @@ export default function ExamSessionPage() {
           </div>
         </div>
       )}
-    </>
+      </>
+    </RouteErrorBoundary>
   );
 }

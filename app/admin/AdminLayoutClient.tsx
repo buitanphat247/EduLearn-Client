@@ -3,16 +3,19 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import AdminSidebar from "../components/layout/AdminSidebar";
 import { usePathname } from "next/navigation";
-import { Spin, message, Modal } from "antd";
+import { Spin, message, Modal, Avatar } from "antd";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
+import { getMediaUrl } from "@/lib/utils/media";
+import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import { useUserId } from "@/app/hooks/useUserId";
 import NotificationBell from "@/app/components/notifications/NotificationBell";
 
 const pageTitles: Record<string, string> = {
-  "/admin": "Dashboard",
-  "/admin/classes": "Quản lý Lớp học",
-  "/admin/students": "Quản lý Học sinh",
-  "/admin/document-crawl": "Quản lý Tài liệu Crawl",
+  "/admin": "Trang chủ",
+  "/admin/classes": "Quản lý lớp học",
+  "/admin/students": "Quản lý học sinh",
+  "/admin/document-crawl": "Tài liệu hệ thống",
+  "/admin/settings": "Cài đặt",
 };
 
 interface InitialUserData {
@@ -27,6 +30,9 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  const FALLBACK_CAT = getMediaUrl("/avatars/anh3_1770318347807_gt8xnc.jpeg");
 
   // Memoize page title calculation
   const currentPageTitle = useMemo(() => {
@@ -78,11 +84,19 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
     fetchUserInfoRef.current(false);
   }, []);
 
-  // Fetch user info when modal opens (with loading state)
   useEffect(() => {
     if (!isProfileModalOpen || userInfo) return;
     fetchUserInfoRef.current(true);
   }, [isProfileModalOpen, userInfo]);
+
+  // Handle user-updated event to sync avatar
+  useEffect(() => {
+    const handleUpdate = () => {
+      fetchUserInfo(false);
+    };
+    window.addEventListener("user-updated", handleUpdate);
+    return () => window.removeEventListener("user-updated", handleUpdate);
+  }, [fetchUserInfo]);
 
   // Memoize getInitials function
   const getInitials = useCallback((name: string) => {
@@ -125,14 +139,22 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
         </div>
 
         <div className="flex items-center gap-4">
-          {userId && (
-            <NotificationBell userId={userId} />
-          )}
+          <NotificationBell userId={userId!} />
           <div
             onClick={() => setIsProfileModalOpen(true)}
             className="flex items-center gap-3 pl-4 cursor-pointer hover:opacity-80 transition-opacity"
           >
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">{displayInitials}</div>
+            <Avatar
+              size={40}
+              src={getCachedImageUrl((imgError || (!userInfo?.avatar && !initialUserData?.avatar)) ? FALLBACK_CAT : getMediaUrl(userInfo?.avatar || initialUserData?.avatar!))}
+              onError={() => {
+                setImgError(true);
+                return true;
+              }}
+              className="flex items-center justify-center bg-blue-600"
+            >
+              {displayInitials}
+            </Avatar>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{displayName}</span>
               <span className="text-xs text-gray-600 dark:text-gray-400">{displayRole}</span>
@@ -146,9 +168,13 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
           {userInfo ? (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl">
+                <Avatar
+                  size={80}
+                  src={getCachedImageUrl((imgError || !userInfo.avatar) ? FALLBACK_CAT : getMediaUrl(userInfo.avatar))}
+                  className="flex items-center justify-center bg-blue-600"
+                >
                   {getInitials(userInfo.fullname || userInfo.username || "A")}
-                </div>
+                </Avatar>
                 <div>
                   <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{userInfo.fullname || userInfo.username}</h3>
                   <p className="text-gray-600 dark:text-gray-400">{userInfo.role?.role_name || "Giáo viên"}</p>
@@ -185,9 +211,6 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
 }
 
 export default function AdminLayoutClient({ children, initialUserData }: { children: React.ReactNode; initialUserData: InitialUserData | null }) {
-  const pathname = usePathname();
-  const isDocumentCrawlPage = pathname?.startsWith("/admin/document-crawl");
-
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-950 overflow-hidden transition-colors duration-300">
       <AdminSidebar />

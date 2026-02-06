@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { App, Button, Upload, Input, Spin, Tag, Popconfirm, Modal } from "antd";
+import { App, Button, Upload, Spin, Tag, Modal, Descriptions } from "antd";
 import {
   ArrowLeftOutlined,
   UploadOutlined,
@@ -10,28 +10,25 @@ import {
   DeleteOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  SaveOutlined,
   FilePdfOutlined,
   FileWordOutlined,
   FileImageOutlined,
   CloudUploadOutlined,
-  PaperClipOutlined,
+  SyncOutlined,
+  InfoCircleOutlined,
 } from "@ant-design/icons";
-import type { UploadFile, UploadProps } from "antd";
+import type { UploadFile } from "antd";
 import CustomCard from "@/app/components/common/CustomCard";
-import DataLoadingSplash from "@/app/components/common/DataLoadingSplash";
-import { getAssignmentById, getAssignmentStudents, type AssignmentDetailResponse, type AssignmentStudentResponse } from "@/lib/api/assignments";
+import { getAssignmentById, getAssignmentStudents, type AssignmentDetailResponse } from "@/lib/api/assignments";
+import { getClassById } from "@/lib/api/classes";
 import {
   createSubmission,
-  updateSubmission,
   getSubmissions,
   createSubmissionAttachment,
   deleteSubmissionAttachment,
   type StudentSubmission,
-  type StudentSubmissionAttachment,
 } from "@/lib/api/submissions";
 import { getUserIdFromCookie, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
-import { classSocketClient } from "@/lib/socket/class-client";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/vi";
@@ -51,9 +48,11 @@ export default function SubmitExercisePage() {
   const [submission, setSubmission] = useState<StudentSubmission | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [note, setNote] = useState("");
   const [isOverdue, setIsOverdue] = useState(false);
   const [gradingInfo, setGradingInfo] = useState<{ status: string; score: number | null } | null>(null);
+  const [classInfo, setClassInfo] = useState<any | null>(null);
+
+  const [refreshing, setRefreshing] = useState(false);
 
   // Helper: Format file size
   const formatFileSize = (bytes: number) => {
@@ -78,14 +77,18 @@ export default function SubmitExercisePage() {
     setAssignment(null);
     setSubmission(null);
     setFileList([]);
-    setNote("");
     setTempFiles([]);
     setIsOverdue(false);
   }, [exerciseId]);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
       let userId: string | number | null = getUserIdFromCookie();
 
       if (!userId) {
@@ -102,7 +105,7 @@ export default function SubmitExercisePage() {
       }
 
       // Parallel fetching for performance
-      const [assignmentData, submissionsData, assignmentStudentData] = await Promise.all([
+      const [assignmentData, submissionsData, assignmentStudentData, classData] = await Promise.all([
         getAssignmentById(exerciseId),
         getSubmissions({
           assignmentId: Number(exerciseId),
@@ -113,8 +116,11 @@ export default function SubmitExercisePage() {
           assignmentId: Number(exerciseId),
           classId: Number(classId),
           limit: 100, // Get all to find current user
-        })
+        }),
+        getClassById(classId, Number(userId))
       ]);
+
+      if (classData) setClassInfo(classData);
 
       // Find grading info for current student
       const myGradingRecord = assignmentStudentData.data.find(
@@ -137,7 +143,6 @@ export default function SubmitExercisePage() {
       if (submissionsData.data && submissionsData.data.length > 0) {
         const existSubmission = submissionsData.data[0];
         setSubmission(existSubmission);
-        setNote(existSubmission.note || "");
 
         // Map existing attachments to fileList
         if (existSubmission.attachments) {
@@ -152,11 +157,16 @@ export default function SubmitExercisePage() {
           );
         }
       }
+
+      if (isRefresh) {
+        message.success("Đã cập nhật kết quả mới nhất");
+      }
     } catch (error: any) {
       console.error(error);
       message.error("Không thể tải thông tin bài tập");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [exerciseId, classId, message]);
 
@@ -164,34 +174,8 @@ export default function SubmitExercisePage() {
     fetchData();
   }, [fetchData]);
 
-  // Socket: Join Class and Listen for Grading
-  useEffect(() => {
-    const userId = getUserIdFromCookie();
-    if (!classId || !userId) return;
+  // Socket logic removed as per request
 
-    classSocketClient.connect();
-    classSocketClient.joinClass(classId);
-
-    // Listen for real-time grading event
-    const unsubscribe = classSocketClient.on("assignment:graded", (data: any) => {
-      // Only update if this is for current assignment and current user
-      if (
-        String(data.assignment_id) === String(exerciseId) &&
-        String(data.student_id) === String(userId)
-      ) {
-        console.log("Real-time grading received:", data);
-        setGradingInfo({
-          status: data.status,
-          score: data.score,
-        });
-        message.success(`Giáo viên đã chấm điểm: ${data.score}/10`);
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [classId, exerciseId, message]);
 
   const handleUpload = async (options: any) => {
     const { file, onSuccess, onError } = options;
@@ -204,17 +188,58 @@ export default function SubmitExercisePage() {
 
     try {
       setUploadLoading(true);
-      const newAttachment = await createSubmissionAttachment(submission.submission_id, file);
+      let userId: string | number | null = getUserIdFromCookie();
+      if (!userId) {
+        userId = await getUserIdFromCookieAsync();
+      }
 
-      const newFile: UploadFile = {
-        uid: String(newAttachment.id),
-        name: newAttachment.file_name,
-        status: "done",
-        url: newAttachment.file_url,
-        size: newAttachment.file_size,
-      };
+      // Upload file
+      await createSubmissionAttachment(submission.submission_id, file);
 
-      setFileList((prev) => [...prev, newFile]);
+      // Refresh submission data to get latest attachments and status
+      const [updatedSubmissionData, updatedGradingData] = await Promise.all([
+        getSubmissions({
+          assignmentId: Number(exerciseId),
+          studentId: Number(userId),
+          classId: Number(classId),
+        }),
+        getAssignmentStudents({
+          assignmentId: Number(exerciseId),
+          classId: Number(classId),
+          limit: 100,
+        }),
+      ]);
+
+      // Update submission state
+      if (updatedSubmissionData.data && updatedSubmissionData.data.length > 0) {
+        const latestSubmission = updatedSubmissionData.data[0];
+        setSubmission(latestSubmission);
+
+        // Update file list
+        if (latestSubmission.attachments) {
+          setFileList(
+            latestSubmission.attachments.map((att) => ({
+              uid: String(att.id),
+              name: att.file_name,
+              status: "done",
+              url: att.file_url,
+              size: att.file_size,
+            }))
+          );
+        }
+      }
+
+      // Update grading info
+      const myGradingRecord = updatedGradingData.data.find(
+        (record) => Number(record.student_id) === Number(userId)
+      );
+      if (myGradingRecord) {
+        setGradingInfo({
+          status: myGradingRecord.status,
+          score: myGradingRecord.score,
+        });
+      }
+
       onSuccess("Ok");
       message.success(`Đã tải lên ${file.name}`);
     } catch (error: any) {
@@ -233,8 +258,59 @@ export default function SubmitExercisePage() {
         return false;
       }
 
+      let userId: string | number | null = getUserIdFromCookie();
+      if (!userId) {
+        userId = await getUserIdFromCookieAsync();
+      }
+
       await deleteSubmissionAttachment(Number(file.uid));
-      setFileList((prev) => prev.filter((item) => item.uid !== file.uid));
+
+      // Refresh submission data and grading info after deletion
+      const [updatedSubmissionData, updatedGradingData] = await Promise.all([
+        getSubmissions({
+          assignmentId: Number(exerciseId),
+          studentId: Number(userId),
+          classId: Number(classId),
+        }),
+        getAssignmentStudents({
+          assignmentId: Number(exerciseId),
+          classId: Number(classId),
+          limit: 100,
+        }),
+      ]);
+
+      // Update submission state
+      if (updatedSubmissionData.data && updatedSubmissionData.data.length > 0) {
+        const latestSubmission = updatedSubmissionData.data[0];
+        setSubmission(latestSubmission);
+
+        // Update file list
+        if (latestSubmission.attachments) {
+          setFileList(
+            latestSubmission.attachments.map((att) => ({
+              uid: String(att.id),
+              name: att.file_name,
+              status: "done",
+              url: att.file_url,
+              size: att.file_size,
+            }))
+          );
+        } else {
+          setFileList([]);
+        }
+      }
+
+      // Update grading info
+      const myGradingRecord = updatedGradingData.data.find(
+        (record) => Number(record.student_id) === Number(userId)
+      );
+      if (myGradingRecord) {
+        setGradingInfo({
+          status: myGradingRecord.status,
+          score: myGradingRecord.score,
+        });
+      }
+
       message.success("Đã xóa file");
       return true;
     } catch (error: any) {
@@ -247,8 +323,8 @@ export default function SubmitExercisePage() {
   const [tempFiles, setTempFiles] = useState<File[]>([]);
 
   const onSubmitInitial = async () => {
-    if (tempFiles.length === 0 && !note.trim()) {
-      message.warning("Vui lòng đính kèm file hoặc viết ghi chú.");
+    if (tempFiles.length === 0) {
+      message.warning("Vui lòng đính kèm bài làm.");
       return;
     }
 
@@ -268,7 +344,7 @@ export default function SubmitExercisePage() {
         assignment_id: Number(exerciseId),
         class_id: Number(classId),
         student_id: Number(userId),
-        note: note,
+        note: "",
       });
 
       setSubmission(newSubmission);
@@ -283,12 +359,19 @@ export default function SubmitExercisePage() {
           message.error(`Lỗi tải file ${file.name}`);
         }
 
-        // Refresh to get attachments with IDs
-        const updatedSubmission = await getSubmissions({
-          assignmentId: Number(exerciseId),
-          studentId: Number(userId),
-          classId: Number(classId)
-        });
+        // Refresh to get attachments with IDs and grading info
+        const [updatedSubmission, updatedGradingData] = await Promise.all([
+          getSubmissions({
+            assignmentId: Number(exerciseId),
+            studentId: Number(userId),
+            classId: Number(classId)
+          }),
+          getAssignmentStudents({
+            assignmentId: Number(exerciseId),
+            classId: Number(classId),
+            limit: 100,
+          }),
+        ]);
 
         if (updatedSubmission.data[0]) {
           setSubmission(updatedSubmission.data[0]);
@@ -304,6 +387,34 @@ export default function SubmitExercisePage() {
             );
           }
         }
+
+        // Update grading info
+        const myGradingRecord = updatedGradingData.data.find(
+          (record) => Number(record.student_id) === Number(userId)
+        );
+        if (myGradingRecord) {
+          setGradingInfo({
+            status: myGradingRecord.status,
+            score: myGradingRecord.score,
+          });
+        }
+      } else {
+        // Even without files, refresh grading info
+        const updatedGradingData = await getAssignmentStudents({
+          assignmentId: Number(exerciseId),
+          classId: Number(classId),
+          limit: 100,
+        });
+
+        const myGradingRecord = updatedGradingData.data.find(
+          (record) => Number(record.student_id) === Number(userId)
+        );
+        if (myGradingRecord) {
+          setGradingInfo({
+            status: myGradingRecord.status,
+            score: myGradingRecord.score,
+          });
+        }
       }
 
       setTempFiles([]);
@@ -316,18 +427,7 @@ export default function SubmitExercisePage() {
     }
   };
 
-  const onUpdateNote = async () => {
-    if (!submission) return;
-    try {
-      setSubmitting(true);
-      await updateSubmission(submission.submission_id, { note });
-      message.success("Cập nhật ghi chú thành công");
-    } catch (e: any) {
-      message.error(e.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+
 
   const [uploadLoading, setUploadLoading] = useState(false);
 
@@ -384,34 +484,81 @@ export default function SubmitExercisePage() {
   return (
     <div className="h-full bg-gray-50/50 ">
       <div className="mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
+        {/* Header Actions */}
+        <div className="flex items-center justify-between">
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => router.back()}
-            className="border-none bg-white shadow-sm hover:bg-gray-100 dark:bg-gray-800"
+            className="border-none bg-white shadow-sm hover:bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
           >
             Quay lại
           </Button>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex-1 truncate">
-            {assignment.title}
-          </h1>
+          <Button
+            type="dashed"
+            icon={<SyncOutlined spin={refreshing} />}
+            onClick={() => fetchData(true)}
+            className="text-gray-500 border-gray-300 hover:text-blue-600 hover:border-blue-500"
+          >
+            Làm mới
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Info Card */}
+        <CustomCard
+          title={
+            <div className="flex items-center gap-2">
+              <InfoCircleOutlined className="text-blue-500" />
+              <span>Thông tin bài tập</span>
+            </div>
+          }
+          bodyClassName="py-6"
+        >
+          <Descriptions column={2} bordered layout="horizontal">
+            <Descriptions.Item label="Tên bài tập" span={1}>
+              <span className="font-semibold text-gray-800 dark:text-gray-100">{assignment.title}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="Lớp học" span={1}>
+              <span className="font-medium text-gray-700 dark:text-gray-300">{classInfo?.name || "..."}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="Hạn nộp" span={1}>
+              <span className="flex items-center gap-2">
+                <ClockCircleOutlined className="text-orange-500" />
+                <span className="font-medium dark:text-gray-200">
+                  {assignment.due_at ? dayjs(assignment.due_at).format("HH:mm - DD/MM/YYYY") : "Không có thời hạn"}
+                </span>
+              </span>
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái" span={1}>
+              <div className="flex items-center gap-2">
+                <Tag color={(!assignment.due_at || dayjs().isBefore(dayjs(assignment.due_at))) ? "processing" : "error"}>
+                  {(!assignment.due_at || dayjs().isBefore(dayjs(assignment.due_at))) ? "Đang mở" : "Đã hết hạn"}
+                </Tag>
+                {gradingInfo && (
+                  <Tag color={gradingInfo.status === 'graded' ? "success" : gradingInfo.status === 'submitted' ? "processing" : "warning"}>
+                    {gradingInfo.status === 'graded' ? 'Đã chấm điểm' : gradingInfo.status === 'submitted' ? 'Đã nộp bài' : 'Chưa nộp'}
+                  </Tag>
+                )}
+              </div>
+            </Descriptions.Item>
+            {submission && (
+              <Descriptions.Item label="Thời gian nộp" span={2}>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  {dayjs(submission.submitted_at).format("HH:mm - DD/MM/YYYY")}
+                  {assignment.due_at && dayjs(submission.submitted_at).isAfter(dayjs(assignment.due_at)) && (
+                    <Tag color="error" className="ml-2">Nộp muộn</Tag>
+                  )}
+                </span>
+              </Descriptions.Item>
+            )}
+          </Descriptions>
+        </CustomCard>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-6">
           {/* Left Col: Exercise Content */}
           <div className="lg:col-span-2 space-y-6">
-            <CustomCard padding="lg" className="min-h-[400px]">
+            <CustomCard padding="lg">
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-gray-800">Nội dung bài tập</h2>
-                  {assignment.due_at && (
-                    <Tag icon={<ClockCircleOutlined />} color={isOverdue ? "error" : "processing"} className="px-3 py-1 text-sm rounded-full">
-                      Hạn nộp: {dayjs(assignment.due_at).format("HH:mm - DD/MM/YYYY")}
-                      {!isOverdue && ` (${dayjs(assignment.due_at).fromNow()})`}
-                    </Tag>
-                  )}
-                </div>
+                <h2 className="text-lg font-bold text-gray-800">Nội dung bài tập</h2>
 
                 {/* Description */}
                 <div
@@ -460,15 +607,17 @@ export default function SubmitExercisePage() {
                 {/* Status */}
                 <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
                   <span className="text-gray-500 font-medium">Trạng thái:</span>
-                  {submission ? (
-                    <Tag color="success" className="font-bold border-0 bg-green-100 text-green-700 m-0">Đã nộp bài</Tag>
+                  {gradingInfo?.status === 'submitted' || gradingInfo?.status === 'graded' ? (
+                    <Tag color="success" className="font-bold border-0 bg-green-100 text-green-700 m-0">
+                      {gradingInfo.status === 'graded' ? 'Đã chấm điểm' : 'Đã nộp bài'}
+                    </Tag>
                   ) : (
                     <Tag color="warning" className="font-bold border-0 bg-orange-100 text-orange-700 m-0">Chưa nộp</Tag>
                   )}
                 </div>
 
                 {/* Grading Status Display */}
-                {submission && gradingInfo && gradingInfo.status !== 'graded' && (
+                {gradingInfo?.status === 'submitted' && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
                     <ClockCircleOutlined className="text-2xl text-blue-500" />
                     <div>
@@ -502,17 +651,7 @@ export default function SubmitExercisePage() {
                 {!submission ? (
                   // Initial Submit UI
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Lời nhắn cho giáo viên:</label>
-                      <Input.TextArea
-                        rows={4}
-                        placeholder="Nhập ghi chú hoặc câu trả lời ngắn..."
-                        value={note}
-                        onChange={e => setNote(e.target.value)}
-                        className="bg-white"
-                        disabled={isOverdue}
-                      />
-                    </div>
+
 
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Đính kèm bài làm:</label>
                     <div className="space-y-3">
@@ -598,31 +737,7 @@ export default function SubmitExercisePage() {
                       )}
                     </div>
 
-                    {/* Notes */}
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <label className="block text-sm font-bold text-gray-700">Lời nhắn:</label>
-                        {canEdit && (
-                          <Button
-                            type="link"
-                            icon={<SaveOutlined />}
-                            size="small"
-                            className="p-0 h-auto"
-                            onClick={onUpdateNote}
-                            loading={submitting}
-                          >
-                            Lưu ghi chú
-                          </Button>
-                        )}
-                      </div>
-                      <Input.TextArea
-                        rows={3}
-                        value={note}
-                        onChange={e => setNote(e.target.value)}
-                        disabled={!canEdit}
-                        className={!canEdit ? "bg-gray-100 cursor-not-allowed" : ""}
-                      />
-                    </div>
+
 
                     {/* Add more files */}
                     {canEdit && (
@@ -652,6 +767,8 @@ export default function SubmitExercisePage() {
                     </div>
                   </div>
                 )}
+
+
               </div>
             </CustomCard>
           </div>

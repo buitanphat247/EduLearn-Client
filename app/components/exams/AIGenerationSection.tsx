@@ -1,14 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Form, Input, InputNumber, Select, Button, Divider, Space, message, Spin, Badge, Collapse, Card, Typography } from "antd";
-import { RobotOutlined, SettingOutlined, FileTextOutlined, ThunderboltFilled, LoadingOutlined, ExperimentOutlined } from "@ant-design/icons";
+import { useState, useEffect } from "react";
+import { Form, Input, InputNumber, Button, Badge, Typography, message } from "antd";
+import { RobotOutlined, SettingOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/api/users";
+import { classSocketClient } from "@/lib/socket/class-client";
 
 const { Title, Text } = Typography;
-const { Panel } = Collapse;
 const { TextArea } = Input;
 
 interface AIGenerationSectionProps {
@@ -99,6 +99,10 @@ export default function AIGenerationSection({ uploadedFile, onLoadingChange }: A
       if (response.status === 201) {
         message.success("Đã sinh đề thi thành công bằng AI!");
         const testId = response.data.data.test_id;
+
+        // Emit socket event to notify other users
+        classSocketClient.emit("exam_created", { class_id: classId, test_id: testId });
+
         // Chuyển hướng đến trang editor để chỉnh sửa nội dung AI vừa sinh
         router.push(`/admin/classes/${classId}/examinate/ai_editor?testId=${testId}`);
       }

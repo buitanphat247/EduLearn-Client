@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 
 // Constants
 const VALID_THEMES = ["light", "dark"] as const;
-type Theme = typeof VALID_THEMES[number];
+type Theme = (typeof VALID_THEMES)[number];
 
 const COOKIE_MAX_AGE_ONE_YEAR = 60 * 60 * 24 * 365; // 1 year in seconds
 
@@ -23,11 +23,7 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
  * @param windowMs - Time window in milliseconds
  * @returns true if request is allowed, false if rate limited
  */
-function checkRateLimit(
-  identifier: string,
-  maxRequests = RATE_LIMIT_MAX_REQUESTS,
-  windowMs = RATE_LIMIT_WINDOW_MS
-): boolean {
+function checkRateLimit(identifier: string, maxRequests = RATE_LIMIT_MAX_REQUESTS, windowMs = RATE_LIMIT_WINDOW_MS): boolean {
   const now = Date.now();
   const record = rateLimitMap.get(identifier);
 
@@ -49,16 +45,11 @@ function checkRateLimit(
  * @param theme - Theme value ("light" or "dark")
  * @returns Object with success status and optional error message
  */
-export async function setThemeCookie(
-  theme: Theme | string
-): Promise<{ success: boolean; error?: string; theme?: Theme }> {
+export async function setThemeCookie(theme: Theme | string): Promise<{ success: boolean; error?: string; theme?: Theme }> {
   try {
     // Rate limiting: Get client IP
     const headersList = await headers();
-    const ip =
-      headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      headersList.get("x-real-ip") ||
-      "unknown";
+    const ip = headersList.get("x-forwarded-for")?.split(",")[0]?.trim() || headersList.get("x-real-ip") || "unknown";
 
     // Check rate limit
     if (!checkRateLimit(`theme:${ip}`)) {
@@ -108,16 +99,7 @@ export async function setThemeCookie(
       sameSite: "lax", // CSRF protection
     });
 
-    // Structured logging for theme changes
-    const logData = {
-      theme: sanitizedTheme,
-      ip,
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV,
-    };
-
     if (process.env.NODE_ENV !== "production") {
-      console.log("[Theme Action] Theme changed successfully:", logData);
     }
     // In production, you can send to logging service (e.g., Sentry, LogRocket)
     // Example: logger.info("Theme changed", logData);

@@ -16,15 +16,15 @@
   /* Background Colors */
   --background: #ffffff;
   --background-dark: #0f172a;
-  
+
   /* Foreground/Text Colors */
   --foreground: #171717;
   --foreground-dark: #ffffff;
-  
+
   /* Border Colors */
   --border-color: #d1d5dc;
   --border-color-dark: #314059;
-  
+
   /* Gray Scale (for borders, dividers) */
   --gray-50: #f9fafb;
   --gray-100: #f3f4f6;
@@ -36,16 +36,16 @@
   --gray-700: #374151;
   --gray-800: #1f2937;
   --gray-900: #111827;
-  
+
   /* Slate Colors (for dark mode) */
   --slate-600: #475569;
   --slate-700: #334155;
   --slate-800: #1e293b;
-  
+
   /* Primary Colors */
   --primary-blue: #3b82f6;
   --primary-blue-hover: #2563eb;
-  
+
   /* Font Variables */
   --font-roboto: var(--font-roboto);
 }
@@ -787,3 +787,19 @@ html.dark .user-dropdown-menu .ant-dropdown-menu-item-divider {
   background-color: #475569;
 }
 /* Force Rebuild */
+
+/* 
+    CÁCH 1 (KHUYÊN DÙNG) - Tắt outline khi click chuột, vẫn giữ cho bàn phím 
+    Smart Focus: Hide outline for mouse users, keep for keyboard 
+*/
+*:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Optional: Define a nice style for keyboard focus if needed, or leave browser default */
+*:focus-visible {
+  outline: 2px solid var(--primary-blue);
+  outline-offset: 2px;
+}

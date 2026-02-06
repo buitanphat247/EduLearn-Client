@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { App, Button, Input, Form, DatePicker, Spin } from "antd";
+import { App, Button, Input, Form, DatePicker, Skeleton } from "antd";
 import CustomCard from "@/app/components/common/CustomCard";
 import RichTextEditor, { type Editor } from "@/app/components/common/RichTextEditor";
 import FileUploadSection from "@/app/components/exercises/FileUploadSection";
@@ -16,7 +16,6 @@ import {
   SaveOutlined,
   InfoCircleOutlined,
 } from "@ant-design/icons";
-import type { UploadFile } from "antd";
 import dayjs from "dayjs";
 
 export default function ExerciseEditPage() {
@@ -28,7 +27,15 @@ export default function ExerciseEditPage() {
   const classId = params?.id as string;
   const exerciseId = params?.exerciseId as string;
 
-  const { fileList, setFileList, handleUpload, handleRemoveFile, beforeUpload } = useFileHandlers();
+  // Early validation - redirect if IDs are missing
+  useEffect(() => {
+    if (!classId || classId === "undefined" || !exerciseId || exerciseId === "undefined") {
+      message.error("Thông tin không hợp lệ");
+      router.push("/admin/classes");
+    }
+  }, [classId, exerciseId, message, router]);
+
+  const { fileList, handleUpload, handleRemoveFile, beforeUpload } = useFileHandlers();
   const [existingAttachments, setExistingAttachments] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -45,10 +52,6 @@ export default function ExerciseEditPage() {
     return isNaN(id) ? null : id;
   }, [exerciseId]);
 
-  const numericClassId = useMemo(() => {
-    const id = typeof classId === "string" ? Number(classId) : classId;
-    return isNaN(id) ? null : id;
-  }, [classId]);
 
   // Get existing attachment for update
   const existingAttachment = useMemo(() => {
@@ -77,7 +80,11 @@ export default function ExerciseEditPage() {
     const loadAssignment = async () => {
       if (!numericExerciseId) {
         message.error("ID bài tập không hợp lệ");
-        router.push(`/admin/classes/${classId}`);
+        if (classId && classId !== "undefined") {
+          router.push(`/admin/classes/${classId}`);
+        } else {
+          router.push("/admin/classes");
+        }
         return;
       }
 
@@ -112,10 +119,13 @@ export default function ExerciseEditPage() {
       }
     };
 
-    if (numericExerciseId) {
+    if (numericExerciseId && classId && classId !== "undefined" && exerciseId && exerciseId !== "undefined") {
       loadAssignment();
+    } else if (!classId || classId === "undefined" || !exerciseId || exerciseId === "undefined") {
+      // Redirect if IDs are invalid
+      router.push("/admin/classes");
     }
-  }, [numericExerciseId, classId, form, message, router]);
+  }, [numericExerciseId, classId, exerciseId, form, message, router]);
 
   const handleSubmit = useCallback(
     async (values: any) => {
@@ -213,10 +223,10 @@ export default function ExerciseEditPage() {
                   // Fallback to create new
                   formData.append("assignment_id", String(numericExerciseId));
                   setUploadStatus(`Đang upload file ${i + 1}/${totalFiles}: ${file.name}`);
-                  
+
                   const controller = new AbortController();
                   const timeoutId = setTimeout(() => controller.abort(), 300000);
-                  
+
                   try {
                     uploadResponse = await fetch(`/api-proxy/assignment-attachments?userId=${numericUserId}`, {
                       method: "POST",
@@ -238,10 +248,10 @@ export default function ExerciseEditPage() {
                     // Fallback to create new
                     formData.append("assignment_id", String(numericExerciseId));
                     setUploadStatus(`Đang upload file ${i + 1}/${totalFiles}: ${file.name}`);
-                    
+
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 300000);
-                    
+
                     try {
                       uploadResponse = await fetch(`/api-proxy/assignment-attachments?userId=${numericUserId}`, {
                         method: "POST",
@@ -259,10 +269,10 @@ export default function ExerciseEditPage() {
                     createdCount++;
                   } else {
                     setUploadStatus(`Đang cập nhật file ${i + 1}/${totalFiles}: ${file.name} (thay thế ${existingAttachment.file_name})`);
-                    
+
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 300000);
-                    
+
                     try {
                       uploadResponse = await fetch(`/api-proxy/assignment-attachments/${attachmentIdStr}?userId=${numericUserId}`, {
                         method: "PATCH",
@@ -284,10 +294,10 @@ export default function ExerciseEditPage() {
                 // Create new attachment
                 formData.append("assignment_id", String(numericExerciseId));
                 setUploadStatus(`Đang upload file ${i + 1}/${totalFiles}: ${file.name}`);
-                
+
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 300000);
-                
+
                 try {
                   uploadResponse = await fetch(`/api-proxy/assignment-attachments?userId=${numericUserId}`, {
                     method: "POST",
@@ -376,7 +386,11 @@ export default function ExerciseEditPage() {
 
         message.success("Cập nhật bài tập thành công!");
         setShowProgressModal(false);
-        router.push(`/admin/classes/${classId}`);
+        if (classId && classId !== "undefined") {
+          router.push(`/admin/classes/${classId}?refresh=exercises`);
+        } else {
+          router.push("/admin/classes");
+        }
       } catch (error: any) {
         setShowProgressModal(false);
         const errorMessage = error?.message || error?.toString() || "Không thể cập nhật bài tập";
@@ -391,29 +405,92 @@ export default function ExerciseEditPage() {
         setUploadStatus("");
       }
     },
-    [numericExerciseId, classId, fileList, existingAttachment, message, router]
+    [numericExerciseId, classId, fileList, existingAttachment, message, router, userId]
   );
 
   const handleCancel = useCallback(() => {
-    router.push(`/admin/classes/${classId}`);
+    if (classId && classId !== "undefined") {
+      router.push(`/admin/classes/${classId}`);
+    } else {
+      router.push("/admin/classes");
+    }
   }, [classId, router]);
 
-  // Memoize disabled date function
-  const disabledDate = useCallback((current: dayjs.Dayjs | null) => {
-    if (!current) return false;
-    try {
-      const today = dayjs().startOf("day");
-      return current.isBefore(today);
-    } catch (error) {
-      return false;
-    }
+  // Disable dates before today (allow only today and future)
+  // Disable dates before today (allow only today and future)
+  const disabledDate = useCallback((current: dayjs.Dayjs) => {
+    // Can not select days before today
+    return current && current.isBefore(dayjs(), 'day');
   }, []);
+
+  // Disable past time if date is today
+  const disabledTime = useCallback((current: dayjs.Dayjs | null) => {
+    if (current && current.isSame(dayjs(), 'day')) {
+      const now = dayjs();
+      const currentHour = now.hour();
+      const currentMinute = now.minute();
+
+      return {
+        disabledHours: () => Array.from({ length: 24 }, (_, i) => i).filter((h) => h < currentHour),
+        disabledMinutes: (selectedHour: number) => {
+          if (selectedHour === currentHour) {
+            return Array.from({ length: 60 }, (_, i) => i).filter((m) => m < currentMinute);
+          }
+          return [];
+        },
+        disabledSeconds: () => [],
+      };
+    }
+    return {};
+  }, []);
+
+
 
   if (loading || editorLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50/50 gap-4">
-        <Spin size="large" />
-        <p className="text-gray-500 font-medium">Đang tải dữ liệu...</p>
+      <div className="bg-gray-50/50 min-h-screen">
+        <div className="mx-auto space-y-6">
+          {/* Header Skeleton */}
+          <div className="w-24">
+            <Skeleton.Button active size="default" block />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Column Skeleton */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-sm">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Skeleton.Input active size="small" style={{ width: 150 }} />
+                    <Skeleton.Input active size="large" block />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton.Input active size="small" style={{ width: 120 }} />
+                    <Skeleton active paragraph={{ rows: 8 }} title={false} />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-sm">
+                <Skeleton active paragraph={{ rows: 3 }} />
+              </div>
+            </div>
+
+            {/* Right Column Skeleton */}
+            <div className="lg:col-span-1">
+              <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-sm sticky top-6">
+                <div className="space-y-5">
+                  <Skeleton.Input active size="small" style={{ width: '40%' }} />
+                  <Skeleton.Input active size="large" block />
+                  <Skeleton.Button active size="large" block style={{ height: 80 }} />
+                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                    <Skeleton.Button active size="large" style={{ width: 100 }} />
+                    <Skeleton.Button active size="large" style={{ width: 120 }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -432,13 +509,13 @@ export default function ExerciseEditPage() {
           </Button>
         </div>
 
-        <Form 
-          form={form} 
-          onFinish={handleSubmit} 
-          layout="vertical" 
+        <Form
+          form={form}
+          onFinish={handleSubmit}
+          layout="vertical"
           requiredMark="optional"
           // Prevent form from submitting to page route - use client-side handler only
-          onFinishFailed={(errorInfo) => {
+          onFinishFailed={() => {
             // Form validation failed - handled by Ant Design
           }}
         >
@@ -471,8 +548,8 @@ export default function ExerciseEditPage() {
                     </label>
                     <div className="relative">
                       {editorLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10 rounded-lg">
-                          <Spin size="large" tip="Đang tải trình soạn thảo..." />
+                        <div className="mb-4">
+                          <Skeleton active paragraph={{ rows: 6 }} />
                         </div>
                       )}
                       <RichTextEditor
@@ -517,6 +594,7 @@ export default function ExerciseEditPage() {
                       className="w-full py-2"
                       size="large"
                       disabledDate={disabledDate}
+                      disabledTime={disabledTime}
                     />
                   </Form.Item>
 
@@ -558,7 +636,11 @@ export default function ExerciseEditPage() {
         </Form>
 
         {/* Progress Modal */}
-        <ProgressModal open={showProgressModal} status={uploadStatus} />
+        <ProgressModal
+          open={showProgressModal}
+          status={uploadStatus}
+          title={uploadProgress < 100 ? "Đang cập nhật bài tập..." : "Hoàn tất!"}
+        />
       </div>
     </div>
   );

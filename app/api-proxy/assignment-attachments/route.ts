@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TIMEOUTS } from '../constants';
 import { createErrorResponse, handleFetchError, logError } from '../utils/errorHandler';
+import { cookieFilter } from '../utils/cookieFilter';
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes for large file uploads
@@ -19,6 +20,31 @@ export async function POST(request: NextRequest) {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611/api";
     const formData = await request.formData();
 
+    // Forward cookies and authorization headers
+    const cookieHeader = request.headers.get("cookie");
+    const authHeader = request.headers.get("authorization");
+    const csrfHeader = request.headers.get("x-csrf-token");
+
+    const headers: HeadersInit = {
+      // Don't set Content-Type for multipart/form-data - let browser set boundary
+    };
+
+    if (authHeader) {
+      headers.Authorization = authHeader;
+    }
+
+    // Use cookieFilter to properly filter and decode cookies
+    if (cookieHeader) {
+      const filteredCookies = cookieFilter.filterCookies(cookieHeader);
+      if (filteredCookies) {
+        headers.Cookie = filteredCookies;
+      }
+    }
+
+    if (csrfHeader) {
+      headers["X-CSRF-Token"] = csrfHeader;
+    }
+
     // Forward the request to the backend API with timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.FILE_UPLOAD);
@@ -27,6 +53,7 @@ export async function POST(request: NextRequest) {
     try {
       backendResponse = await fetch(`${apiUrl}/assignment-attachments?userId=${userId}`, {
         method: "POST",
+        headers,
         body: formData,
         signal: controller.signal,
         // Don't set Content-Type header - let fetch set it automatically with boundary

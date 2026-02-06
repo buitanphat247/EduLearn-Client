@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { App, Skeleton } from "antd";
+import { App, Skeleton, Empty } from "antd";
 import { getFolders, type FolderResponse } from "@/lib/api/vocabulary";
 import VocabularyCard from "@/app/components/vocabulary/VocabularyCard";
 import DarkPagination from "@/app/components/common/DarkPagination";
@@ -114,10 +114,15 @@ export default function VocabularyFeature() {
             )}
           </>
         ) : (
-          <div className="text-center py-32 md:py-40 bg-white/50 dark:bg-[#1e293b]/50 rounded-3xl border border-slate-200 dark:border-slate-700/50 border-dashed transition-colors duration-300">
-            <p className="text-slate-500 dark:text-slate-400 text-lg">
-              {debouncedSearchQuery ? "Không tìm thấy folder nào phù hợp" : "Chưa có folder từ vựng nào"}
-            </p>
+          <div className="py-20 bg-white/50 dark:bg-[#1e293b]/50 rounded-3xl border border-slate-200 dark:border-slate-700/50 border-dashed transition-colors duration-300">
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={
+                <span className="text-slate-500 dark:text-slate-400 text-lg">
+                  {debouncedSearchQuery ? "Không tìm thấy folder nào phù hợp" : "Chưa có folder từ vựng nào"}
+                </span>
+              }
+            />
           </div>
         )}
       </div>

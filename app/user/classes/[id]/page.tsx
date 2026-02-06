@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { App, Spin, Button, Tabs, Table } from "antd";
-import { ArrowLeftOutlined, BellOutlined, FileTextOutlined, CalendarOutlined, UserOutlined } from "@ant-design/icons";
+import { App, Button, Tabs, Table, Skeleton } from "antd";
+import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
+import { ArrowLeftOutlined, BellOutlined, FileTextOutlined, CalendarOutlined, UserOutlined, ReloadOutlined } from "@ant-design/icons";
 import ClassInfoCard from "@/app/components/classes/ClassInfoCard";
 import ClassExercisesTab from "@/app/components/classes/ClassExercisesTab";
 import ClassNotificationsTab from "@/app/components/classes/ClassNotificationsTab";
 import ClassExamsTab from "@/app/components/classes/ClassExamsTab";
 import CustomCard from "@/app/components/common/CustomCard";
-import DataLoadingSplash from "@/app/components/common/DataLoadingSplash";
 import { getClassById, getClassStudentsByClass, type ClassStudentRecord } from "@/lib/api/classes";
 import { CLASS_STATUS_MAP, formatStudentId } from "@/lib/utils/classUtils";
 import { getUserIdFromCookie, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
@@ -56,9 +56,7 @@ export default function UserClassDetail() {
   // State
   const [classData, setClassData] = useState<ClassDataState>(null);
   const [loading, setLoading] = useState(true);
-  const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState("students");
-  const [isTabLoading, setIsTabLoading] = useState(false);
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
 
@@ -69,6 +67,11 @@ export default function UserClassDetail() {
   const [notificationPage, setNotificationPage] = useState(1);
   const [examSearchQuery, setExamSearchQuery] = useState("");
   const [examPage, setExamPage] = useState(1);
+  
+  // Refresh functions refs
+  const exerciseRefreshRef = useRef<(() => void) | null>(null);
+  const notificationRefreshRef = useRef<(() => void) | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Constants
   const exercisePageSize = 4;
@@ -195,8 +198,7 @@ export default function UserClassDetail() {
     if (!currentClassId) return;
 
     setLoading(true);
-    setShowSplash(true);
-    const startTime = Date.now();
+
 
     try {
       const className = await fetchClassInfo(true);
@@ -215,8 +217,6 @@ export default function UserClassDetail() {
       messageRef.current.error(errorMessage || "Không thể tải thông tin lớp học");
     } finally {
       setLoading(false);
-      const elapsed = Date.now() - startTime;
-      setTimeout(() => setShowSplash(false), Math.max(0, 250 - elapsed));
     }
   }, [fetchClassInfo, fetchClassStudents, router]);
 
@@ -431,24 +431,31 @@ export default function UserClassDetail() {
   }, [router]);
 
   const handleTabChange = useCallback((key: string) => {
-    setIsTabLoading(true);
     setActiveTab(key);
-    requestAnimationFrame(() => {
-      setTimeout(() => setIsTabLoading(false), 300);
-    });
   }, []);
 
-  // Tab content renderer
-  const renderTabContent = useCallback((content: React.ReactNode) => {
-    if (isTabLoading) {
-      return (
-        <div className="flex justify-center items-center h-64">
-          <Spin size="large" />
-        </div>
-      );
+  // Fast refresh handler
+  const handleFastRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // Refresh based on active tab
+      if (activeTab === "exercises" && exerciseRefreshRef.current) {
+        await exerciseRefreshRef.current();
+      } else if (activeTab === "notifications" && notificationRefreshRef.current) {
+        await notificationRefreshRef.current();
+      } else {
+        // Refresh all data if on other tabs
+        await fetchClassDetail();
+      }
+      messageRef.current.success("Đã cập nhật dữ liệu mới nhất");
+    } catch (error: any) {
+      messageRef.current.error(error?.message || "Không thể làm mới dữ liệu");
+    } finally {
+      setRefreshing(false);
     }
-    return content;
-  }, [isTabLoading]);
+  }, [activeTab, fetchClassDetail]);
+
+
 
   // Memoized students table
   const studentsTableContent = useMemo(() => (
@@ -473,7 +480,7 @@ export default function UserClassDetail() {
           Danh sách học sinh
         </span>
       ),
-      children: renderTabContent(studentsTableContent),
+      children: studentsTableContent,
     },
     {
       key: "notifications",
@@ -483,7 +490,7 @@ export default function UserClassDetail() {
           Thông báo
         </span>
       ),
-      children: renderTabContent(
+      children: (
         <ClassNotificationsTab
           classId={classId}
           searchQuery={notificationSearchQuery}
@@ -492,6 +499,9 @@ export default function UserClassDetail() {
           pageSize={notificationPageSize}
           onPageChange={handleNotificationPageChange}
           readOnly={true}
+          onRefresh={(refreshFn) => {
+            notificationRefreshRef.current = refreshFn;
+          }}
         />
       ),
     },
@@ -503,7 +513,7 @@ export default function UserClassDetail() {
           Bài tập
         </span>
       ),
-      children: renderTabContent(
+      children: (
         <ClassExercisesTab
           classId={classId}
           searchQuery={exerciseSearchQuery}
@@ -512,6 +522,9 @@ export default function UserClassDetail() {
           pageSize={exercisePageSize}
           onPageChange={handleExercisePageChange}
           readOnly={true}
+          onRefresh={(refreshFn) => {
+            exerciseRefreshRef.current = refreshFn;
+          }}
         />
       ),
     },
@@ -523,7 +536,7 @@ export default function UserClassDetail() {
           Kiểm tra
         </span>
       ),
-      children: renderTabContent(
+      children: (
         <ClassExamsTab
           classId={classId}
           searchQuery={examSearchQuery}
@@ -536,7 +549,7 @@ export default function UserClassDetail() {
       ),
     },
   ], [
-    studentsTableContent, renderTabContent, classId,
+    studentsTableContent, classId,
     notificationSearchQuery, notificationPage, handleNotificationSearchChange, handleNotificationPageChange,
     exerciseSearchQuery, exercisePage, handleExerciseSearchChange, handleExercisePageChange,
     examSearchQuery, examPage, handleExamSearchChange, handleExamPageChange,
@@ -584,8 +597,85 @@ export default function UserClassDetail() {
   ), [handleBack]);
 
   // Early returns
-  if (showSplash || loading) {
-    return <DataLoadingSplash tip="ĐANG TẢI DỮ LIỆU..." />;
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <Skeleton.Button active size="default" style={{ width: 120 }} />
+        </div>
+
+        {/* Info Card Skeleton (Matches ClassInfoCard) */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+            <div className="w-1.5 h-4 bg-blue-500 rounded-full animate-pulse" />
+            <Skeleton.Input active size="small" style={{ width: 150 }} />
+          </div>
+          <div className="p-0">
+            <div className="grid grid-cols-1 md:grid-cols-2">
+              {/* Row 1 */}
+              <div className="p-4 border-b border-r border-gray-100 dark:border-gray-700 flex flex-col gap-2">
+                <Skeleton.Input active size="small" style={{ width: 80 }} />
+                <Skeleton.Input active size="default" block />
+              </div>
+              <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col gap-2">
+                <Skeleton.Input active size="small" style={{ width: 80 }} />
+                <Skeleton.Input active size="default" block />
+              </div>
+              {/* Row 2 */}
+              <div className="p-4 border-r border-gray-100 dark:border-gray-700 flex flex-col gap-2">
+                <Skeleton.Input active size="small" style={{ width: 120 }} />
+                <Skeleton.Input active size="default" block />
+              </div>
+              <div className="p-4 flex flex-col gap-2">
+                <Skeleton.Input active size="small" style={{ width: 140 }} />
+                <div className="flex items-center gap-3">
+                  <Skeleton.Avatar active size="small" />
+                  <div className="flex flex-col gap-1 flex-1">
+                    <Skeleton.Input active size="small" style={{ width: "60%" }} />
+                    <Skeleton.Input active size="small" style={{ width: "40%" }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs Skeleton */}
+        <div className="space-y-4">
+          <div className="flex gap-8 border-b border-gray-200 dark:border-gray-700">
+            {["Danh sách học sinh", "Thông báo", "Bài tập", "Kiểm tra"].map((label, idx) => (
+              <div key={label} className={`pb-3 px-2 ${idx === 0 ? "border-b-2 border-blue-500" : ""}`}>
+                <Skeleton.Input active size="small" style={{ width: label.length * 8 }} />
+              </div>
+            ))}
+          </div>
+
+          {/* Tab Content Card Skeleton */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <Skeleton.Input active size="default" style={{ width: 200 }} />
+            </div>
+            <div className="p-0">
+              <div className="border-b border-gray-100 dark:border-gray-700 p-4">
+                <div className="flex gap-4">
+                  <Skeleton.Input active size="default" style={{ width: "20%" }} />
+                  <Skeleton.Input active size="default" style={{ width: "40%" }} />
+                  <Skeleton.Input active size="default" style={{ width: "40%" }} />
+                </div>
+              </div>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="p-4 border-b border-gray-50 dark:border-gray-700/50 flex gap-4">
+                  <Skeleton.Input active size="default" style={{ width: "20%" }} />
+                  <Skeleton.Input active size="default" style={{ width: "40%" }} />
+                  <Skeleton.Input active size="default" style={{ width: "30%" }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!classData) {
@@ -593,16 +683,25 @@ export default function UserClassDetail() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>
-          Quay lại
-        </Button>
+    <RouteErrorBoundary routeName="user">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>
+            Quay lại
+          </Button>
+          <Button 
+            icon={<ReloadOutlined />} 
+            onClick={handleFastRefresh} 
+            loading={refreshing}
+          >
+            Làm mới
+          </Button>
+        </div>
+
+        {classInfo && <ClassInfoCard classInfo={classInfo} onCopyCode={handleCopyCode} />}
+
+        <Tabs activeKey={activeTab} onChange={handleTabChange} destroyOnHidden items={tabItems} />
       </div>
-
-      {classInfo && <ClassInfoCard classInfo={classInfo} onCopyCode={handleCopyCode} />}
-
-      <Tabs activeKey={activeTab} onChange={handleTabChange} destroyInactiveTabPane items={tabItems} />
-    </div>
+    </RouteErrorBoundary>
   );
 }

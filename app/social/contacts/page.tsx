@@ -14,7 +14,7 @@ import { acceptFriendRequest as acceptFriendRequestSocket, rejectFriendRequest a
 
 export default function ContactsPage() {
   const router = useRouter();
-    const {
+  const {
     contacts,
     receivedFriendRequests,
     friendRequests,
@@ -146,10 +146,10 @@ export default function ContactsPage() {
         setContactSubTab={setContactSubTab}
         conversations={[]} // Empty for contacts tab
         selectedConversation={null}
-        setSelectedConversation={() => {}}
+        setSelectedConversation={() => { }}
         receivedFriendRequestsCount={receivedFriendRequests.length}
         handleAddFriendClick={() => setIsAddFriendOpen(true)}
-        onDeleteConversation={async (id) => { console.log('Delete conversation in contacts not implemented', id); }}
+        onDeleteConversation={async (id) => { }}
       />
 
       <main className="flex-1 flex flex-col min-w-0 bg-slate-900 relative h-full overflow-hidden">

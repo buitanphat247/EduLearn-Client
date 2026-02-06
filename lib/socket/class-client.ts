@@ -10,6 +10,8 @@ type SocketInstance = ReturnType<typeof io>;
 class ClassSocketClient {
   private socket: SocketInstance | null = null;
   private isConnecting = false;
+  private isAuthenticated = false;
+  private pendingClassJoins: Set<string | number> = new Set();
   private connectionListeners: Set<(connected: boolean) => void> = new Set();
 
   private getSocketUrl(): string {
@@ -48,20 +50,38 @@ class ClassSocketClient {
     return null;
   }
 
-  private getAccessToken(): string | null {
+  /**
+   * Get encrypted user data from cookie _u
+   * NOTE: Cookie _u is NOT httpOnly, so JavaScript can read it
+   */
+  private getEncryptedUser(): string | null {
     if (typeof window === "undefined") return null;
-    
-    // Check localStorage first
-    const token = localStorage.getItem("accessToken");
-    if (token) return token;
 
-    // Check cookies
     try {
       const { getCookie } = require("@/lib/utils/cookies");
-      const cookieToken = getCookie("accessToken");
-      if (cookieToken) return cookieToken;
-    } catch (e) {}
+      // Get encrypted user from cookie _u
+      const encryptedUser = getCookie("_u");
+      if (encryptedUser) return encryptedUser;
+    } catch (e) {
+      console.error("Error getting encrypted user:", e);
+    }
 
+    return null;
+  }
+
+  /**
+   * Get JWT token from cookie _at
+   */
+  private getToken(): string | null {
+    if (typeof window === "undefined") return null;
+
+    try {
+      const { getCookie } = require("@/lib/utils/cookies");
+      const token = getCookie("_at");
+      if (token) return token;
+    } catch (e) {
+      console.error("Error getting token:", e);
+    }
     return null;
   }
 
@@ -73,17 +93,24 @@ class ClassSocketClient {
     if (!socketUrl) return null;
 
     const userId = this.getUserId();
-    const token = this.getAccessToken();
+    const encryptedUser = this.getEncryptedUser();
+    const token = this.getToken(); // ✅ Get JWT token
 
-    if (!userId) return null;
+    // User ID is required for socket connection identification
+    if (!userId) {
+      console.warn("[ClassSocket] No user ID found, cannot connect");
+      return null;
+    }
 
     this.isConnecting = true;
 
     try {
+      console.log("[ClassSocket] Connecting to:", socketUrl);
+
       this.socket = io(`${socketUrl}/class`, {
         auth: {
-          token: token || undefined,
           user_id: userId,
+          token: token, // ✅ Send token in handshake auth as well
         },
         query: {
           userId: String(userId),
@@ -97,13 +124,41 @@ class ClassSocketClient {
 
       this.socket.on("connect", () => {
         console.log("Class socket connected:", this.socket?.id);
+
+        this.isAuthenticated = false;
+
+        // Authenticate using encrypted user data
+        if (encryptedUser || token) {
+          console.log("[ClassSocket] Authenticating...");
+          this.socket?.emit("authenticate", {
+            encryptedData: encryptedUser,
+            token: token,
+          });
+        } else {
+          console.warn("[ClassSocket] Connected but no authentication data found!");
+        }
+
         this.isConnecting = false;
         this.connectionListeners.forEach((listener) => listener(true));
+      });
+
+      this.socket.on("class:authenticated", (data: any) => {
+        console.log("[ClassSocket] Authentication successful:", data);
+        this.isAuthenticated = true;
+
+        if (this.pendingClassJoins.size > 0) {
+          console.log(`[ClassSocket] Joining ${this.pendingClassJoins.size} pending class rooms`);
+          this.pendingClassJoins.forEach((classId) => {
+            this.socket?.emit("join_class", { class_id: classId });
+          });
+          this.pendingClassJoins.clear();
+        }
       });
 
       this.socket.on("disconnect", (reason: string) => {
         console.log("Class socket disconnected:", reason);
         this.isConnecting = false;
+        this.isAuthenticated = false;
         this.connectionListeners.forEach((listener) => listener(false));
       });
 
@@ -111,6 +166,20 @@ class ClassSocketClient {
         console.error("Class socket connection error:", error);
         this.isConnecting = false;
         this.connectionListeners.forEach((listener) => listener(false));
+      });
+
+      // Listen for server confirmation
+      this.socket.on("class:connected", (data: any) => {
+        console.log("[ClassSocket] Server confirmed connection:", data);
+      });
+
+      // Listen for server errors
+      this.socket.on("class:error", (data: any) => {
+        try {
+          console.error("[ClassSocket] Server error:", typeof data === "object" ? JSON.stringify(data, null, 2) : data);
+        } catch (e) {
+          console.error("[ClassSocket] Server error (raw):", data);
+        }
       });
     } catch (error) {
       console.error("Error creating class socket connection:", error);
@@ -171,7 +240,17 @@ class ClassSocketClient {
 
   // Helper method specifically for class updates
   joinClass(classId: string | number) {
-    this.emit("join_class", { class_id: classId });
+    console.log(`[ClassSocket] Attempting to join class room: ${classId}`);
+    if (this.isAuthenticated && this.socket?.connected) {
+      console.log(`[ClassSocket] Emitting join_class for: ${classId}`);
+      this.emit("join_class", { class_id: classId });
+    } else {
+      console.log(`[ClassSocket] Queueing join_class for: ${classId} (waiting for auth)`);
+      this.pendingClassJoins.add(classId);
+      if (!this.socket?.connected && !this.isConnecting) {
+        this.connect();
+      }
+    }
   }
 
   leaveClass(classId: string | number) {

@@ -5,10 +5,10 @@
 
 // Timeout constants (in milliseconds)
 export const TIMEOUTS = {
-  DEFAULT: 30000,      // 30 seconds - default timeout
-  PROFILE: 10000,      // 10 seconds - optimized for profile requests
+  DEFAULT: 30000, // 30 seconds - default timeout
+  PROFILE: 10000, // 10 seconds - optimized for profile requests
   AI_GENERATION: 60000, // 60 seconds - timeout for AI generation
-  FILE_UPLOAD: 300000,  // 5 minutes - timeout for large file uploads
+  FILE_UPLOAD: 300000, // 5 minutes - timeout for large file uploads
 } as const;
 
 // Rate limiting constants
@@ -24,4 +24,4 @@ export const BODY_SIZE_LIMITS = {
 } as const;
 
 // Allowed cookie names for forwarding
-export const ALLOWED_COOKIE_NAMES = ['_u', 'access_token', 'refresh_token'] as const;
+export const ALLOWED_COOKIE_NAMES = ["_u", "_csrf", "access_token", "refresh_token", "_at", "_rt"] as const;

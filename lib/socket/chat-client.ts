@@ -29,8 +29,11 @@ class ChatSocketClient {
   private getUserId(): number | string | null {
     if (typeof window === "undefined") return null;
 
-    // Try localStorage first
     try {
+      const { getUserIdFromCookie } = require("@/lib/utils/cookies");
+      const userId = getUserIdFromCookie();
+      if (userId) return userId;
+
       const userStr = localStorage.getItem("user");
       if (userStr) {
         const user = JSON.parse(userStr);
@@ -38,41 +41,25 @@ class ChatSocketClient {
         if (user.id) return user.id;
       }
     } catch (error) {
-      console.error("Error getting user ID from localStorage:", error);
+      console.error("Error getting user ID:", error);
     }
-
-    // Try cookie
-    try {
-      const cookies = document.cookie.split(";");
-      for (const cookie of cookies) {
-        const [name, value] = cookie.trim().split("=");
-        if (name === "user_id") {
-          return decodeURIComponent(value);
-        }
-      }
-    } catch (e) {}
-
     return null;
   }
 
-  private getAccessToken(): string | null {
+  /**
+   * Get encrypted user data from cookie _u
+   * NOTE: Cookie _u is NOT httpOnly, so JavaScript can read it
+   */
+  private getEncryptedUser(): string | null {
     if (typeof window === "undefined") return null;
 
-    // Try localStorage first
-    const token = localStorage.getItem("accessToken");
-    if (token) return token;
-
-    // Try to get from cookie
     try {
-      const cookies = document.cookie.split(";");
-      for (const cookie of cookies) {
-        const [name, value] = cookie.trim().split("=");
-        if (name === "accessToken") {
-          return decodeURIComponent(value);
-        }
-      }
-    } catch (error) {
-      console.error("Error getting token from cookie:", error);
+      const { getCookie } = require("@/lib/utils/cookies");
+      // Get encrypted user from cookie _u
+      const encryptedUser = getCookie("_u");
+      if (encryptedUser) return encryptedUser;
+    } catch (e) {
+      console.error("Error getting encrypted user:", e);
     }
 
     return null;
@@ -96,20 +83,21 @@ class ChatSocketClient {
     }
 
     const userId = this.getUserId();
-    const token = this.getAccessToken();
+    const encryptedUser = this.getEncryptedUser();
 
     if (!userId) {
-      console.warn("No user ID found. Chat socket connection requires user ID.");
+      console.warn("[ChatSocket] No user ID found, cannot connect");
       return null;
     }
 
     this.isConnecting = true;
 
     try {
+      console.log("[ChatSocket] Connecting to:", socketUrl);
+
       // Connect to /chat namespace
       this.socket = io(`${socketUrl}/chat`, {
         auth: {
-          token: token || undefined,
           user_id: userId,
         },
         query: {
@@ -125,10 +113,23 @@ class ChatSocketClient {
       // Connection event handlers
       this.socket.on("connect", () => {
         console.log("Chat socket connected:", this.socket?.id);
+
+        // Authenticate using encrypted user data
+        if (encryptedUser) {
+          console.log("[ChatSocket] Authenticating with encrypted user data...");
+          this.socket?.emit("authenticate", { encryptedData: encryptedUser });
+        } else {
+          console.warn("[ChatSocket] Connected but no encrypted user data found!");
+        }
+
         this.isConnecting = false;
 
         // Notify all listeners
         this.connectionListeners.forEach((listener) => listener(true));
+      });
+
+      this.socket.on("chat:authenticated", (data: any) => {
+        console.log("[ChatSocket] Authentication successful:", data);
       });
 
       this.socket.on("disconnect", (reason: string) => {
@@ -145,6 +146,10 @@ class ChatSocketClient {
 
         // Notify all listeners
         this.connectionListeners.forEach((listener) => listener(false));
+      });
+
+      this.socket.on("chat:error", (data: any) => {
+        console.error("[ChatSocket] Server error:", data);
       });
     } catch (error) {
       console.error("Error creating chat socket connection:", error);

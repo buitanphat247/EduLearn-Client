@@ -29,7 +29,7 @@ export default function BannedStudentModal({ open, onCancel, student, classInfo 
       onCancel={onCancel}
       footer={null}
       width={600}
-      destroyOnClose={true}
+      destroyOnHidden={true}
       maskClosable={true}
     >
       <div className="space-y-6">

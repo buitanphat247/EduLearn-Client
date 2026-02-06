@@ -2,43 +2,29 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AppstoreOutlined, ReadOutlined, UserOutlined, FileTextOutlined, SettingOutlined, LogoutOutlined } from "@ant-design/icons";
+import {
+  AppstoreOutlined,
+  ReadOutlined,
+  UserOutlined,
+  FileTextOutlined,
+  SettingOutlined,
+  LogoutOutlined,
+  BarChartOutlined
+} from "@ant-design/icons";
 import { IoBookOutline } from "react-icons/io5";
 import { Button, App } from "antd";
 
-/**
- * AdminSidebar - Navigation sidebar for admin dashboard
- * 
- * @description 
- * Provides navigation sidebar for admin users with:
- * - Logo and branding
- * - Navigation menu items with icons
- * - Active route highlighting
- * - "Coming soon" feature indicators
- * - Go home button
- * - Full keyboard navigation support
- * 
- * @example
- * ```tsx
- * <AdminSidebar />
- * ```
- * 
- * @returns {JSX.Element} Rendered sidebar component
- * 
- * @accessibility
- * - Navigation links have proper ARIA labels
- * - Active route is indicated with aria-current
- * - Keyboard navigation support (Tab, Enter, Space)
- * - Focus management
- * - Screen reader friendly
- */
-const menuItems = [
-  { path: "/admin", icon: AppstoreOutlined, label: "Dashboard" },
-  { path: "/admin/classes", icon: ReadOutlined, label: "Quản lí lớp học" },
-  { path: "/admin/students", icon: UserOutlined, label: "Quản lí học sinh" },
-  { path: "/admin/courses", icon: IoBookOutline, label: "Quản lí khóa học", isComingSoon: true },
+const completedItems = [
+  { path: "/admin", icon: AppstoreOutlined, label: "Trang chủ" },
+  { path: "/admin/classes", icon: ReadOutlined, label: "Quản lý lớp học" },
+  { path: "/admin/students", icon: UserOutlined, label: "Quản lý học sinh" },
   { path: "/admin/document-crawl", icon: FileTextOutlined, label: "Tài liệu hệ thống" },
   { path: "/admin/settings", icon: SettingOutlined, label: "Cài đặt" },
+];
+
+const pendingItems = [
+  { path: "/admin/courses", icon: IoBookOutline, label: "Khóa học của tôi", isComingSoon: true },
+  { path: "/admin/analytics", icon: BarChartOutlined, label: "Tổng quan khóa học", isComingSoon: true },
 ];
 
 export default function AdminSidebar() {
@@ -50,7 +36,7 @@ export default function AdminSidebar() {
     router.push("/");
   };
 
-  const handleMenuItemClick = (item: typeof menuItems[0], e: React.MouseEvent) => {
+  const handleMenuItemClick = (item: { isComingSoon?: boolean }, e: React.MouseEvent) => {
     if (item.isComingSoon) {
       e.preventDefault();
       message.info("Tính năng đang phát triển");
@@ -58,14 +44,96 @@ export default function AdminSidebar() {
     }
   };
 
+  const renderSidebarItem = (item: any) => {
+    const Icon = item.icon;
+    const isExactMatch = item.path === "/admin";
+    const isActive = isExactMatch ? pathname === "/admin" : pathname?.startsWith(item.path);
+
+    return (
+      <div
+        key={item.path}
+        className={`group flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-300 ease-in-out ${isActive
+          ? "bg-blue-100 dark:bg-blue-900/40"
+          : "hover:bg-blue-50/80 dark:hover:bg-blue-900/15 hover:opacity-100 opacity-90 cursor-pointer"
+          }`}
+      >
+        {item.isComingSoon ? (
+          <div
+            onClick={(e) => handleMenuItemClick(item, e)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleMenuItemClick(item, e as any);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={`${item.label} (Sắp ra mắt)`}
+            className="flex items-center gap-4 w-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 rounded-lg"
+          >
+            <Icon
+              className={`text-xl transition-all duration-300 ${isActive
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                }`}
+              aria-hidden="true"
+            />
+            <span
+              className={`text-[14px] transition-all duration-300 ${isActive
+                ? "font-bold text-blue-600 dark:text-blue-400"
+                : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
+                }`}
+            >
+              {item.label}
+            </span>
+          </div>
+        ) : (
+          <Link
+            href={item.path}
+            prefetch={false}
+            onMouseEnter={() => {
+
+              router.prefetch(item.path);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                router.push(item.path);
+              }
+            }}
+            aria-label={`Điều hướng đến ${item.label}`}
+            aria-current={isActive ? 'page' : undefined}
+            className="flex items-center gap-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 rounded-lg"
+          >
+            <Icon
+              className={`text-xl transition-all duration-300 ${isActive
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                }`}
+              aria-hidden="true"
+            />
+            <span
+              className={`text-[14px] transition-all duration-300 ${isActive
+                ? "font-bold text-blue-600 dark:text-blue-400"
+                : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
+                }`}
+            >
+              {item.label}
+            </span>
+          </Link>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <aside 
+    <aside
       className="w-64 h-screen flex flex-col z-50 transition-all duration-300 border-r border-gray-100 dark:!border-slate-700 bg-white dark:bg-gray-900"
       aria-label="Admin navigation sidebar"
     >
       {/* Logo Section */}
       <div className="p-4 pb-6 flex items-center gap-3">
-        <div 
+        <div
           className="w-10 h-10 bg-linear-to-br from-indigo-600 via-purple-600 to-blue-600 rounded-xl flex items-center justify-center shadow-lg"
           aria-hidden="true"
         >
@@ -75,98 +143,28 @@ export default function AdminSidebar() {
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isExactMatch = item.path === "/admin";
-          const isActive = isExactMatch ? pathname === "/admin" : pathname?.startsWith(item.path);
+      <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto custom-scrollbar">
+        <div className="flex items-center px-2 mb-3 mt-2">
+          <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1"></div>
+          <span className="px-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Hệ thống quản lý</span>
+          <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1"></div>
+        </div>
+        {completedItems.map(renderSidebarItem)}
 
-          return (
-            <div
-              key={item.path}
-              className={`group flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-300 ease-in-out ${isActive
-                ? "bg-blue-100 dark:bg-blue-900/40"
-                : "hover:bg-blue-50/80 dark:hover:bg-blue-900/15 hover:opacity-100 opacity-90 cursor-pointer"
-                }`}
-            >
-              {item.isComingSoon ? (
-                <div 
-                  onClick={(e) => handleMenuItemClick(item, e)} 
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleMenuItemClick(item, e as any);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${item.label} (Sắp ra mắt)`}
-                  className="flex items-center gap-4 w-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 rounded-lg"
-                >
-                  <Icon
-                    className={`text-xl transition-all duration-300 ${isActive
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                      }`}
-                    aria-hidden="true"
-                  />
-                  <span
-                    className={`text-[14px] transition-all duration-300 ${isActive
-                      ? "font-bold text-blue-600 dark:text-blue-400"
-                      : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
-                      }`}
-                  >
-                    {item.label}
-                  </span>
-                </div>
-              ) : (
-                <Link
-                  href={item.path}
-                  prefetch={false}
-                  onMouseEnter={() => {
-                    if (process.env.NODE_ENV === 'development') {
-                      console.log(`🚀 [Prefetch] Hovering over: ${item.path}`);
-                    }
-                    router.prefetch(item.path);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      router.push(item.path);
-                    }
-                  }}
-                  aria-label={`Điều hướng đến ${item.label}`}
-                  aria-current={isActive ? 'page' : undefined}
-                  className="flex items-center gap-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 rounded-lg"
-                >
-                  <Icon
-                    className={`text-xl transition-all duration-300 ${isActive
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                      }`}
-                    aria-hidden="true"
-                  />
-                  <span
-                    className={`text-[14px] transition-all duration-300 ${isActive
-                      ? "font-bold text-blue-600 dark:text-blue-400"
-                      : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
-                      }`}
-                  >
-                    {item.label}
-                  </span>
-                </Link>
-              )}
-            </div>
-          );
-        })}
+        <div className="flex items-center px-2 mb-3 mt-6">
+          <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1"></div>
+          <span className="px-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Đang phát triển</span>
+          <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1"></div>
+        </div>
+        {pendingItems.map(renderSidebarItem)}
       </nav>
 
       {/* Go Home Button */}
       <div className="p-4">
-        <Button 
-          size="large" 
-          type="primary" 
-          danger 
+        <Button
+          size="large"
+          type="primary"
+          danger
           onClick={handleGoHome}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {

@@ -225,3 +225,11 @@ header > nav > button[data-active] span {
   -webkit-text-fill-color: inherit !important;
   transition: none !important;
 }
+
+/* Remove focus outline for seamless clicks */
+button:focus,
+a:focus,
+div[role="button"]:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}

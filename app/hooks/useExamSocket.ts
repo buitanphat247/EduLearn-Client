@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import io from "socket.io-client";
-import type { Socket as SocketType } from "socket.io-client";
 
 /**
  * Socket.IO connection URL for exam real-time features
@@ -42,7 +41,7 @@ interface UseExamSocketProps {
  * const { isConnected, socket } = useExamSocket({
  *   examId: '123',
  *   studentId: '456',
- *   onConnect: () => console.log('Connected'),
+
  * });
  * ```
  */

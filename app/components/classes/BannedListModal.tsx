@@ -178,7 +178,7 @@ export default function BannedListModal({ open, onCancel, classId, className, on
       onCancel={onCancel}
       footer={null}
       width={900}
-      destroyOnClose={true}
+      destroyOnHidden={true}
     >
       <Spin spinning={loading}>
         <div style={{ minHeight: "400px" }}>

@@ -4,13 +4,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
-  border-radius: 8px;
-  transition: background-color 0.2s;
+  border-radius: 50%;
+  transition: all 0.2s ease;
 }
 
 .notification-bell-wrapper:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(0, 0, 0, 0.06);
+  transform: scale(1.05);
 }
 
 .dark .notification-bell-wrapper:hover {
@@ -23,46 +23,40 @@
   justify-content: center;
 }
 
-.notification-dropdown-overlay .ant-dropdown-menu {
-  max-width: 400px;
-  max-height: 500px;
-  overflow-y: auto;
-  padding: 8px;
+/* Drawer Styling Overrides */
+.notification-drawer .ant-drawer-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.notification-item.unread {
-  background-color: rgba(59, 130, 246, 0.05);
+.dark .notification-drawer .ant-drawer-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: #0f172a;
 }
 
-.dark .notification-item.unread {
-  background-color: rgba(59, 130, 246, 0.15);
+.dark .notification-drawer .ant-drawer-content {
+  background-color: #0f172a;
 }
 
-.notification-item .ant-dropdown-menu-item {
-  padding: 0 !important;
-  margin-bottom: 4px;
+.dark .notification-drawer .ant-drawer-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.notification-item .ant-dropdown-menu-item:last-child {
-  margin-bottom: 0;
+.notification-drawer .ant-drawer-close {
+  margin-right: 12px;
 }
 
-.notification-item .ant-dropdown-menu-item:hover {
-  background-color: transparent !important;
+/* Modal Styling */
+.notification-detail-modal .ant-modal-content {
+  border-radius: 16px;
+  overflow: hidden;
+  padding: 0;
 }
 
-.notification-dropdown .ant-dropdown-menu-item {
-  padding: 0 !important;
+.notification-detail-modal .ant-modal-body {
+  padding: 0;
 }
 
-.notification-dropdown .ant-dropdown-menu-item:hover {
-  background-color: transparent !important;
-}
-
-.notification-detail-modal .ant-modal-header {
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.dark .notification-detail-modal .ant-modal-header {
-  border-bottom-color: #374151;
+.dark .notification-detail-modal .ant-modal-content {
+  background-color: #1e293b; /* Slate 800 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }

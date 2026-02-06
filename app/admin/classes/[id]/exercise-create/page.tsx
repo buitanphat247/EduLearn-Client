@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import apiClient from "@/app/config/api";
 import { useRouter, useParams } from "next/navigation";
 import { App, Button, Input, Upload, Form, DatePicker, Modal, Spin, Select } from "antd";
 import CustomCard from "@/app/components/common/CustomCard";
@@ -103,26 +104,12 @@ export default function ExerciseCreatePage() {
         status: values.status || 'published',
       };
 
-      const createResponse = await fetch(`/api-proxy/assignments?userId=${numericUserId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(assignmentData),
-      });
+      // Use apiClient instead of fetch
+      const createResponse = await apiClient.post(`/assignments?userId=${numericUserId}`, assignmentData);
+      setUploadProgress(30);
+      setUploadStatus("Đã tạo bài tập. Đang upload file đính kèm...");
 
-      if (!createResponse.ok) {
-        const errorData = await createResponse.json().catch(() => ({}));
-        const errorMessage = errorData?.message || errorData?.error || `HTTP ${createResponse.status}: ${createResponse.statusText}`;
-        throw new Error(errorMessage || "Không thể tạo bài tập");
-      }
-
-      // Check if response is 201 Created
-      if (createResponse.status !== 201) {
-        throw new Error(`Unexpected status code: ${createResponse.status}`);
-      }
-
-      const assignmentResult = await createResponse.json();
+      const assignmentResult = createResponse.data;
 
       // Try different possible field names
       const assignmentId = assignmentResult?.assignment_id || assignmentResult?.id || assignmentResult?.data?.assignment_id;
@@ -131,10 +118,8 @@ export default function ExerciseCreatePage() {
         throw new Error("Không nhận được ID bài tập từ server. Vui lòng kiểm tra lại response.");
       }
 
-      setUploadProgress(30);
-      setUploadStatus(`Đã tạo bài tập. Đang upload ${fileList.length} file...`);
 
-      // Step 2: Upload files sequentially
+      // Step 2: Upload files directly to backend
       if (fileList.length > 0) {
         const totalFiles = fileList.length;
         let uploadedCount = 0;
@@ -145,61 +130,87 @@ export default function ExerciseCreatePage() {
             continue;
           }
 
-          setUploadStatus(`Đang upload file ${i + 1}/${totalFiles}: ${file.name}`);
+          try {
+            const formData = new FormData();
+            const formattedFileName = formatFileName(file.name || "file");
+            formData.append("file", file.originFileObj, formattedFileName);
+            formData.append("assignment_id", String(assignmentId));
 
-          // File size validation removed - backend will handle size limits
+            setUploadStatus(`Đang upload file ${i + 1}/${totalFiles}: ${file.name}`);
 
-          const formData = new FormData();
-          formData.append("assignment_id", String(assignmentId));
-          // Format file name: remove diacritics, lowercase, replace spaces with underscores
-          const formattedFileName = formatFileName(file.name);
-          formData.append("file", file.originFileObj, formattedFileName);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 300000);
 
-          const uploadResponse = await fetch(`/api-proxy/assignment-attachments?userId=${numericUserId}`, {
-            method: "POST",
-            body: formData,
-          });
-
-          if (!uploadResponse.ok) {
-            let errorMessage = "Lỗi không xác định";
-            const status = uploadResponse.status;
-
+            let uploadResponse: Response;
             try {
-              const contentType = uploadResponse.headers.get("content-type");
-              if (contentType && contentType.includes("application/json")) {
-                const errorData = await uploadResponse.json();
-                errorMessage =
-                  errorData?.message ||
-                  errorData?.error ||
-                  errorData?.detail ||
-                  errorData?.error_message ||
-                  `HTTP ${status}: ${uploadResponse.statusText}`;
-              } else {
-                const errorText = await uploadResponse.text();
-                errorMessage = errorText || `HTTP ${status}: ${uploadResponse.statusText}`;
+              uploadResponse = await fetch(`/api-proxy/assignment-attachments?userId=${numericUserId}`, {
+                method: "POST",
+                body: formData,
+                signal: controller.signal,
+              });
+              clearTimeout(timeoutId);
+            } catch (fetchError: any) {
+              clearTimeout(timeoutId);
+              if (fetchError.name === "AbortError") {
+                throw new Error(`Request timeout: Không thể upload file ${file.name} sau 5 phút.`);
               }
-            } catch (parseError) {
-              errorMessage = `HTTP ${status}: ${uploadResponse.statusText}`;
+              throw fetchError;
             }
 
-            // Provide more specific error messages based on status code
-            if (status === 500) {
-              errorMessage = `Lỗi server (500): ${errorMessage}. Vui lòng thử lại sau hoặc liên hệ quản trị viên.`;
-            } else if (status === 400) {
-              errorMessage = `Dữ liệu không hợp lệ (400): ${errorMessage}`;
-            } else if (status === 413) {
-              errorMessage = `File quá lớn (413): ${errorMessage}`;
+            if (!uploadResponse.ok) {
+              let errorMessage = "Lỗi không xác định";
+              const status = uploadResponse.status;
+
+              try {
+                const contentType = uploadResponse.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                  const errorData = await uploadResponse.json();
+                  errorMessage =
+                    errorData?.message ||
+                    errorData?.error ||
+                    errorData?.detail ||
+                    errorData?.error_message ||
+                    `HTTP ${status}: ${uploadResponse.statusText}`;
+                } else {
+                  const errorText = await uploadResponse.text();
+                  errorMessage = errorText || `HTTP ${status}: ${uploadResponse.statusText}`;
+                }
+              } catch (parseError) {
+                errorMessage = `HTTP ${status}: ${uploadResponse.statusText}`;
+              }
+
+              if (status === 500) {
+                errorMessage = `Lỗi server (500): ${errorMessage}. Vui lòng thử lại sau hoặc liên hệ quản trị viên.`;
+              } else if (status === 400) {
+                errorMessage = `Dữ liệu không hợp lệ (400): ${errorMessage}`;
+              } else if (status === 413) {
+                errorMessage = `File quá lớn (413): ${errorMessage}`;
+              }
+
+              throw new Error(`Không thể upload file ${file.name}: ${errorMessage}`);
             }
 
-            throw new Error(`Không thể upload file ${file.name}: ${errorMessage}`);
+            uploadedCount++;
+            const progress = 30 + Math.floor((uploadedCount / totalFiles) * 70);
+            setUploadProgress(progress);
+          } catch (error: any) {
+            // Handle network errors
+            let errorMessage = error?.message || "Lỗi không xác định";
+            if (
+              error.message?.includes("Failed to fetch") ||
+              error.message?.includes("NetworkError") ||
+              error.name === "TypeError"
+            ) {
+              errorMessage = `Lỗi kết nối: Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng và thử lại. File: ${file.name}`;
+            }
+            message.error(`Không thể upload file ${file.name}: ${errorMessage}`);
+            // Continue with next file instead of throwing
           }
-
-          uploadedCount++;
-          const progress = 30 + Math.floor((uploadedCount / totalFiles) * 70);
-          setUploadProgress(progress);
         }
 
-        setUploadStatus(`Đã upload thành công ${uploadedCount} file`);
+        if (uploadedCount > 0) {
+          setUploadStatus(`Đã upload thành công ${uploadedCount}/${totalFiles} file`);
+        }
       } else {
         setUploadProgress(100);
       }
@@ -209,13 +220,12 @@ export default function ExerciseCreatePage() {
 
       message.success("Tạo bài tập thành công!");
       setShowProgressModal(false);
-      router.push(`/admin/classes/${classId}`);
+      router.push(`/admin/classes/${classId}?refresh=exercises`);
     } catch (error: any) {
       setShowProgressModal(false);
       message.error(error?.message || "Không thể tạo bài tập");
     } finally {
       setSubmitting(false);
-      setUploadProgress(0);
       setUploadStatus("");
     }
   };

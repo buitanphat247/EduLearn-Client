@@ -2,16 +2,18 @@
 
 import { memo } from "react";
 import { Button, Space } from "antd";
-import { ArrowLeftOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 
 interface ClassHeaderProps {
   className: string;
   onEdit: () => void;
   onDelete: () => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
-function ClassHeader({ className, onEdit, onDelete }: ClassHeaderProps) {
+function ClassHeader({ className, onEdit, onDelete, onRefresh, refreshing = false }: ClassHeaderProps) {
   const router = useRouter();
 
   return (
@@ -22,6 +24,16 @@ function ClassHeader({ className, onEdit, onDelete }: ClassHeaderProps) {
         </Button>
       </div>
       <Space>
+        {onRefresh && (
+          <Button 
+            icon={<ReloadOutlined />} 
+            onClick={onRefresh} 
+            loading={refreshing}
+            className="cursor-pointer"
+          >
+            Làm mới
+          </Button>
+        )}
         <Button icon={<EditOutlined />} onClick={onEdit} className="cursor-pointer">
           Chỉnh sửa
         </Button>

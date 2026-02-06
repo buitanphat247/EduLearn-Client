@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, memo, useRef } from "react";
-import { App, Spin, Input, Button, Tag, Dropdown, Pagination, Modal, Empty } from "antd";
+import { App, Input, Button, Dropdown, Pagination, Modal, Empty, Skeleton, Tag } from "antd";
 import type { MenuProps } from "antd";
 import { SearchOutlined, PlusOutlined, MoreOutlined, CalendarOutlined } from "@ant-design/icons";
 import { deleteNotification, getNotificationsByScopeId, getNotificationById, type NotificationResponse } from "@/lib/api/notifications";
 import CreateClassNotificationModal from "./CreateClassNotificationModal";
 import EditClassNotificationModal from "./EditClassNotificationModal";
 import type { ClassNotificationsTabProps, Notification } from "./types";
-import { notificationSocketClient } from "@/lib/socket/notification-client";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { getClassById, type ClassDetailResponse } from "@/lib/api/classes";
 
 const ClassNotificationsTab = memo(function ClassNotificationsTab({
   classId,
@@ -20,16 +20,17 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
   onPageChange,
   onNotificationCreated,
   readOnly = false,
+  onRefresh,
 }: ClassNotificationsTabProps) {
   const { message, modal } = App.useApp();
   const messageRef = useRef(message);
   const modalRef = useRef(modal);
 
-  // Update refs when they change
   useEffect(() => {
     messageRef.current = message;
     modalRef.current = modal;
   }, [message, modal]);
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -40,528 +41,368 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
   const [total, setTotal] = useState(0);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [loadingEdit, setLoadingEdit] = useState(false);
+  const [classDetails, setClassDetails] = useState<ClassDetailResponse | null>(null);
 
-  // Debounce search query
+  // Fetch class details to get the name
   useEffect(() => {
-    // Nếu là lần đầu hoặc searchQuery rỗng, set luôn không cần đợi 500ms
+    if (classId) {
+      getClassById(classId).then(setClassDetails).catch(err => console.error("Error fetching class details for tab:", err));
+    }
+  }, [classId]);
+
+  useEffect(() => {
     if (!searchQuery) {
       setDebouncedSearchQuery("");
       return;
     }
-
     const timer = setTimeout(() => {
       const prevSearch = debouncedSearchQuery;
       setDebouncedSearchQuery(searchQuery);
-      // Reset to page 1 when search thực sự thay đổi
       if (searchQuery !== prevSearch && currentPage !== 1) {
         onPageChange(1);
       }
     }, 250);
-
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]); // Only depend on searchQuery to prevent rerender loop
+  }, [searchQuery, debouncedSearchQuery, currentPage, onPageChange]);
 
-  // Fetch notifications - optimized with numeric classId
-  const fetchNotifications = useCallback(async () => {
+  const latestRequestRef = useRef<number>(0);
+
+  const fetchNotifications = useCallback(async (silent = false) => {
+    const timestamp = Date.now();
+    latestRequestRef.current = timestamp;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const numericClassId = typeof classId === "string" ? Number(classId) : classId;
       if (isNaN(numericClassId)) {
-        messageRef.current.error("ID lớp học không hợp lệ");
-        setNotifications([]);
-        setTotal(0);
-        setLoading(false);
+        if (latestRequestRef.current === timestamp) {
+          messageRef.current.error("ID lớp học không hợp lệ");
+          setNotifications([]);
+          setTotal(0);
+          setLoading(false);
+        }
         return;
       }
-
       const userId = getUserIdFromCookie();
       if (!userId) {
-        setNotifications([]);
-        setTotal(0);
-        setLoading(false);
+        if (latestRequestRef.current === timestamp) {
+          setNotifications([]);
+          setTotal(0);
+          setLoading(false);
+        }
         return;
       }
-
       const result = await getNotificationsByScopeId(numericClassId, {
         userId,
         page: currentPage,
         limit: pageSize,
         search: debouncedSearchQuery.trim() || undefined,
       });
-
-      // Update data first, then remove loading to prevent flicker
-      setNotifications(result.data);
-      setTotal(result.total);
-
-      // Use requestAnimationFrame to ensure smooth transition without delay
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setLoading(false);
-        });
-      });
+      if (latestRequestRef.current === timestamp) {
+        setNotifications(result.data);
+        setTotal(result.total);
+        setLoading(false);
+      }
     } catch (error: any) {
-      messageRef.current.error(error?.message || "Không thể tải danh sách thông báo");
-      setNotifications([]);
-      setTotal(0);
-      setLoading(false);
+      if (latestRequestRef.current === timestamp) {
+        messageRef.current.error(error?.message || "Không thể tải danh sách thông báo");
+        setNotifications([]);
+        setTotal(0);
+        setLoading(false);
+      }
     }
-  }, [classId, currentPage, pageSize, debouncedSearchQuery]); // Removed message from dependencies to prevent rerender
+  }, [classId, currentPage, pageSize, debouncedSearchQuery]);
 
-  // Fetch on mount and when dependencies change
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Socket setup
+  const searchRef = useRef(debouncedSearchQuery);
+  const pageRef = useRef(currentPage);
+  const pageSizeRef = useRef(pageSize);
+  const totalRef = useRef(total);
+  const fetchNotificationsRef = useRef(fetchNotifications);
+
   useEffect(() => {
-    const numericClassId = typeof classId === "string" ? Number(classId) : classId;
-    if (isNaN(numericClassId)) return;
+    searchRef.current = debouncedSearchQuery;
+    pageRef.current = currentPage;
+    pageSizeRef.current = pageSize;
+    totalRef.current = total;
+    fetchNotificationsRef.current = fetchNotifications;
+  }, [debouncedSearchQuery, currentPage, pageSize, total, fetchNotifications]);
 
-    // Connect and join room
-    notificationSocketClient.connect();
-    notificationSocketClient.joinClassNotifications(numericClassId);
-
-    // Listen for events
-    const handleNotificationCreated = (newNotification: NotificationResponse) => {
-      // Logic: Only add if searching doesn't exclude it, or just refresh to be safe but optimized
-      // For simplicity and correctness with pagination, if search is active, refresh
-      if (debouncedSearchQuery.trim()) {
-        fetchNotifications();
-      } else {
-        // If on page 1, we can prepend
-        if (currentPage === 1) {
-          setNotifications((prev) => {
-            // Check if already exists to avoid duplicates (race condition with API)
-            if (prev.some((n) => n.notification_id === newNotification.notification_id)) return prev;
-            const updatedList = [newNotification, ...prev];
-            if (updatedList.length > pageSize) {
-              updatedList.pop(); // Keep page size
-            }
-            return updatedList;
-          });
-          setTotal((prev) => prev + 1);
-        } else {
-          // If not on page 1, just update total, user would need to go to page 1 to see it
-          setTotal((prev) => prev + 1);
-        }
-      }
-    };
-
-    const handleNotificationUpdated = (updatedNotification: NotificationResponse) => {
-      setNotifications((prev) =>
-        prev.map((n) => (n.notification_id === updatedNotification.notification_id ? updatedNotification : n))
-      );
-    };
-
-    const handleNotificationDeleted = (data: { notification_id: number }) => {
-      setNotifications((prev) => {
-        const filtered = prev.filter((n) => n.notification_id !== data.notification_id);
-        // If we were on this page and it became empty, and we aren't on page 1, go back
-        if (filtered.length === 0 && currentPage > 1 && prev.length > 0) {
-          onPageChange(currentPage - 1);
-        } else if (filtered.length < prev.length) {
-          // If we deleted something but there might be more on next pages, refresh to pull next item
-          if (total > pageSize * currentPage) {
-            fetchNotifications();
-          }
-        }
-        return filtered;
-      });
-      setTotal((prev) => Math.max(0, prev - 1));
-    };
-
-    notificationSocketClient.on("notification_created", handleNotificationCreated);
-    notificationSocketClient.on("notification_updated", handleNotificationUpdated);
-    notificationSocketClient.on("notification_deleted", handleNotificationDeleted);
-
-    return () => {
-      notificationSocketClient.off("notification_created", handleNotificationCreated);
-      notificationSocketClient.off("notification_updated", handleNotificationUpdated);
-      notificationSocketClient.off("notification_deleted", handleNotificationDeleted);
-      notificationSocketClient.leaveClassNotifications(numericClassId);
-    };
-  }, [classId, fetchNotifications, debouncedSearchQuery, currentPage, pageSize, total, onPageChange]);
-
-  // Map API response to display format - memoized
-  const mapNotificationToDisplay = useCallback((notification: NotificationResponse): Notification => {
-    const date = new Date(notification.created_at);
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-
-    let dateStr = "";
-    let timeStr = "";
-
-    if (isToday) {
-      dateStr = "Hôm nay";
-      timeStr = date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-    } else {
-      dateStr = date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  // Expose refresh function to parent
+  useEffect(() => {
+    if (onRefresh) {
+      onRefresh(() => fetchNotifications(false));
     }
+  }, [onRefresh, fetchNotifications]);
 
+  const mapToDisplay = useCallback((n: NotificationResponse): Notification => {
+    const date = new Date(n.created_at);
+    const isToday = date.toDateString() === new Date().toDateString();
     return {
-      id: String(notification.notification_id),
-      title: notification.title,
-      content: notification.message,
-      author: notification.creator?.fullname || "Không xác định",
-      date: dateStr,
-      time: timeStr || undefined,
-      scope: notification.scope === "class" ? "Lớp học" : "Tất cả",
+      id: String(n.notification_id),
+      title: n.title,
+      content: n.message,
+      author: n.creator?.fullname || "Không xác định",
+      date: isToday ? "Hôm nay" : date.toLocaleDateString("vi-VN"),
+      time: isToday ? date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : undefined,
+      scope: n.scope === "class" ? "Lớp học" : "Tất cả",
     };
   }, []);
 
-  const displayNotifications = useMemo(() => {
-    if (!notifications || notifications.length === 0) return [];
-    return notifications.map(mapNotificationToDisplay);
-  }, [notifications, mapNotificationToDisplay]);
-
-  const handleCreateNotification = () => {
-    setIsCreateModalOpen(true);
-  };
+  const displayNotifications = useMemo(() => notifications.map(mapToDisplay), [notifications, mapToDisplay]);
 
   const handleCreateSuccess = () => {
     setIsCreateModalOpen(false);
-    // fetchNotifications() removed to rely on socket
-    if (onNotificationCreated) {
-      onNotificationCreated();
-    }
+    fetchNotifications(true);
+    if (onNotificationCreated) onNotificationCreated();
   };
 
   const handleEditSuccess = () => {
     setIsEditModalOpen(false);
     setEditNotification(null);
-    // fetchNotifications() removed to rely on socket
+    fetchNotifications(true);
   };
 
-  const handleEditNotification = useCallback(async (notification: Notification) => {
+  const handleEditNotification = useCallback(async (n: Notification) => {
     try {
       setLoadingEdit(true);
-      const notificationId = typeof notification.id === "string" ? Number(notification.id) : notification.id;
-
-      if (isNaN(notificationId)) {
-        messageRef.current.error("ID thông báo không hợp lệ");
-        return;
-      }
-
-      const notificationDetail = await getNotificationById(notificationId);
-      setEditNotification(notificationDetail);
+      const id = Number(n.id);
+      if (isNaN(id)) return;
+      const detail = await getNotificationById(id);
+      setEditNotification(detail);
       setIsEditModalOpen(true);
     } catch (error: any) {
-      messageRef.current.error(error?.message || "Không thể tải thông tin thông báo");
+      messageRef.current.error(error?.message || "Lỗi tải thông báo");
     } finally {
       setLoadingEdit(false);
     }
   }, []);
 
-  const getMenuItems = useCallback(
-    (notification: Notification): MenuProps["items"] => {
-      const items: MenuProps["items"] = [
-        {
-          key: "view",
-          label: "Xem chi tiết",
-        },
-      ];
+  const handleMenuClick = (key: string, n: Notification) => {
+    if (key === "view") {
+      const full = notifications.find((item) => String(item.notification_id) === n.id);
+      if (full) { setSelectedNotification(full); setIsDetailModalOpen(true); }
+    } else if (key === "edit") {
+      handleEditNotification(n);
+    } else if (key === "delete") {
+      const full = notifications.find((item) => String(item.notification_id) === n.id);
+      if (full) {
+        modalRef.current.confirm({
+          title: "Xác nhận xóa",
+          content: `Xóa thông báo "${n.title}"?`,
+          okText: "Xóa",
+          okType: "danger",
+          onOk: async () => {
+            try {
+              const userId = getUserIdFromCookie();
 
-      // Only show edit/delete actions if not readOnly
-      if (!readOnly) {
-        items.push(
-          {
-            key: "edit",
-            label: "Chỉnh sửa",
-          },
-          {
-            type: "divider",
-          },
-          {
-            key: "delete",
-            label: "Xóa",
-            danger: true,
-          }
-        );
-      }
+              // Optimistic update: remove from list immediately
+              setNotifications((prev) => prev.filter((item) => String(item.notification_id) !== n.id));
+              setTotal((prev) => Math.max(0, prev - 1));
 
-      return items;
-    },
-    [readOnly]
-  );
-
-  const handleMenuClick = (key: string, notification: Notification) => {
-    switch (key) {
-      case "view":
-        // Find the full notification data from API response
-        const fullNotification = notifications.find((n) => String(n.notification_id) === notification.id);
-        if (fullNotification) {
-          setSelectedNotification(fullNotification);
-          setIsDetailModalOpen(true);
-        }
-        break;
-      case "edit":
-        handleEditNotification(notification);
-        break;
-      case "delete":
-        // Find the full notification data from API response
-        const fullNotificationForDelete = notifications.find((n) => String(n.notification_id) === notification.id);
-        if (fullNotificationForDelete) {
-          modalRef.current.confirm({
-            title: "Xác nhận xóa thông báo",
-            content: `Bạn có chắc chắn muốn xóa thông báo "${notification.title}"? Hành động này không thể hoàn tác.`,
-            okText: "Xóa",
-            okType: "danger",
-            cancelText: "Hủy",
-            onOk: async () => {
-              try {
-                const notificationId =
-                  typeof fullNotificationForDelete.notification_id === "string"
-                    ? Number(fullNotificationForDelete.notification_id)
-                    : fullNotificationForDelete.notification_id;
-
-                if (isNaN(notificationId)) {
-                  messageRef.current.error("ID thông báo không hợp lệ");
-                  return;
-                }
-
-                const userId = getUserIdFromCookie();
-                if (!userId) {
-                  messageRef.current.error("Không tìm thấy thông tin người dùng");
-                  return;
-                }
-
-                await deleteNotification(notificationId, userId);
-                messageRef.current.success("Đã xóa thông báo thành công");
-                // fetchNotifications() removed to rely on socket
-              } catch (error: any) {
-                messageRef.current.error(error?.message || "Không thể xóa thông báo");
+              // Close detail modal if the deleted notification was selected
+              if (selectedNotification && String(selectedNotification.notification_id) === n.id) {
+                setIsDetailModalOpen(false);
+                setSelectedNotification(null);
               }
-            },
-          });
-        }
-        break;
+
+              // Delete from server
+              if (userId) await deleteNotification(full.notification_id, userId);
+
+              messageRef.current.success("Đã xóa");
+
+              // Refresh list to ensure consistency
+              await fetchNotificationsRef.current(true);
+            } catch (error: any) {
+              // Rollback on error: refresh to get correct state
+              messageRef.current.error(error?.message || "Lỗi xóa");
+              await fetchNotificationsRef.current(false);
+            }
+          },
+        });
+      }
     }
   };
 
-  const formatDate = useCallback((dateString: string | null): string => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleString("vi-VN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }, []);
-
-  const getScopeInfo = useCallback((scope: string) => {
-    const scopeMap: Record<string, { color: string; text: string }> = {
-      all: { color: "orange", text: "Tất cả" },
-      user: { color: "cyan", text: "Người dùng" },
-      class: { color: "geekblue", text: "Lớp học" },
-    };
-    return scopeMap[scope] || { color: "default", text: scope };
-  }, []);
+  const menuItems = useCallback((): MenuProps["items"] => {
+    const items: MenuProps["items"] = [{ key: "view", label: "Xem chi tiết" }];
+    if (!readOnly) {
+      items.push({ key: "edit", label: "Chỉnh sửa" }, { type: "divider" }, { key: "delete", label: "Xóa", danger: true });
+    }
+    return items;
+  }, [readOnly]);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
         <Input
-          size="middle"
-          prefix={<SearchOutlined className="text-gray-400" />}
+          prefix={<SearchOutlined />}
           placeholder="Tìm kiếm thông báo..."
           value={searchQuery}
-          onChange={(e) => {
-            onSearchChange(e.target.value);
-          }}
-          className="flex-1 dark:bg-gray-700/50 dark:!border-slate-600 dark:text-white dark:placeholder-gray-500 hover:dark:!border-slate-500 focus:dark:!border-blue-500"
+          onChange={(e) => onSearchChange(e.target.value)}
           allowClear
+          className="flex-1"
         />
         {!readOnly && (
-          <Button size="middle" icon={<PlusOutlined />} onClick={handleCreateNotification} className="bg-blue-600 hover:bg-blue-700 border-none">
+          <Button icon={<PlusOutlined />} onClick={() => setIsCreateModalOpen(true)} type="primary" className="bg-blue-600">
             Tạo thông báo mới
           </Button>
         )}
       </div>
 
       <div className="relative min-h-[200px]">
-        {notifications.length > 0 ? (
+        {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {displayNotifications.map((notification) => (
+            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} active className="p-6 bg-white dark:bg-gray-800 rounded-lg" />)}
+          </div>
+        ) : notifications.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {displayNotifications.map((n) => (
               <div
-                key={notification.id}
-                className="bg-white dark:bg-gray-800 rounded-lg border-l-4 border-blue-500 border-t border-r border-b border-gray-200 dark:!border-slate-600 p-6 hover:shadow-md transition-shadow duration-200 cursor-pointer"
-                onClick={() => {
-                  const fullNotification = notifications.find((n) => String(n.notification_id) === notification.id);
-                  if (fullNotification) {
-                    setSelectedNotification(fullNotification);
-                    setIsDetailModalOpen(true);
-                  }
-                }}
+                key={n.id}
+                className="bg-white dark:bg-gray-800 rounded-lg border-l-4 border-blue-500 border border-gray-200 dark:border-slate-600 p-6 hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => handleMenuClick("view", n)}
               >
                 <div className="flex flex-col h-full">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {notification.time ? `${notification.time} - ${notification.date}` : notification.date}
-                      </span>
-                      <Tag color="orange" className="text-xs">
-                        {notification.scope}
-                      </Tag>
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-xs text-gray-500">{n.time ? `${n.time} - ${n.date}` : n.date}</span>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Dropdown menu={{ items: menuItems(), onClick: ({ key }) => handleMenuClick(key, n) }} trigger={["click"]}>
+                        <Button type="text" icon={<MoreOutlined />} size="small" />
+                      </Dropdown>
                     </div>
-                    {!readOnly && (
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation(); // Global stop for anything in this area
-                        }}
-                        onMouseDown={(e) => e.stopPropagation()} // Some components might use onMouseDown
-                      >
-                        {(() => {
-                          const menuItems = getMenuItems(notification) || [];
-                          return menuItems.length > 1 ? (
-                            <Dropdown
-                              menu={{
-                                items: menuItems,
-                                onClick: ({ key }) => handleMenuClick(key, notification),
-                              }}
-                              trigger={["click"]}
-                              getPopupContainer={(trigger) => trigger.parentElement || document.body}
-                            >
-                              <Button type="text" icon={<MoreOutlined />} className="shrink-0" />
-                            </Dropdown>
-                          ) : (
-                            <Button
-                              type="text"
-                              icon={<MoreOutlined />}
-                              className="shrink-0"
-                              onClick={() => {
-                                const fullNotification = notifications.find((n) => String(n.notification_id) === notification.id);
-                                if (fullNotification) {
-                                  setSelectedNotification(fullNotification);
-                                  setIsDetailModalOpen(true);
-                                }
-                              }}
-                            />
-                          );
-                        })()}
-                      </div>
-                    )}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-lg line-clamp-2 mb-2">{notification.title}</h3>
-                    <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mb-3">{notification.content}</p>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{notification.author}</span>
-                  </div>
+                  <h3 className="font-semibold text-lg line-clamp-2 mb-2">{n.title}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-3">{n.content}</p>
+                  <span className="text-xs text-gray-500 mt-auto">{n.author}</span>
                 </div>
               </div>
             ))}
           </div>
-        ) : !loading ? (
-          <div className="flex justify-center items-center py-20">
-            <Empty description={searchQuery ? "Không tìm thấy thông báo nào" : "Chưa có thông báo nào"} image={Empty.PRESENTED_IMAGE_SIMPLE} />
-          </div>
-        ) : null}
+        ) : (
+          <div className="flex justify-center py-20"><Empty description="Không có thông báo nào" /></div>
+        )}
       </div>
 
       {total > pageSize && (
-        <div className="flex items-center justify-between pt-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            Hiển thị {(currentPage - 1) * pageSize + 1} đến {Math.min(currentPage * pageSize, total)} của {total} kết quả
-          </div>
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-gray-500">Hiển thị {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, total)} / {total}</div>
           <Pagination current={currentPage} total={total} pageSize={pageSize} onChange={onPageChange} showSizeChanger={false} />
         </div>
       )}
 
-      {/* Create Notification Modal */}
-      <CreateClassNotificationModal
-        open={isCreateModalOpen}
-        classId={classId}
-        onCancel={() => setIsCreateModalOpen(false)}
-        onSuccess={handleCreateSuccess}
-      />
+      <CreateClassNotificationModal open={isCreateModalOpen} classId={classId} onCancel={() => setIsCreateModalOpen(false)} onSuccess={handleCreateSuccess} />
+      <EditClassNotificationModal open={isEditModalOpen} notification={editNotification} classId={classId} onCancel={() => { setIsEditModalOpen(false); setEditNotification(null); }} onSuccess={handleEditSuccess} />
 
-      {/* Edit Notification Modal */}
-      <EditClassNotificationModal
-        open={isEditModalOpen}
-        notification={editNotification}
-        classId={classId}
-        onCancel={() => {
-          setIsEditModalOpen(false);
-          setEditNotification(null);
-        }}
-        onSuccess={handleEditSuccess}
-      />
-
-      {/* Detail Notification Modal */}
       <Modal
-        title="Chi tiết thông báo"
+        title={<span className="font-bold text-slate-800 dark:text-white">Chi tiết thông báo</span>}
         open={isDetailModalOpen}
-        onCancel={() => {
-          setIsDetailModalOpen(false);
-          setSelectedNotification(null);
-        }}
+        onCancel={() => setIsDetailModalOpen(false)}
         footer={null}
         width={700}
-        destroyOnClose={true}
+        centered
+        destroyOnHidden
+        styles={{
+          mask: { backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' }
+        }}
       >
         {selectedNotification && (
-          <div className="space-y-4">
+          <div className="space-y-5 pt-2">
             <div>
-              <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">Tiêu đề</label>
-              <div className="mt-1 text-base font-semibold text-gray-800 dark:text-gray-100">{selectedNotification.title}</div>
+              <label className="text-xs font-bold uppercase tracking-widest text-slate-400 block mb-1">Tiêu đề</label>
+              <div className="text-lg font-bold text-slate-800 dark:text-white leading-tight">{selectedNotification.title}</div>
             </div>
 
             <div>
-              <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">Nội dung</label>
-              <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:!border-slate-600 text-gray-700 dark:text-gray-200 whitespace-pre-wrap">
+              <label className="text-xs font-bold uppercase tracking-widest text-slate-400 block mb-1">Nội dung</label>
+              <div className="mt-1 p-4 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
                 {selectedNotification.message}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">Phạm vi</label>
-                <div className="mt-1">
-                  <Tag className="px-2 py-0.5 rounded-md font-semibold text-xs border-none" color={getScopeInfo(selectedNotification.scope).color}>
-                    {getScopeInfo(selectedNotification.scope).text}
-                  </Tag>
-                </div>
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-400 block mb-2">Phạm vi</label>
+                <Tag className="px-3 py-0.5 rounded-md font-bold text-[10px] border-none m-0" color={selectedNotification.scope === 'all' ? 'orange' : 'geekblue'}>
+                  {(selectedNotification.scope === 'all' ? 'Hệ thống' : 'Lớp học').toUpperCase()}
+                </Tag>
               </div>
 
-              {selectedNotification.scope_id && (
+              {selectedNotification.scope === 'class' && (
                 <div>
-                  <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">{selectedNotification.scope === "user" ? "Mã người dùng" : "Mã lớp"}</label>
-                  <div className="mt-1 text-gray-700 dark:text-gray-200">{selectedNotification.scope_id}</div>
+                  <label className="text-xs font-bold uppercase tracking-widest text-slate-400 block mb-1">Tên lớp học</label>
+                  <div className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                    {classDetails?.name || "Đang tải..."}
+                  </div>
                 </div>
               )}
             </div>
 
-            {selectedNotification.creator && (
-              <div>
-                <label className="text-sm font-semibold text-gray-600 dark:text-gray-300">Người tạo</label>
-                <div className="mt-1 text-gray-700 dark:text-gray-200">{selectedNotification.creator.fullname}</div>
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-6">
+              {selectedNotification.scope === 'class' && (
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-widest text-slate-400 block mb-1">Mã lớp</label>
+                  <div className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                    #{selectedNotification.scope_id || classId}
+                  </div>
+                </div>
+              )}
 
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200 dark:!border-slate-600">
+              {selectedNotification.creator && (
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-widest text-slate-400 block mb-2">Người tạo</label>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-[10px] font-bold text-blue-600 dark:text-blue-400 border border-blue-200/50">
+                      {(selectedNotification.creator.fullname || "H")[0]}
+                    </div>
+                    <div className="text-sm font-semibold text-slate-800 dark:text-white">
+                      {selectedNotification.creator.fullname}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 pt-5 border-t border-slate-100 dark:border-slate-700">
               <div>
-                <label className="text-sm font-semibold text-gray-600 dark:text-gray-300 flex items-center gap-1">
-                  <CalendarOutlined />
-                  Ngày tạo
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1.5 mb-1">
+                  <CalendarOutlined className="text-blue-500" /> Ngày tạo
                 </label>
-                <div className="mt-1 text-gray-700 dark:text-gray-200">{formatDate(selectedNotification.created_at)}</div>
+                <div className="text-sm text-slate-600 dark:text-slate-400 font-medium italic">
+                  {new Date(selectedNotification.created_at).toLocaleString("vi-VN", {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                  })}
+                </div>
               </div>
 
               {selectedNotification.updated_at && (
                 <div>
-                  <label className="text-sm font-semibold text-gray-600 dark:text-gray-300 flex items-center gap-1">
-                    <CalendarOutlined />
-                    Ngày cập nhật
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1.5 mb-1">
+                    <CalendarOutlined className="text-orange-500" /> Cập nhật
                   </label>
-                  <div className="mt-1 text-gray-700 dark:text-gray-200">{formatDate(selectedNotification.updated_at)}</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400 font-medium italic">
+                    {new Date(selectedNotification.updated_at).toLocaleString("vi-VN", {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    })}
+                  </div>
                 </div>
               )}
             </div>
           </div>
         )}
       </Modal>
+
+      {loadingEdit && <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-[9999] p-20"><Skeleton active /></div>}
     </div>
   );
 });

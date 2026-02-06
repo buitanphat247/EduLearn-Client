@@ -49,7 +49,7 @@ export default function UserDetailModal({ open, onCancel, userDetail, loading = 
       footer={null}
       width={700}
       className="user-detail-modal"
-      destroyOnClose={false}
+      destroyOnHidden={false}
       maskClosable={true}
     >
       {loading ? (

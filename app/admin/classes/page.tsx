@@ -9,7 +9,7 @@ import UpdateClassModal from "@/app/components/classes/UpdateClassModal";
 import { getClassesByUser, deleteClass, getClassById, type ClassResponse, type ClassDetailResponse } from "@/lib/api/classes";
 import { deleteRagTestsByClass } from "@/lib/api/rag-exams";
 import type { ClassItem } from "@/interface/classes";
-import { ensureMinLoadingTime, CLASS_STATUS_MAP } from "@/lib/utils/classUtils";
+import { CLASS_STATUS_MAP } from "@/lib/utils/classUtils";
 import { classSocketClient } from "@/lib/socket/class-client";
 import { useUserId } from "@/app/hooks/useUserId";
 
@@ -60,7 +60,8 @@ export default function AdminClasses() {
   const fetchClasses = useCallback(async () => {
     if (userIdLoading || !userId) return;
 
-    const startTime = Date.now();
+
+
     try {
       setLoading(true);
 
@@ -73,7 +74,7 @@ export default function AdminClasses() {
 
       const mappedClasses: ClassItem[] = result.classes.map(mapClassData);
 
-      await ensureMinLoadingTime(startTime);
+
 
       setClasses(mappedClasses);
       setPagination((prev) => ({ ...prev, total: result.total }));
@@ -203,14 +204,21 @@ export default function AdminClasses() {
         setClasses((prev) => prev.filter((c) => Number(c.key) !== Number(data.class_id)));
         setPagination((prev) => ({ ...prev, total: Math.max(0, prev.total - 1) }));
 
+        // Only show message if deleted by someone else
         if (data.deleted_by && userId && Number(data.deleted_by) !== Number(userId)) {
-          messageRef.current.info(`Lớp học "${data.name}" đã bị xóa`);
+          // Use setTimeout to avoid blocking state updates
+          setTimeout(() => {
+            messageRef.current.info(`Lớp học "${data.name}" đã bị xóa`);
+          }, 0);
         }
       });
 
       const unsubscribeAccessDenied = classSocketClient.on("class:access_denied", (data: any) => {
         if (data.reason === "banned") {
-          messageRef.current.error(data.message || "Bạn đã bị chặn khỏi lớp học này");
+          // Use setTimeout to avoid blocking state updates
+          setTimeout(() => {
+            messageRef.current.error(data.message || "Bạn đã bị chặn khỏi lớp học này");
+          }, 0);
         }
       });
 
@@ -304,6 +312,10 @@ export default function AdminClasses() {
           await deleteRagTestsByClass(classItem.key);
           await deleteClass(classItem.key);
           messageRef.current.success(`Đã xóa lớp học "${classItem.name}" thành công`);
+
+          // Optimistic update
+          setClasses((prev) => prev.filter((c) => c.key !== classItem.key));
+          setPagination((prev) => ({ ...prev, total: Math.max(0, prev.total - 1) }));
         } catch (error: any) {
           messageRef.current.error(error?.message || "Không thể xóa lớp học");
         }

@@ -6,20 +6,21 @@
 
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { getCookie, clearCookieCache } from "@/lib/utils/cookies";
+import { getCsrfToken, clearCsrfTokenCache, requiresCsrfToken } from "@/lib/utils/csrf";
 
 const isDev = process.env.NODE_ENV === "development";
 
 /**
  * Get base URL for API requests
  * @returns {string} Base URL for API client
- * @description 
+ * @description
  * - Client-side: Uses '/api-proxy' route
  * - Server-side: Uses NEXT_PUBLIC_API_URL env variable or defaults to localhost
  * - Validates URL format before returning
  */
 const getBaseURL = (): string => {
   if (typeof window !== "undefined") return "/api-proxy";
-  
+
   // ✅ Use environment variable with validation
   const envURL = process.env.NEXT_PUBLIC_API_URL;
   if (envURL?.trim()) {
@@ -32,7 +33,7 @@ const getBaseURL = (): string => {
       }
     }
   }
-  
+
   // ✅ Default fallback (should be overridden by env var in production)
   return process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611/api";
 };
@@ -112,7 +113,7 @@ let cachedAuthTimestamp = 0;
 /**
  * Get cached auth header with validation
  * @returns {string | null} Cached authorization header or null
- * @description 
+ * @description
  * - Checks cache validity (TTL)
  * - Verifies token still exists in cookies
  * - Invalidates cache if token changed
@@ -120,7 +121,7 @@ let cachedAuthTimestamp = 0;
 const getCachedAuthHeader = (): string | null => {
   if (typeof window === "undefined") return null;
   const now = Date.now();
-  
+
   // ✅ Check if cache is still valid
   if (cachedAuthHeader && now - cachedAuthTimestamp < AUTH_CACHE_TTL) {
     // ✅ Verify token still exists
@@ -131,14 +132,14 @@ const getCachedAuthHeader = (): string | null => {
     // ✅ Token changed - invalidate cache
     cachedAuthHeader = null;
   }
-  
+
   const atCookie = getCookie("_at");
   if (atCookie) {
     cachedAuthHeader = `Bearer ${atCookie}`;
     cachedAuthTimestamp = now;
     return cachedAuthHeader;
   }
-  
+
   cachedAuthHeader = null;
   return null;
 };
@@ -168,7 +169,7 @@ export const setTokens = (_accessToken: string, _refreshToken?: string): void =>
 
 /**
  * Clear all tokens and session data
- * @description Clears localStorage, sessionStorage, cookies, and auth cache
+ * @description Clears localStorage, sessionStorage, cookies, auth cache, and CSRF token cache
  */
 export const clearTokens = (): void => {
   if (typeof window === "undefined") return;
@@ -182,11 +183,16 @@ export const clearTokens = (): void => {
   document.cookie = "_at=; path=/; max-age=0";
   document.cookie = "_u=; path=/; max-age=0";
   clearAuthCache();
+  clearCsrfTokenCache(); // Clear CSRF token cache on logout
 };
 
 // ✅ Refresh token state with queue limits
 let isRefreshing = false;
-let failedQueue: Array<{ resolve: (v?: any) => void; reject: (e?: any) => void }> = [];
+type QueueItem = {
+  resolve: (value?: unknown) => void;
+  reject: (error?: unknown) => void;
+};
+let failedQueue: Array<QueueItem> = [];
 
 /**
  * Process queued requests after token refresh
@@ -199,27 +205,25 @@ const processQueue = (error: AxiosError | null, token: string | null = null) => 
 };
 
 // ✅ Response cache with improved cleanup
-const responseCache = new Map<string, { data: any; ts: number }>();
+const responseCache = new Map<string, { data: unknown; ts: number }>();
 
 // ✅ Periodic cleanup for response cache
 if (typeof window !== "undefined") {
   setInterval(() => {
     const now = Date.now();
     const entries = [...responseCache.entries()];
-    
+
     // ✅ Remove expired entries
     entries.forEach(([key, value]) => {
       if (now - value.ts > CACHE_TTL) {
         responseCache.delete(key);
       }
     });
-    
+
     // ✅ If still too large, remove oldest
     if (responseCache.size > MAX_CACHE_SIZE) {
-      const sorted = entries
-        .filter(([_, value]) => now - value.ts <= CACHE_TTL)
-        .sort((a, b) => a[1].ts - b[1].ts);
-      
+      const sorted = entries.filter(([_, value]) => now - value.ts <= CACHE_TTL).sort((a, b) => a[1].ts - b[1].ts);
+
       const toRemove = sorted.slice(0, responseCache.size - CACHE_CLEANUP_THRESHOLD);
       toRemove.forEach(([key]) => responseCache.delete(key));
     }
@@ -236,21 +240,50 @@ const getCacheKey = (config: InternalAxiosRequestConfig): string | null => {
   if (config.method?.toLowerCase() !== "get") return null;
   const url = config.url || "";
   if (url.includes("/auth/")) return null;
+
+  // ✅ Disable cache for class module and related features to ensure real-time updates
+  const noCachePaths = ["/classes", "/class-students", "/notifications", "/assignments", "/rag-tests", "/rag-exams", "/exams", "/users"];
+  if (noCachePaths.some((path) => url.includes(path))) return null;
+
   return `${url}?${config.params ? JSON.stringify(config.params) : ""}`;
 };
 
 // Request interceptor
 apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig & { _retry?: boolean }) => {
+  async (config: InternalAxiosRequestConfig & { _retry?: boolean; _csrfRetry?: boolean }) => {
     const isRefreshReq = config.url?.includes("/auth/refresh");
-    const isRetry = config._retry === true;
+    const isCsrfRetry = config._csrfRetry === true;
 
-    if (!isRefreshReq && !isRetry) {
+    // Add Authorization header
+    if (!isRefreshReq) {
       const auth = getCachedAuthHeader();
       if (auth) config.headers.Authorization = auth;
-    } else if (isRetry && config.headers?.Authorization) {
-      delete config.headers.Authorization;
     }
+
+    // Add CSRF token for state-changing requests
+    if (requiresCsrfToken(config.method || "GET") && !isCsrfRetry) {
+      try {
+        // Skip CSRF for csrf-token endpoint itself and refresh token endpoint
+        // Refresh token endpoint is excluded from CSRF validation on backend
+        // and has its own authentication (refresh token in cookie)
+        if (!config.url?.includes("/auth/csrf-token") && !config.url?.includes("/auth/refresh")) {
+          const csrfToken = await getCsrfToken();
+          if (csrfToken && csrfToken.trim()) {
+            // Ensure header is set correctly
+            if (!config.headers) {
+              // @ts-ignore
+              config.headers = {};
+            }
+            config.headers["X-CSRF-Token"] = csrfToken.trim();
+          } else {
+          }
+        }
+      } catch (error) {
+        // If CSRF token fetch fails, continue without it
+        // Backend will reject with 403 if CSRF is required
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error),
@@ -275,7 +308,7 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean; _csrfRetry?: boolean };
     if (!error.response) {
       return Promise.reject({ ...error, message: "Không thể kết nối đến server" });
     }
@@ -284,7 +317,27 @@ apiClient.interceptors.response.use(
     const errorCode = (data as any)?.code;
     const errorMessage = (data as any)?.message || "Có lỗi xảy ra";
 
-    // 🔴 DEBUG BREAKPOINT 1: Kiểm tra khi nhận 401 error
+    // Handle 403 Forbidden (CSRF token invalid or missing) or 500 with specific message
+    const isCsrfError = status === 403 || (status === 500 && (errorMessage === "invalid csrf token" || errorMessage === "missing csrf token"));
+
+    if (isCsrfError && !originalRequest._csrfRetry) {
+      // Clear CSRF token cache and retry with new token
+      clearCsrfTokenCache();
+      originalRequest._csrfRetry = true;
+
+      try {
+        // Get new CSRF token and retry request
+        const csrfToken = await getCsrfToken();
+        if (csrfToken && originalRequest.headers) {
+          originalRequest.headers["X-CSRF-Token"] = csrfToken;
+        }
+        return apiClient(originalRequest);
+      } catch (csrfError) {
+        return Promise.reject({ ...error, message: "CSRF token validation failed", code: "CSRF_ERROR" });
+      }
+    }
+
+    // Check for 401 error
     if (status !== 401) {
       return Promise.reject({ ...error, message: errorMessage, code: errorCode });
     }
@@ -298,7 +351,6 @@ apiClient.interceptors.response.use(
     // Critical errors - logout immediately
     const criticalErrors = ["REFRESH_TOKEN_EXPIRED", "INVALID_REFRESH_TOKEN", "USER_BANNED"];
     if (criticalErrors.includes(errorCode)) {
-      if (isDev) console.log("[API] Critical error:", errorCode);
       clearTokens();
       processQueue(error, null);
       isRefreshing = false;
@@ -317,22 +369,22 @@ apiClient.interceptors.response.use(
           if (failedQueue.length >= MAX_QUEUE_SIZE) {
             return Promise.reject(new Error("Too many queued requests"));
           }
-          
+
           return new Promise((resolve, reject) => {
             // ✅ Add timeout to queued requests
             const timeoutId = setTimeout(() => {
               reject(new Error("Request timeout - token refresh taking too long"));
             }, QUEUE_TIMEOUT);
-            
-            failedQueue.push({ 
+
+            failedQueue.push({
               resolve: (value) => {
                 clearTimeout(timeoutId);
                 resolve(value);
-              }, 
+              },
               reject: (error) => {
                 clearTimeout(timeoutId);
                 reject(error);
-              }
+              },
             });
           })
             .then(() => {
@@ -344,12 +396,10 @@ apiClient.interceptors.response.use(
         }
 
         // Start refresh
-        // 🔴 DEBUG BREAKPOINT 2: Bắt đầu refresh token
-        isRefreshing = true;
-        if (isDev) console.log("[API] Refreshing token...");
+        // Start refresh
 
         try {
-          // 🔴 DEBUG BREAKPOINT 3: Gọi API refresh
+          // Call refresh API
           const response = await axios.post(
             "/api-proxy/auth/refresh",
             {},
@@ -359,14 +409,13 @@ apiClient.interceptors.response.use(
             },
           );
 
-          // 🔴 DEBUG BREAKPOINT 4: Nhận response từ refresh - Kiểm tra accessToken
+          // Get access token from response
           const accessToken =
             response.data?.access_token || response.data?.data?.access_token || response.data?.accessToken || response.data?.cookies?._at?.value;
 
           if (!accessToken) throw new Error("No access token received from server");
 
           // Set cookies from response body (fallback for proxy issues)
-          // 🔴 DEBUG BREAKPOINT 5: Kiểm tra cookies từ response
           const cookies = response.data?.cookies;
           if (cookies?._at) {
             const exp = new Date(Date.now() + cookies._at.maxAge);
@@ -382,13 +431,8 @@ apiClient.interceptors.response.use(
           processQueue(null, accessToken);
           isRefreshing = false;
 
-          if (isDev) console.log("[API] Token refreshed successfully");
           return apiClient(originalRequest);
-        } catch (refreshError: any) {
-          // 🔴 DEBUG BREAKPOINT 6: Xử lý lỗi refresh
-          const code = refreshError?.response?.data?.code;
-          if (isDev) console.log("[API] Refresh failed:", code);
-
+        } catch (refreshError: unknown) {
           clearTokens();
           processQueue(refreshError as AxiosError, null);
           isRefreshing = false;
@@ -422,7 +466,7 @@ apiClient.interceptors.response.use(
  * @returns {any | null} Cached response data or null if not found/expired
  * @description Retrieves cached GET response if available and not expired
  */
-export const getCachedResponse = (url: string, params?: any): any | null => {
+export const getCachedResponse = (url: string, params?: unknown): unknown | null => {
   const key = params ? `${url}?${JSON.stringify(params)}` : `${url}?`;
   const cached = responseCache.get(key);
   return cached && Date.now() - cached.ts < CACHE_TTL ? cached.data : null;

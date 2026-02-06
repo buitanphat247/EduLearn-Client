@@ -1,20 +1,22 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Avatar, Button, Spin, message } from "antd";
+import { Avatar, message } from "antd";
 import {
   UserOutlined,
   MailOutlined,
   PhoneOutlined,
   CalendarOutlined,
-  EditOutlined,
   IdcardOutlined,
   CrownOutlined,
-  SettingOutlined,
-  BulbOutlined,
+  CameraOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
 import { getProfile } from "@/lib/api/auth";
-import type { UserInfoResponse } from "@/lib/api/users";
+import { updateUser, type UserInfoResponse } from "@/lib/api/users";
+import { uploadFile } from "@/lib/api/file-upload";
+import { getMediaUrl } from "@/lib/utils/media";
+import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import { useTheme } from "@/app/context/ThemeContext";
 
 import ProfileSkeleton from "@/app/components/profile/ProfileSkeleton";
@@ -22,7 +24,11 @@ import ProfileSkeleton from "@/app/components/profile/ProfileSkeleton";
 export default function Profile() {
   const [user, setUser] = useState<UserInfoResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const { theme, toggleTheme } = useTheme();
+  const [uploading, setUploading] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const { theme } = useTheme();
+
+  const FALLBACK_CAT = getMediaUrl("/avatars/anh3_1770318347807_gt8xnc.jpeg");
 
   useEffect(() => {
     let isMounted = true;
@@ -31,7 +37,7 @@ export default function Profile() {
       try {
         // Lấy thông tin profile từ API (đọc từ cookie đã mã hóa)
         const userInfo = await getProfile();
-        
+
         if (isMounted) {
           setUser(userInfo as UserInfoResponse);
           // Sync với localStorage
@@ -60,6 +66,52 @@ export default function Profile() {
       isMounted = false;
     };
   }, []);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      message.error("Vui lòng chọn tệp hình ảnh (jpg, png, webp...)");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      message.error("Kích thước ảnh không được vượt quá 5MB");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const hideProgress = message.loading("Đang tải ảnh lên...", 0);
+
+      // 1. Upload to R2
+      const imageUrl = await uploadFile(file, "avatars");
+
+      // 2. Update user profile
+      const updatedUser = await updateUser(user.user_id, { avatar: imageUrl });
+
+      // 3. Update local state
+      setUser(updatedUser);
+      setImgError(false);
+
+      // 4. Update localStorage
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      // 5. Trigger event for Header sync
+      window.dispatchEvent(new Event("user-updated"));
+
+      hideProgress();
+      message.success("Cập nhật ảnh đại diện thành công");
+    } catch (error: any) {
+      console.error("Avatar upload error:", error);
+      message.error(error.message || "Lỗi khi cập nhật ảnh đại diện");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // ✅ Move useMemo hooks to top level (before early returns)
   const formattedCreatedAt = useMemo(() => {
@@ -110,17 +162,48 @@ export default function Profile() {
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 dark:bg-purple-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none"></div>
 
           {/* Avatar - Circle */}
-          <div className="shrink-0 relative">
-            <Avatar
-              size={140}
-              src={user.avatar}
-              className="rounded-full shadow-2xl border-4 border-white dark:border-[#1e293b] flex items-center justify-center"
-              style={{ backgroundColor: "#334155" }}
-              icon={<UserOutlined style={{ fontSize: 70, color: "white" }} />}
-            />
+          <div className="shrink-0 relative group">
+            <div className="relative p-1 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]">
+              <div className="relative overflow-hidden rounded-full border-4 border-white dark:border-[#1e293b]">
+                <Avatar
+                  size={140}
+                  src={getCachedImageUrl((!user.avatar || imgError) ? FALLBACK_CAT : getMediaUrl(user.avatar))}
+                  onError={() => {
+                    setImgError(true);
+                    return true;
+                  }}
+                  className="flex items-center justify-center bg-slate-200 dark:bg-slate-800"
+                  icon={<UserOutlined style={{ fontSize: 70, color: theme === 'dark' ? '#475569' : '#94a3b8' }} />}
+                />
+              </div>
+
+              {/* Enhanced floating edit button */}
+              <label
+                htmlFor="avatar-upload"
+                className={`absolute bottom-1 right-1 w-10 h-10 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-lg cursor-pointer border-2 border-white dark:border-[#1e293b] hover:bg-blue-50 dark:hover:bg-slate-700 transition-all duration-300 z-10 group/btn ${uploading ? 'pointer-events-none' : 'hover:scale-110 active:scale-95'}`}
+              >
+                {uploading ? (
+                  <LoadingOutlined className="text-blue-500 animate-spin" />
+                ) : (
+                  <CameraOutlined className="text-slate-600 dark:text-slate-300 group-hover/btn:text-blue-500 transition-colors text-lg" />
+                )}
+                <input
+                  type="file"
+                  id="avatar-upload"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  disabled={uploading}
+                />
+              </label>
+
+              {/* Subtle overlay on hover for the whole avatar */}
+              <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full pointer-events-none" />
+            </div>
+
             {isAdmin && (
-              <div className="absolute top-0 right-2 bg-yellow-400 text-yellow-900 rounded-full p-2 shadow-lg border-4 border-white dark:border-[#1e293b]">
-                <CrownOutlined className="text-xl block" />
+              <div className="absolute -top-1 -right-1 bg-gradient-to-br from-yellow-400 to-orange-500 text-white rounded-full p-2 shadow-xl border-2 border-white dark:border-[#1e293b] z-20">
+                <CrownOutlined className="text-lg block" />
               </div>
             )}
           </div>

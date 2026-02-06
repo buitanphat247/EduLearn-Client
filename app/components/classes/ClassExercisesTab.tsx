@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, memo } from "react";
+import { useState, useEffect, useCallback, memo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { App, Spin, Input, Button, Tag, Dropdown, Pagination, Empty, Modal } from "antd";
+import { App, Spin, Input, Button, Tag, Dropdown, Pagination, Empty, Modal, Skeleton } from "antd";
 import type { MenuProps } from "antd";
 import { SearchOutlined, PlusOutlined, MoreOutlined, FileOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { IoBookOutline } from "react-icons/io5";
-import Swal from "sweetalert2";
 import { getAssignmentsByClass, getAssignmentById, deleteAssignment, getAssignmentStudents, type AssignmentResponse, type AssignmentDetailResponse } from "@/lib/api/assignments";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
 import type { ClassExercisesTabProps, Exercise } from "./types";
@@ -19,9 +18,10 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
   pageSize,
   onPageChange,
   readOnly = false,
+  onRefresh,
 }: ClassExercisesTabProps) {
   const router = useRouter();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -29,11 +29,13 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [selectedAssignment, setSelectedAssignment] = useState<AssignmentDetailResponse | null>(null);
-  const [assignmentsMap, setAssignmentsMap] = useState<Map<string, AssignmentResponse>>(new Map());
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   // Track submission status for each assignment (only for readOnly/student mode)
   const [submissionStatusMap, setSubmissionStatusMap] = useState<Map<string, { status: string; score: number | null }>>(new Map());
+
+  // Ref to track the latest request time to handle race conditions
+  const latestRequestRef = useRef<number>(0);
 
   // Debounce search query
   useEffect(() => {
@@ -45,11 +47,13 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
 
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-      onPageChange(1);
+      if (currentPage !== 1) {
+        onPageChange(1);
+      }
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, onPageChange]);
+  }, [searchQuery, onPageChange, currentPage]);
 
   // Map API response to Exercise format
   const mapAssignmentToExercise = useCallback((assignment: AssignmentResponse): Exercise => {
@@ -125,84 +129,94 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
   }, []);
 
   // Fetch assignments from API
-  const fetchAssignments = useCallback(async () => {
+  const fetchAssignments = useCallback(async (silent = false) => {
+    const timestamp = Date.now();
+    latestRequestRef.current = timestamp;
+
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const numericClassId = typeof classId === "string" ? Number(classId) : classId;
 
       if (isNaN(numericClassId)) {
-        message.error("ID lớp học không hợp lệ");
-        setExercises([]);
-        setTotal(0);
+        if (latestRequestRef.current === timestamp) {
+          message.error("ID lớp học không hợp lệ");
+          setExercises([]);
+          setTotal(0);
+        }
         return;
       }
 
-      const result = await getAssignmentsByClass(numericClassId, {
-        page: currentPage,
-        limit: pageSize,
-        search: debouncedSearchQuery.trim() || undefined,
-      });
+      // Prepare promises
+      const promises: Promise<any>[] = [
+        getAssignmentsByClass(numericClassId, {
+          page: currentPage,
+          limit: pageSize,
+          search: debouncedSearchQuery.trim() || undefined,
+        })
+      ];
 
-      const mappedExercises = result.data.map(mapAssignmentToExercise);
-      setExercises(mappedExercises);
-      setTotal(result.total);
+      // If readOnly (User view), fetch submission status in parallel
+      const userId = getUserIdFromCookie();
+      if (readOnly && userId) {
+        promises.push(
+          getAssignmentStudents({
+            classId: numericClassId,
+            limit: 200, // Get all
+          }).catch(() => ({ data: [] }))
+        );
+      }
 
-      // Store assignments map for detail modal
-      const newMap = new Map<string, AssignmentResponse>();
-      result.data.forEach((assignment) => {
-        newMap.set(String(assignment.assignment_id), assignment);
-      });
-      setAssignmentsMap(newMap);
+      const results = await Promise.all(promises);
+      const result = results[0];
+      const submissionsResult = results[1];
+
+      // Only update state if this is still the latest request
+      if (latestRequestRef.current === timestamp) {
+        // Process Submissions First (to be ready before render)
+        if (submissionsResult && submissionsResult.data) {
+          const newMap = new Map<string, { status: string; score: number | null }>();
+          submissionsResult.data.forEach((record: any) => {
+            if (String(record.student_id) === String(userId)) {
+              newMap.set(String(record.assignment_id), {
+                status: record.status,
+                score: record.score,
+              });
+            }
+          });
+          setSubmissionStatusMap(newMap);
+        } else if (!readOnly) {
+          // Reset map if not readOnly? (Optional, but safe)
+          setSubmissionStatusMap(new Map());
+        }
+
+        const mappedExercises = result.data.map(mapAssignmentToExercise);
+        setExercises(mappedExercises);
+        setTotal(result.total);
+      }
     } catch (error: any) {
-      message.error(error?.message || "Không thể tải danh sách bài tập");
-      setExercises([]);
-      setTotal(0);
+      if (latestRequestRef.current === timestamp) {
+        message.error(error?.message || "Không thể tải danh sách bài tập");
+        setExercises([]);
+        setTotal(0);
+      }
     } finally {
-      setLoading(false);
+      if (latestRequestRef.current === timestamp) {
+        setLoading(false);
+      }
     }
-  }, [classId, currentPage, pageSize, debouncedSearchQuery, mapAssignmentToExercise, message]);
+  }, [classId, currentPage, pageSize, debouncedSearchQuery, mapAssignmentToExercise, message, readOnly]);
 
   // Fetch on mount and when dependencies change
   useEffect(() => {
     fetchAssignments();
   }, [fetchAssignments]);
 
-  // Fetch submission status for each assignment (only in readOnly mode for students)
+  // Expose refresh function to parent
   useEffect(() => {
-    if (!readOnly || exercises.length === 0) return;
-
-    const fetchSubmissionStatus = async () => {
-      const userId = getUserIdFromCookie();
-      if (!userId) return;
-
-      const numericClassId = typeof classId === "string" ? Number(classId) : classId;
-      if (isNaN(numericClassId)) return;
-
-      try {
-        // Fetch all assignment_students records for this class
-        const result = await getAssignmentStudents({
-          classId: numericClassId,
-          limit: 200, // Get all
-        });
-
-        // Filter by current user and build status map
-        const newMap = new Map<string, { status: string; score: number | null }>();
-        result.data.forEach((record) => {
-          if (String(record.student_id) === String(userId)) {
-            newMap.set(String(record.assignment_id), {
-              status: record.status,
-              score: record.score,
-            });
-          }
-        });
-        setSubmissionStatusMap(newMap);
-      } catch (error) {
-        console.error("Failed to fetch submission status:", error);
-      }
-    };
-
-    fetchSubmissionStatus();
-  }, [readOnly, exercises, classId]);
+    if (onRefresh) {
+      onRefresh(() => fetchAssignments(true));
+    }
+  }, [onRefresh, fetchAssignments]);
 
   const currentExercises = exercises;
 
@@ -247,7 +261,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
   };
 
   const getMenuItems = useCallback(
-    (exercise: Exercise): MenuProps["items"] => {
+    (_exercise: Exercise): MenuProps["items"] => {
       const items: MenuProps["items"] = [];
 
       if (readOnly) {
@@ -309,7 +323,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
 
   const handleDelete = useCallback(
     (exercise: Exercise) => {
-      Modal.confirm({
+      modal.confirm({
         title: "Xác nhận xóa bài tập",
         content: `Bạn có chắc chắn muốn xóa bài tập "${exercise.title}"? Hành động này không thể hoàn tác.`,
         okText: "Xóa",
@@ -324,11 +338,9 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
               throw new Error("ID bài tập không hợp lệ");
             }
 
-            await deleteAssignment(numericAssignmentId);
-            message.success("Xóa bài tập thành công");
-
-            // Refresh list
-            await fetchAssignments();
+            // Optimistic update: remove from list immediately
+            setExercises((prev) => prev.filter((item) => String(item.id) !== String(exercise.id)));
+            setTotal((prev) => Math.max(0, prev - 1));
 
             // If deleted exercise was selected, close modal
             if (selectedExercise?.id === exercise.id) {
@@ -336,15 +348,24 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
               setSelectedExercise(null);
               setSelectedAssignment(null);
             }
+
+            // Delete from server
+            await deleteAssignment(numericAssignmentId);
+            message.success("Xóa bài tập thành công");
+
+            // Refresh list to ensure consistency
+            await fetchAssignments();
           } catch (error: any) {
+            // Rollback on error: refresh to get correct state
             message.error(error?.message || "Không thể xóa bài tập");
+            await fetchAssignments();
           } finally {
             setDeletingId(null);
           }
         },
       });
     },
-    [message, fetchAssignments, selectedExercise]
+    [message, modal, fetchAssignments, selectedExercise]
   );
 
   const handleMenuClick = useCallback(
@@ -449,9 +470,28 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
         )}
       </div>
 
-      {/* Exercises List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {currentExercises.length > 0 ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[200px]">
+        {loading ? (
+          Array.from({ length: 6 }).map((_, index) => (
+            <div
+              key={`skeleton-${index}`}
+              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:!border-slate-600 p-6"
+            >
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <Skeleton.Avatar active shape="square" size={56} />
+                  <div className="flex gap-2">
+                    <Skeleton.Button active size="small" style={{ width: 80 }} />
+                    <Skeleton.Button active size="small" style={{ width: 80 }} />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <Skeleton active title={{ width: '90%' }} paragraph={{ rows: 2, width: ['60%', '40%'] }} />
+              </div>
+            </div>
+          ))
+        ) : currentExercises.length > 0 ? (
           currentExercises.map((exercise) => {
             const statusInfo = getStatusTag(exercise);
             const subjectStyle = {
@@ -569,23 +609,17 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
                       {exercise.dueTime && <span className="text-gray-800 dark:text-gray-200 font-semibold"> - {exercise.dueTime}</span>}
                     </div>
 
-
                   </div>
                 </div>
               </div>
             );
           })
-        ) : !loading ? (
+        ) : (
           <div className="col-span-full">
             <Empty description={searchQuery ? "Không tìm thấy bài tập nào" : "Chưa có bài tập nào"} image={Empty.PRESENTED_IMAGE_SIMPLE} />
           </div>
-        ) : (
-          <div className="col-span-full py-12 flex justify-center items-center">
-            {/* Mất hiệu ứng Spin cục bộ, phụ thuộc vào Spin cha */}
-          </div>
         )}
       </div>
-
       {/* Pagination */}
       {total > pageSize && (
         <div className="flex items-center justify-between pt-4">
@@ -615,8 +649,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
         }}
         footer={null}
         width={600}
-
-        destroyOnClose={true}
+        destroyOnHidden={true}
       >
         <Spin spinning={loadingDetail}>
           {selectedExercise && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { Modal, Avatar, Tag, Descriptions, Spin, App } from "antd";
-import { UserOutlined, MailOutlined, PhoneOutlined, BookOutlined, IdcardOutlined, CalendarOutlined } from "@ant-design/icons";
+import { UserOutlined, MailOutlined, PhoneOutlined, BookOutlined, IdcardOutlined } from "@ant-design/icons";
 import { useState, useEffect } from "react";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import type { StudentItem } from "@/interface/students";
@@ -21,24 +21,6 @@ export default function StudentDetailModal({ open, onCancel, student, classInfo 
   const [loading, setLoading] = useState(false);
   const [studentProfile, setStudentProfile] = useState<UserInfoResponse | null>(null);
 
-  const getStatusColor = (status: string) => {
-    if (status === "Đang học" || status === "online") return "green";
-    if (status === "Bị cấm" || status === "banned") return "red";
-    return "default";
-  };
-
-  const getDisplayStatus = (status: string, apiStatus?: string) => {
-    // Ưu tiên apiStatus nếu có (từ class-student status)
-    if (apiStatus === "banned") return "Bị cấm";
-    if (apiStatus === "online") return "Đang học";
-    
-    // Fallback về status
-    if (status === "online" || status === "Đang học") return "Đang học";
-    if (status === "banned" || status === "Bị cấm") return "Bị cấm";
-    
-    // Mặc định là "Đang học"
-    return "Đang học";
-  };
 
   // Fetch student profile when modal opens
   useEffect(() => {
@@ -74,16 +56,16 @@ export default function StudentDetailModal({ open, onCancel, student, classInfo 
   // Use API data if available, otherwise fallback to student prop
   const displayData = studentProfile
     ? {
-        name: studentProfile.fullname,
-        studentId: studentProfile.username,
-        email: studentProfile.email,
-        phone: studentProfile.phone || "",
-        status: student?.apiStatus || student?.status || "online", // Ưu tiên apiStatus từ student prop
-        apiStatus: student?.apiStatus, // Lưu apiStatus để dùng cho getDisplayStatus
-        avatar: studentProfile.avatar,
-      }
+      name: studentProfile.fullname,
+      studentId: studentProfile.username,
+      email: studentProfile.email,
+      phone: studentProfile.phone || "",
+      status: student?.apiStatus || student?.status || "online", // Ưu tiên apiStatus từ student prop
+      apiStatus: student?.apiStatus, // Lưu apiStatus để dùng cho getDisplayStatus
+      avatar: studentProfile.avatar,
+    }
     : student
-    ? {
+      ? {
         name: student.name,
         studentId: student.studentId,
         email: student.email,
@@ -92,7 +74,7 @@ export default function StudentDetailModal({ open, onCancel, student, classInfo 
         apiStatus: student.apiStatus, // Lưu apiStatus để dùng cho getDisplayStatus
         avatar: null,
       }
-    : null;
+      : null;
 
   return (
     <Modal
@@ -101,7 +83,7 @@ export default function StudentDetailModal({ open, onCancel, student, classInfo 
       onCancel={onCancel}
       footer={null}
       width={700}
-      destroyOnClose={true}
+      destroyOnHidden={true}
       maskClosable={true}
     >
       <Spin spinning={loading}>
@@ -109,11 +91,11 @@ export default function StudentDetailModal({ open, onCancel, student, classInfo 
           <div className="space-y-6">
             {/* Avatar và thông tin cơ bản */}
             <div className="text-center">
-              <Avatar 
-                size={120} 
-                src={displayData.avatar} 
-                icon={<UserOutlined />} 
-                className="mb-3" 
+              <Avatar
+                size={120}
+                src={displayData.avatar}
+                icon={<UserOutlined />}
+                className="mb-3"
               />
               <h3 className="text-xl font-bold text-gray-800 mb-2">{displayData.name}</h3>
               <Tag color="blue" className="mb-4">

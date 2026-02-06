@@ -200,14 +200,12 @@ function QuickActionsGrid({ items }: { items: QuickActionItem[] }) {
 export default function AdminDashboard() {
   const { message } = App.useApp();
   const [stats, setStats] = useState<StatsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchStats = async () => {
       try {
-        setLoading(true);
         const data = await getStats();
         if (isMounted) {
           setStats(data);
@@ -215,10 +213,6 @@ export default function AdminDashboard() {
       } catch (error: any) {
         if (isMounted) {
           message.error(error?.message || "Không thể tải thống kê");
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
         }
       }
     };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { App, Skeleton } from "antd";
+import { App, Skeleton, Empty } from "antd";
 import { getLessons, type Lesson } from "@/lib/api/lessons";
 import LessonCard from "@/app/components/listening/LessonCard";
 import DarkPagination from "@/app/components/common/DarkPagination";
@@ -163,15 +163,19 @@ export default function ListeningFeature() {
           )}
         </>
       ) : (
-        <div className="text-center py-20 bg-white/50 dark:bg-[#1e293b]/50 rounded-3xl border border-slate-200 dark:border-slate-700/50 border-dashed transition-colors duration-300">
-          <p className="text-slate-500 dark:text-slate-400 text-lg">
-            {debouncedSearchQuery || selectedLevel || selectedLanguage
-              ? "Không tìm thấy bài học nào phù hợp"
-              : "Chưa có bài học nào"}
-          </p>
+        <div className="py-20 bg-white/50 dark:bg-[#1e293b]/50 rounded-3xl border border-slate-200 dark:border-slate-700/50 border-dashed transition-colors duration-300">
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={
+              <span className="text-slate-500 dark:text-slate-400 text-lg">
+                {debouncedSearchQuery || selectedLevel || selectedLanguage
+                  ? "Không tìm thấy bài học nào phù hợp"
+                  : "Chưa có bài học nào"}
+              </span>
+            }
+          />
         </div>
       )}
     </div>
   );
 }
-

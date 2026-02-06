@@ -1,7 +1,5 @@
 "use client";
 
-import React from "react";
-import { Button } from "antd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -18,7 +16,7 @@ export default function Hero() {
       <div className="container mx-auto px-4 relative z-10 text-center">
         <div className="max-w-4xl mx-auto">
           <div className="inline-block px-4 py-1.5 mb-6 rounded-full bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 font-medium text-sm animate-fade-in-up" suppressHydrationWarning>
-            <span aria-hidden="true">✨</span> Nền tảng giáo dục số hàng đầu
+            <span aria-hidden="true" suppressHydrationWarning>✨</span> Nền tảng giáo dục số hàng đầu
           </div>
           <h1 className="text-5xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-slate-900 via-blue-800 to-blue-600 dark:from-white dark:via-blue-100 dark:to-blue-200 mb-8 leading-tight tracking-tight">
             Khám phá tri thức <br />
@@ -30,8 +28,8 @@ export default function Hero() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link 
-              href="/news" 
+            <Link
+              href="/news"
               prefetch={false}
               onMouseEnter={() => router.prefetch("/news")}
             >

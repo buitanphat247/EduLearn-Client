@@ -75,7 +75,7 @@ export default function EventDetailModal({ open, onCancel, eventDetail, loading 
       footer={null}
       width={700}
       className="event-detail-modal"
-      destroyOnClose={false}
+      destroyOnHidden={false}
       maskClosable={true}
     >
       {loading ? (

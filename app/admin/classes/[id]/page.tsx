@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { App, Spin, Tabs } from "antd";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { App, Tabs, Skeleton } from "antd";
+import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
 import { FileTextOutlined, BellOutlined, UserOutlined, ExperimentOutlined } from "@ant-design/icons";
 import StudentDetailModal from "@/app/components/students/StudentDetailModal";
 import ClassHeader from "@/app/components/classes/ClassHeader";
@@ -12,7 +13,7 @@ import UpdateClassModal from "@/app/components/classes/UpdateClassModal";
 import ClassExercisesTab from "@/app/components/classes/ClassExercisesTab";
 import ClassNotificationsTab from "@/app/components/classes/ClassNotificationsTab";
 import ClassExamsTab from "@/app/components/classes/ClassExamsTab";
-import DataLoadingSplash from "@/app/components/common/DataLoadingSplash";
+import { useUserId } from "@/app/hooks/useUserId";
 import {
   getClassById,
   removeStudentFromClass,
@@ -24,8 +25,7 @@ import {
 } from "@/lib/api/classes";
 import { deleteRagTestsByClass } from "@/lib/api/rag-exams";
 import type { StudentItem } from "@/interface/students";
-import { ensureMinLoadingTime, CLASS_STATUS_MAP, formatStudentId } from "@/lib/utils/classUtils";
-import { useUserId } from "@/app/hooks/useUserId";
+import { CLASS_STATUS_MAP, formatStudentId } from "@/lib/utils/classUtils";
 import { classSocketClient } from "@/lib/socket/class-client";
 
 type ClassDataState = {
@@ -39,6 +39,7 @@ type ClassDataState = {
 export default function ClassDetail() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const { modal, message } = App.useApp();
   const { userId } = useUserId();
   const classId = params?.id as string;
@@ -66,9 +67,7 @@ export default function ClassDetail() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [originalClassData, setOriginalClassData] = useState<ClassDetailResponse | null>(null);
   const [activeTab, setActiveTab] = useState("students");
-  const [isTabLoading, setIsTabLoading] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
-  
+
   // Tab-specific state
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState("");
   const [exercisePage, setExercisePage] = useState(1);
@@ -76,6 +75,12 @@ export default function ClassDetail() {
   const [notificationPage, setNotificationPage] = useState(1);
   const [examSearchQuery, setExamSearchQuery] = useState("");
   const [examPage, setExamPage] = useState(1);
+
+  // Refresh functions refs
+  const exerciseRefreshRef = useRef<(() => void) | null>(null);
+  const notificationRefreshRef = useRef<(() => void) | null>(null);
+  const examRefreshRef = useRef<(() => void) | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Constants
   const exercisePageSize = 4;
@@ -110,253 +115,140 @@ export default function ClassDetail() {
 
   // Fetch class info
   const fetchClassInfo = useCallback(async (showLoading: boolean = true): Promise<string> => {
-      const currentClassId = classIdRef.current;
+    const currentClassId = classIdRef.current;
     if (!currentClassId || !userId) return "";
 
-      try {
-        const numericUserId = typeof userId === "string" ? Number(userId) : userId;
+    try {
+      const numericUserId = typeof userId === "string" ? Number(userId) : userId;
       if (isNaN(numericUserId)) throw new Error("User ID không hợp lệ");
 
-        const data = await getClassById(currentClassId, numericUserId);
+      const data = await getClassById(currentClassId, numericUserId);
 
-        const mappedClassData = {
-          id: String(data.class_id),
-          name: data.name,
-          code: data.code,
-          students: data.student_count,
-          status: (data.status === "active" ? CLASS_STATUS_MAP.active : CLASS_STATUS_MAP.inactive) as "Đang hoạt động" | "Tạm dừng",
-        };
+      const mappedClassData = {
+        id: String(data.class_id),
+        name: data.name,
+        code: data.code,
+        students: data.student_count,
+        status: (data.status === "active" ? CLASS_STATUS_MAP.active : CLASS_STATUS_MAP.inactive) as "Đang hoạt động" | "Tạm dừng",
+      };
 
-        setClassData(mappedClassData);
+      setClassData(mappedClassData);
       setOriginalClassData(data);
       classNameRef.current = data.name;
       return data.name;
-      } catch (error: any) {
+    } catch (error: any) {
+      // Only clear data on initial/explicit loading, not silent refresh
       if (showLoading) setClassData(null);
-        throw error;
-      }
+      throw error;
+    }
   }, [userId]);
 
   // Fetch students
-  const fetchClassStudents = useCallback(async (className?: string, showLoading: boolean = false) => {
-      const currentClassId = classIdRef.current;
-      if (!currentClassId) return;
-
-      const startTime = Date.now();
-      try {
-        const records = await getClassStudentsByClass({
-          classId: currentClassId,
-          page: 1,
-        limit: 1000,
-        });
-
-        const studentClassName = className || classNameRef.current || "";
-      const mappedStudents: StudentItem[] = records.map((record: ClassStudentRecord) => 
-        mapStudentRecordToItem(record, studentClassName)
-      );
-
-      if (showLoading) await ensureMinLoadingTime(startTime);
-        setStudents(mappedStudents);
-      } catch (error: any) {
-        if (showLoading) {
-          await ensureMinLoadingTime(startTime);
-          setStudents([]);
-        }
-      }
-  }, [mapStudentRecordToItem]);
-
-  // Fetch both class info and students
-  const fetchClassDetail = useCallback(async () => {
+  const fetchClassStudents = useCallback(async (className?: string) => {
     const currentClassId = classIdRef.current;
     if (!currentClassId) return;
 
-    setLoading(true);
-    setShowSplash(true);
-    const startTime = Date.now();
+    try {
+      const records = await getClassStudentsByClass({
+        classId: currentClassId,
+        page: 1,
+        limit: 1000,
+      });
+
+      const studentClassName = className || classNameRef.current || "";
+      const mappedStudents: StudentItem[] = records.map((record: ClassStudentRecord) =>
+        mapStudentRecordToItem(record, studentClassName)
+      );
+
+      setStudents(mappedStudents);
+    } catch (error: any) {
+      setStudents([]);
+    }
+  }, [mapStudentRecordToItem]);
+
+  // Fetch both class info and students
+  const fetchClassDetail = useCallback(async (isInitial: boolean = false) => {
+    const currentClassId = classIdRef.current;
+    if (!currentClassId) return;
+
+    if (isInitial) {
+      setLoading(true);
+    }
 
     try {
-      const className = await fetchClassInfo(true);
-      await fetchClassStudents(className, true);
+      const className = await fetchClassInfo(isInitial);
+      await fetchClassStudents(className);
     } catch (error) {
       // Error handled in fetchClassInfo
     } finally {
-      setLoading(false);
-      const elapsed = Date.now() - startTime;
-      setTimeout(() => setShowSplash(false), Math.max(0, 250 - elapsed));
+      if (isInitial) {
+        setLoading(false);
+      }
     }
   }, [fetchClassInfo, fetchClassStudents]);
 
   // Initial fetch
   useEffect(() => {
-    if (classId && userId) fetchClassDetail();
+    if (classId && userId) fetchClassDetail(true);
   }, [classId, userId, fetchClassDetail]);
 
-  // Socket.io real-time updates
+  // Real-time updates via Socket.io
   useEffect(() => {
-    if (!classId) return;
+    if (!classId || !userId) return;
 
-    const socket = classSocketClient.connect();
-    if (!socket) return;
-
-    const joinRoom = () => {
-      if (classSocketClient.isConnected()) {
-        classSocketClient.joinClass(classId);
-      } else {
-        setTimeout(joinRoom, 100);
-      }
-    };
-
-    if (socket.connected) {
+    // Connect and join class room
+    classSocketClient.connect();
     classSocketClient.joinClass(classId);
-    } else {
-      socket.on("connect", () => classSocketClient.joinClass(classId));
-      joinRoom();
-    }
 
-    // Socket listeners
-    const unsubscribeUpdated = classSocketClient.on("class_updated", (data: any) => {
-      if (Number(data.class_id) !== Number(classId)) return;
-
-        setClassData((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            name: data.name,
-            code: data.code,
-            status: data.status === "active" ? CLASS_STATUS_MAP.active : CLASS_STATUS_MAP.inactive,
-          };
-        });
-        classNameRef.current = data.name;
-
-        if (userId && Number(data.updated_by) !== Number(userId)) {
-          const toastMessage = data.old_name && data.name !== data.old_name
-            ? `Lớp học "${data.old_name}" vừa đổi tên thành "${data.name}"`
-            : `Lớp học "${data.name}" vừa được cập nhật`;
-          
-        messageRef.current.info({
-            content: toastMessage,
-          key: `class_update_${data.class_id}`,
-            duration: 3,
-          });
-      }
-    });
-
-    const unsubscribeDeleted = classSocketClient.on("class_deleted", (data: any) => {
-      if (Number(data.class_id) !== Number(classId)) return;
-
-        if (userId && data.deleted_by && Number(data.deleted_by) !== Number(userId)) {
-        messageRef.current.warning(`Lớp học "${data.name}" đã bị giải tán bởi quản trị viên khác.`);
-          router.push("/admin/classes");
-      }
-    });
-
+    // Listeners
     const unsubscribeJoined = classSocketClient.on("student_joined", (data: any) => {
       if (Number(data.class_id) !== Number(classId)) return;
 
-      try {
-        const studentRecord: ClassStudentRecord = {
-          id: data.student?.class_student_id || 0,
-          class_id: data.class_id,
-          user_id: data.student?.user_id || data.user_id,
-          status: "online",
-          added_at: data.added_at || new Date().toISOString(),
-          student: data.student || {
-            user_id: data.student?.user_id || data.user_id,
-            username: data.student?.username || "",
-            fullname: data.student?.fullname || data.student?.name || "",
-            email: data.student?.email || "",
-            avatar: data.student?.avatar || null,
-          },
-        };
+      // Update count
+      setClassData(prev => prev ? ({ ...prev, students: data.student_count ?? (prev.students + 1) }) : prev);
 
-        const newStudent = mapStudentRecordToItem(studentRecord, classNameRef.current || "");
-        setStudents((prev) => {
-          if (!Array.isArray(prev)) return [newStudent];
-          if (prev.some((s) => String(s.userId) === String(newStudent.userId))) return prev;
-          
-          const newList = [newStudent, ...prev];
-          const newCount = data.student_count ?? newList.length;
-          setClassData((prevData) => (prevData ? { ...prevData, students: newCount } : prevData));
-          return newList;
-        });
-        
-        messageRef.current.info({
-          content: `Học sinh ${data.student?.fullname || data.student?.name || "mới"} vừa tham gia lớp học`,
-          key: `student_joined_${data.student?.user_id || data.user_id}`,
-          duration: 3,
-        });
-      } catch (error: any) {
-        if (data.student_count !== undefined) {
-          setClassData((prevData) => (prevData ? { ...prevData, students: data.student_count } : prevData));
-        }
-      }
+      // Re-fetch to get new student details
+      fetchClassDetail(false);
     });
 
     const unsubscribeRemoved = classSocketClient.on("student_removed", (data: any) => {
       if (Number(data.class_id) !== Number(classId)) return;
 
-        setStudents((prev) => {
-        if (!Array.isArray(prev)) return [];
-          const newList = prev.filter((s) => String(s.userId) !== String(data.user_id));
-        const newCount = data.student_count ?? newList.length;
-          setClassData((prevData) => (prevData ? { ...prevData, students: newCount } : prevData));
-          return newList;
-        });
+      // Update count
+      setClassData(prev => prev ? ({ ...prev, students: data.student_count ?? Math.max(0, prev.students - 1) }) : prev);
+
+      // Remove student from list
+      setStudents(prev => prev.filter(s => String(s.userId) !== String(data.user_id)));
     });
 
     const unsubscribeStatus = classSocketClient.on("student_status_updated", (data: any) => {
       if (Number(data.class_id) !== Number(classId)) return;
 
-          setStudents((prev) => {
-        if (!Array.isArray(prev)) return [];
-            const index = prev.findIndex((s) => String(s.userId) === String(data.user_id));
-        if (index === -1) return prev;
-
-              const newList = [...prev];
-              newList[index] = {
-                ...newList[index],
-                status: data.status === "banned" ? "Bị cấm" : "Đang học",
-                apiStatus: data.status,
-              };
-              return newList;
-      });
-      
+      // Update count if provided
       if (data.student_count !== undefined) {
-        setClassData((prevData) => (prevData ? { ...prevData, students: data.student_count } : prevData));
+        setClassData(prev => prev ? ({ ...prev, students: data.student_count }) : prev);
       }
-    });
 
-    const unsubscribeError = classSocketClient.on("class:error", (data: any) => {
-      if (data.error) {
-        messageRef.current.error({
-          content: `Socket error: ${data.error}`,
-          key: `socket_error_${Date.now()}`,
-          duration: 5,
-        });
-      }
-    });
-
-    const unsubscribeAccessDenied = classSocketClient.on("class:access_denied", (data: any) => {
-      if (data.reason === "banned") {
-        messageRef.current.warning({
-          content: data.message || "Bạn đã bị chặn khỏi lớp học này",
-          key: `access_denied_${Date.now()}`,
-          duration: 5,
-        });
-      }
+      // Update student status in list
+      setStudents(prev => prev.map(s => {
+        if (String(s.userId) === String(data.user_id)) {
+          return {
+            ...s,
+            apiStatus: data.status,
+            status: data.status === "banned" ? "Bị cấm" : "Đang học"
+          };
+        }
+        return s;
+      }));
     });
 
     return () => {
       classSocketClient.leaveClass(classId);
-      unsubscribeUpdated();
-      unsubscribeDeleted();
-      unsubscribeJoined();
-      unsubscribeRemoved();
-      unsubscribeStatus();
-      unsubscribeError();
-      unsubscribeAccessDenied();
+      if (typeof unsubscribeJoined === 'function') unsubscribeJoined();
+      if (typeof unsubscribeRemoved === 'function') unsubscribeRemoved();
+      if (typeof unsubscribeStatus === 'function') unsubscribeStatus();
     };
-  }, [classId, userId, router, mapStudentRecordToItem]);
+  }, [classId, userId, fetchClassDetail]);
 
   // Handlers - all stable with useCallback
   const handleEdit = useCallback(() => setIsEditModalOpen(true), []);
@@ -399,8 +291,8 @@ export default function ClassDetail() {
             throw new Error("Không tìm thấy ID học sinh trong lớp. Vui lòng refresh trang và thử lại.");
           }
 
-          const classStudentId = typeof student.classStudentId === "string" 
-            ? Number(student.classStudentId) 
+          const classStudentId = typeof student.classStudentId === "string"
+            ? Number(student.classStudentId)
             : student.classStudentId;
 
           if (isNaN(classStudentId) || classStudentId <= 0) {
@@ -409,14 +301,14 @@ export default function ClassDetail() {
 
           await updateClassStudentStatus({ id: classStudentId, status: "banned" });
           messageRef.current.success(`Đã cấm học sinh "${student.name}" khỏi lớp học`);
-          
+
           // Optimistic update
-          setStudents((prev) => prev.map((s) => 
-            String(s.userId) === String(student.userId) 
+          setStudents((prev) => prev.map((s) =>
+            String(s.userId) === String(student.userId)
               ? { ...s, apiStatus: "banned", status: "Bị cấm" }
               : s
           ));
-          
+
           setClassData((prevData) => {
             if (!prevData) return prevData;
             return { ...prevData, students: Math.max(0, (prevData.students || 0) - 1) };
@@ -434,8 +326,8 @@ export default function ClassDetail() {
         throw new Error("Không tìm thấy ID học sinh trong lớp. Vui lòng refresh trang và thử lại.");
       }
 
-      const classStudentId = typeof student.classStudentId === "string" 
-        ? Number(student.classStudentId) 
+      const classStudentId = typeof student.classStudentId === "string"
+        ? Number(student.classStudentId)
         : student.classStudentId;
 
       if (isNaN(classStudentId) || classStudentId <= 0) {
@@ -444,14 +336,14 @@ export default function ClassDetail() {
 
       await updateClassStudentStatus({ id: classStudentId, status: "online" });
       messageRef.current.success(`Đã gỡ cấm học sinh "${student.name}"`);
-      
+
       // Optimistic update
-      setStudents((prev) => prev.map((s) => 
-        String(s.userId) === String(student.userId) 
+      setStudents((prev) => prev.map((s) =>
+        String(s.userId) === String(student.userId)
           ? { ...s, apiStatus: "online", status: "Đang học" }
           : s
       ));
-      
+
       setClassData((prevData) => {
         if (!prevData) return prevData;
         return { ...prevData, students: (prevData.students || 0) + 1 };
@@ -463,24 +355,32 @@ export default function ClassDetail() {
   }, []);
 
   const handleRemoveStudent = useCallback((student: StudentItem) => {
-      modal.confirm({
-        title: "Xác nhận xóa học sinh",
+    modal.confirm({
+      title: "Xác nhận xóa học sinh",
       content: `Bạn có chắc chắn muốn xóa học sinh "${student.name}" ra khỏi lớp "${classNameRef.current}"?`,
-        okText: "Xóa",
-        okType: "danger",
-        cancelText: "Hủy",
-        onOk: async () => {
-          try {
-            await removeStudentFromClass({
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          await removeStudentFromClass({
             classId: classIdRef.current,
-              userId: student.userId,
-            });
+            userId: student.userId,
+          });
           messageRef.current.success(`Đã xóa học sinh "${student.name}" ra khỏi lớp`);
-          } catch (error: any) {
+
+          // Optimistic update
+          setStudents((prev) => prev.filter((s) => String(s.userId) !== String(student.userId)));
+          setClassData((prevData) => {
+            if (!prevData) return prevData;
+            const currentCount = prevData.students || 0;
+            return { ...prevData, students: Math.max(0, currentCount - 1) };
+          });
+        } catch (error: any) {
           messageRef.current.error(error?.message || "Không thể xóa học sinh khỏi lớp");
-          }
-        },
-      });
+        }
+      },
+    });
   }, [modal]);
 
   // Memoized values
@@ -517,118 +417,242 @@ export default function ClassDetail() {
   }, []);
 
   const handleTabChange = useCallback((key: string) => {
-    setIsTabLoading(true);
     setActiveTab(key);
-    // Use requestAnimationFrame for smoother transition
-    requestAnimationFrame(() => {
-      setTimeout(() => setIsTabLoading(false), 300);
-    });
   }, []);
 
-  // Tab content renderer
-  const renderTabContent = useCallback((content: React.ReactNode) => {
-    if (isTabLoading) {
-      return (
-        <div className="flex justify-center items-center h-64">
-          <Spin size="large" />
-        </div>
-      );
+  // Fast refresh handler - refreshes all data silently
+  const handleFastRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // Refresh class info and students silently
+      await fetchClassDetail(false);
+
+      // Trigger refresh for child components if they have refresh functions
+      if (exerciseRefreshRef.current) {
+        exerciseRefreshRef.current();
+      }
+      if (notificationRefreshRef.current) {
+        notificationRefreshRef.current();
+      }
+      if (examRefreshRef.current) {
+        examRefreshRef.current();
+      }
+
+      message.success({ content: "Đã cập nhật dữ liệu mới nhất", key: "refresh_success", duration: 2 });
+    } catch (error) {
+      console.error("Error refreshing class data:", error);
+      message.error("Lỗi khi cập nhật dữ liệu");
+    } finally {
+      setRefreshing(false);
     }
-    return content;
-  }, [isTabLoading]);
+  }, [fetchClassDetail, message]);
+
+  // Auto-refresh on mount if URL has refresh param
+  useEffect(() => {
+    const refreshType = searchParams.get("refresh");
+
+    if (refreshType) {
+      // Remove the param from URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+
+      // Trigger appropriate refresh
+      setTimeout(() => {
+        if (refreshType === "exercises" && exerciseRefreshRef.current) {
+          exerciseRefreshRef.current();
+        } else if (refreshType === "notifications" && notificationRefreshRef.current) {
+          notificationRefreshRef.current();
+        } else if (refreshType === "exams" && examRefreshRef.current) {
+          examRefreshRef.current();
+        } else if (refreshType === "all") {
+          handleFastRefresh();
+        }
+      }, 100);
+    }
+  }, [searchParams, handleFastRefresh]);
 
   // Memoize tab items
   const tabItems = useMemo(() => [
-          {
-            key: "students",
-            label: (
-              <span>
-                <UserOutlined className="mr-2" />
-                Danh sách học sinh
-              </span>
-            ),
-            children: renderTabContent(
-              <ClassStudentsTable
-                students={students}
-                onViewStudent={handleViewStudent}
-                onRemoveStudent={handleRemoveStudent}
-                onBanStudent={handleBanStudent}
+    {
+      key: "students",
+      label: (
+        <span>
+          <UserOutlined className="mr-2" />
+          Danh sách học sinh
+        </span>
+      ),
+      children: (
+        <ClassStudentsTable
+          students={students}
+          onViewStudent={handleViewStudent}
+          onRemoveStudent={handleRemoveStudent}
+          onBanStudent={handleBanStudent}
           onUnbanStudent={handleUnbanStudent}
-              />
-            ),
-          },
-          {
-            key: "notifications",
-            label: (
-              <span>
-                <BellOutlined className="mr-2" />
-                Thông báo
-              </span>
-            ),
-            children: renderTabContent(
-              <ClassNotificationsTab
-                classId={classId}
-                searchQuery={notificationSearchQuery}
-                onSearchChange={setNotificationSearchQuery}
-                currentPage={notificationPage}
-                pageSize={notificationPageSize}
-                onPageChange={setNotificationPage}
-              />
-            ),
-          },
-          {
-            key: "exercises",
-            label: (
-              <span>
-                <FileTextOutlined className="mr-2" />
-                Bài tập
-              </span>
-            ),
-            children: renderTabContent(
-              <ClassExercisesTab
-                classId={classId}
-                searchQuery={exerciseSearchQuery}
-                onSearchChange={setExerciseSearchQuery}
-                currentPage={exercisePage}
-                pageSize={exercisePageSize}
-                onPageChange={setExercisePage}
-              />
-            ),
-          },
-          {
-            key: "exams",
-            label: (
-              <span>
-                <ExperimentOutlined className="mr-2" />
-                Kiểm tra
-              </span>
-            ),
-            children: renderTabContent(
-              <ClassExamsTab
-                classId={classId}
-                searchQuery={examSearchQuery}
-                onSearchChange={setExamSearchQuery}
-                currentPage={examPage}
-                pageSize={examPageSize}
-                onPageChange={setExamPage}
-              />
-            ),
-          },
+        />
+      ),
+    },
+    {
+      key: "notifications",
+      label: (
+        <span>
+          <BellOutlined className="mr-2" />
+          Thông báo
+        </span>
+      ),
+      children: (
+        <ClassNotificationsTab
+          classId={classId}
+          searchQuery={notificationSearchQuery}
+          onSearchChange={setNotificationSearchQuery}
+          currentPage={notificationPage}
+          pageSize={notificationPageSize}
+          onPageChange={setNotificationPage}
+          onRefresh={(refreshFn) => {
+            notificationRefreshRef.current = refreshFn;
+          }}
+        />
+      ),
+    },
+    {
+      key: "exercises",
+      label: (
+        <span>
+          <FileTextOutlined className="mr-2" />
+          Bài tập
+        </span>
+      ),
+      children: (
+        <ClassExercisesTab
+          classId={classId}
+          searchQuery={exerciseSearchQuery}
+          onSearchChange={setExerciseSearchQuery}
+          currentPage={exercisePage}
+          pageSize={exercisePageSize}
+          onPageChange={setExercisePage}
+          onRefresh={(refreshFn) => {
+            exerciseRefreshRef.current = refreshFn;
+          }}
+        />
+      ),
+    },
+    {
+      key: "exams",
+      label: (
+        <span>
+          <ExperimentOutlined className="mr-2" />
+          Kiểm tra
+        </span>
+      ),
+      children: (
+        <ClassExamsTab
+          classId={classId}
+          searchQuery={examSearchQuery}
+          onSearchChange={setExamSearchQuery}
+          currentPage={examPage}
+          pageSize={examPageSize}
+          onPageChange={setExamPage}
+          onRefresh={(refreshFn) => {
+            examRefreshRef.current = refreshFn;
+          }}
+        />
+      ),
+    },
   ], [
     students, handleViewStudent, handleRemoveStudent, handleBanStudent, handleUnbanStudent,
     classId, notificationSearchQuery, notificationPage, exerciseSearchQuery, exercisePage,
-    examSearchQuery, examPage, renderTabContent
+    examSearchQuery, examPage
   ]);
 
   // Early returns
-  if (showSplash || loading) {
-    return <DataLoadingSplash tip="Đang kiểm tra quyền truy cập lớp học..." />;
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <Skeleton.Button active size="default" style={{ width: 120 }} />
+          <div className="flex gap-3">
+            <Skeleton.Button active size="default" style={{ width: 110 }} />
+            <Skeleton.Button active size="default" style={{ width: 130 }} />
+          </div>
+        </div>
+
+        {/* Info Card Skeleton (Matches ClassInfoCard) */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+            <div className="w-1.5 h-4 bg-blue-500 rounded-full animate-pulse" />
+            <Skeleton.Input active size="small" style={{ width: 150 }} />
+          </div>
+          <div className="p-0">
+            <div className="grid grid-cols-1 md:grid-cols-2">
+              {/* Row 1 */}
+              <div className="p-4 border-b border-r border-gray-100 dark:border-gray-700 flex flex-col gap-2">
+                <Skeleton.Input active size="small" style={{ width: 80 }} />
+                <Skeleton.Input active size="default" block />
+              </div>
+              <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex flex-col gap-2">
+                <Skeleton.Input active size="small" style={{ width: 80 }} />
+                <Skeleton.Input active size="default" block />
+              </div>
+              {/* Row 2 */}
+              <div className="p-4 border-r border-gray-100 dark:border-gray-700 flex flex-col gap-2">
+                <Skeleton.Input active size="small" style={{ width: 120 }} />
+                <Skeleton.Input active size="default" block />
+              </div>
+              <div className="p-4 flex flex-col gap-2">
+                <Skeleton.Input active size="small" style={{ width: 140 }} />
+                <div className="flex items-center gap-3">
+                  <Skeleton.Avatar active size="small" />
+                  <div className="flex flex-col gap-1 flex-1">
+                    <Skeleton.Input active size="small" style={{ width: "60%" }} />
+                    <Skeleton.Input active size="small" style={{ width: "40%" }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs Skeleton */}
+        <div className="space-y-4">
+          <div className="flex gap-8 border-b border-gray-200 dark:border-gray-700">
+            {["Danh sách học sinh", "Thông báo", "Bài tập", "Kiểm tra"].map((label, idx) => (
+              <div key={label} className={`pb-3 px-2 ${idx === 0 ? "border-b-2 border-blue-500" : ""}`}>
+                <Skeleton.Input active size="small" style={{ width: label.length * 8 }} />
+              </div>
+            ))}
+          </div>
+
+          {/* Tab Content Card Skeleton */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <Skeleton.Input active size="default" style={{ width: 200 }} />
+            </div>
+            <div className="p-0">
+              <div className="border-b border-gray-100 dark:border-gray-700 p-4">
+                <div className="flex gap-4">
+                  <Skeleton.Input active size="default" style={{ width: "20%" }} />
+                  <Skeleton.Input active size="default" style={{ width: "40%" }} />
+                  <Skeleton.Input active size="default" style={{ width: "40%" }} />
+                </div>
+              </div>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="p-4 border-b border-gray-50 dark:border-gray-700/50 flex gap-4">
+                  <Skeleton.Input active size="default" style={{ width: "20%" }} />
+                  <Skeleton.Input active size="default" style={{ width: "40%" }} />
+                  <Skeleton.Input active size="default" style={{ width: "30%" }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!classData) {
     return (
       <div className="space-y-6">
-        <ClassHeader className="Lớp học" onEdit={() => {}} onDelete={() => {}} />
+        <ClassHeader className="Lớp học" onEdit={() => { }} onDelete={() => { }} />
         <ClassInfoCard
           classInfo={{
             name: "Không tìm thấy",
@@ -642,36 +666,44 @@ export default function ClassDetail() {
   }
 
   return (
-    <div className="space-y-6">
-      <ClassHeader className={classData.name} onEdit={handleEdit} onDelete={handleDelete} />
-      {classInfo && <ClassInfoCard classInfo={classInfo} />}
-
-      <Tabs
-        activeKey={activeTab}
-        onChange={handleTabChange}
-        destroyInactiveTabPane
-        items={tabItems}
-      />
-
-      {originalClassData && classData && (
-        <UpdateClassModal
-          open={isEditModalOpen}
-          classId={classId}
-          currentName={classData.name}
-          currentCode={classData.code}
-          currentStudentCount={classData.students}
-          currentStatus={originalClassData.status}
-          onCancel={handleCloseEditModal}
-          onSuccess={handleUpdateClassSuccess}
+    <RouteErrorBoundary routeName="admin">
+      <div className="space-y-6">
+        <ClassHeader
+          className={classData.name}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onRefresh={handleFastRefresh}
+          refreshing={refreshing}
         />
-      )}
+        {classInfo && <ClassInfoCard classInfo={classInfo} />}
 
-      <StudentDetailModal 
-        open={isViewModalOpen} 
-        onCancel={handleCloseViewModal} 
-        student={selectedStudent} 
-        classInfo={modalClassInfo} 
-      />
-    </div>
+        <Tabs
+          activeKey={activeTab}
+          onChange={handleTabChange}
+          destroyOnHidden
+          items={tabItems}
+        />
+
+        {originalClassData && classData && (
+          <UpdateClassModal
+            open={isEditModalOpen}
+            classId={classId}
+            currentName={classData.name}
+            currentCode={classData.code}
+            currentStudentCount={classData.students}
+            currentStatus={originalClassData.status}
+            onCancel={handleCloseEditModal}
+            onSuccess={handleUpdateClassSuccess}
+          />
+        )}
+
+        <StudentDetailModal
+          open={isViewModalOpen}
+          onCancel={handleCloseViewModal}
+          student={selectedStudent}
+          classInfo={modalClassInfo}
+        />
+      </div>
+    </RouteErrorBoundary>
   );
 }

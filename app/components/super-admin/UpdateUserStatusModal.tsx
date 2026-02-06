@@ -66,7 +66,7 @@ export default function UpdateUserStatusModal({
       onCancel={handleCancel}
       footer={null}
       width={500}
-      destroyOnClose={false}
+      destroyOnHidden={false}
       maskClosable={!updating}
       closable={!updating}
     >

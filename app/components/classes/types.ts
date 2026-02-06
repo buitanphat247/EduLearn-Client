@@ -66,14 +66,17 @@ export interface ClassTabProps {
 export interface ClassNotificationsTabProps extends ClassTabProps {
   onNotificationCreated?: () => void;
   readOnly?: boolean; // If true, hide create/edit/delete actions
+  onRefresh?: (refreshFn: () => void) => void; // Callback to expose refresh function
 }
 
 export interface ClassExercisesTabProps extends ClassTabProps {
   readOnly?: boolean; // If true, hide create/edit/delete actions
+  onRefresh?: (refreshFn: () => void) => void; // Callback to expose refresh function
 }
 
 export interface ClassExamsTabProps extends ClassTabProps {
   readOnly?: boolean; // If true, hide create/edit/delete actions
+  onRefresh?: (refreshFn: () => void) => void; // Callback to expose refresh function
 }
 
 export interface CreateClassNotificationModalProps {

@@ -3,15 +3,17 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import UserSidebar from "../components/layout/UserSidebar";
 import { usePathname } from "next/navigation";
-import { Modal, Spin, message } from "antd";
+import { Modal, Spin, message, Avatar } from "antd";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { getMediaUrl } from "@/lib/utils/media";
+import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import NotificationBell from "@/app/components/notifications/NotificationBell";
 
 const pageTitles: Record<string, string> = {
   "/user": "Trang chủ",
-  "/user/classes": "Lớp học",
-  "/user/documents": "Tài liệu",
+  "/user/classes": "Quản lý lớp học",
+  "/user/documents": "Tài liệu hệ thống",
   "/user/settings": "Cài đặt",
 };
 
@@ -26,6 +28,9 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  const FALLBACK_CAT = getMediaUrl("/avatars/anh3_1770318347807_gt8xnc.jpeg");
 
   // Memoize page title calculation
   const currentPageTitle = useMemo(() => {
@@ -52,7 +57,7 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
       const user = await getUserInfo(userId);
       // ✅ Only update state if not aborted
       if (!signal?.aborted) {
-      setUserInfo(user);
+        setUserInfo(user);
       }
     } catch (error: any) {
       // ✅ Only show error if not aborted
@@ -60,7 +65,7 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
         message.error(error?.message || "Không thể tải thông tin người dùng");
       }
       if (!signal?.aborted) {
-      console.error("Error fetching user info:", error);
+        console.error("Error fetching user info:", error);
       }
     } finally {
       if (showError && !signal?.aborted) {
@@ -87,6 +92,15 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
       abortController.abort();
     };
   }, [isProfileModalOpen, userInfo, fetchUserInfo]);
+
+  // Handle user-updated event to sync avatar
+  useEffect(() => {
+    const handleUpdate = () => {
+      fetchUserInfo(false);
+    };
+    window.addEventListener("user-updated", handleUpdate);
+    return () => window.removeEventListener("user-updated", handleUpdate);
+  }, [fetchUserInfo]);
 
   // Memoize getInitials function
   const getInitials = useCallback((name: string) => {
@@ -119,14 +133,32 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
         </div>
 
         <div className="flex items-center gap-4">
-          {userInfo?.user_id && (
-            <NotificationBell userId={userInfo.user_id} />
-          )}
+          <NotificationBell userId={userInfo?.user_id!} />
           <div
+            key="user-profile-section"
             onClick={() => setIsProfileModalOpen(true)}
             className="flex items-center gap-3 pl-4 border-l border-gray-300 dark:border-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
           >
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">{displayInitials}</div>
+            <Avatar
+              size={40}
+              src={
+                // Logic simplified to avoid hydration mismatch: use state/props directly, no cache checks during render if not needed
+                // OR better: use consistent logic. 
+                // Using getMediaUrl is consistent if is just string processing.
+                // getCachedImageUrl might access localstorage.
+                // We will skip cache check on server/first render.
+                (imgError || (!userInfo?.avatar && !initialUserData?.avatar))
+                  ? FALLBACK_CAT
+                  : getMediaUrl(userInfo?.avatar || initialUserData?.avatar!)
+              }
+              onError={() => {
+                setImgError(true);
+                return true;
+              }}
+              className="flex items-center justify-center bg-blue-600"
+            >
+              {displayInitials}
+            </Avatar>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{displayName}</span>
               <span className="text-xs text-gray-600 dark:text-gray-400">{displayRole}</span>
@@ -140,9 +172,13 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
           {userInfo ? (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl">
+                <Avatar
+                  size={80}
+                  src={getCachedImageUrl((imgError || !userInfo.avatar) ? FALLBACK_CAT : getMediaUrl(userInfo.avatar))}
+                  className="flex items-center justify-center bg-blue-600"
+                >
                   {getInitials(userInfo.fullname || userInfo.username || "A")}
-                </div>
+                </Avatar>
                 <div>
                   <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{userInfo.fullname || userInfo.username}</h3>
                   <p className="text-gray-600 dark:text-gray-400">{userInfo.role?.role_name || "Học sinh"}</p>
@@ -164,13 +200,13 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
                 <div>
                   <span className="text-sm text-gray-500 dark:text-gray-400">Ngày tạo:</span>
                   <p className="text-gray-800 dark:text-gray-200 font-medium">
-                    {userInfo.created_at 
+                    {userInfo.created_at
                       ? new Date(userInfo.created_at).toLocaleDateString("vi-VN", {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          timeZone: 'Asia/Ho_Chi_Minh' // ✅ Consistent timezone
-                        })
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        timeZone: 'Asia/Ho_Chi_Minh' // ✅ Consistent timezone
+                      })
                       : "Chưa có thông tin"}
                   </p>
                 </div>
@@ -187,7 +223,7 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
 
 export default function UserLayoutClient({ children, initialUserData }: { children: React.ReactNode; initialUserData: InitialUserData | null }) {
   const pathname = usePathname();
-  
+
   // Check if we are in an exam session: /user/classes/[id]/exams/[examId]
   // We want to hide all sidebar/header for actual exam doing page
   const isExamSession = pathname.includes("/exams/") && pathname.split("/").length >= 6;
@@ -199,8 +235,6 @@ export default function UserLayoutClient({ children, initialUserData }: { childr
       </div>
     );
   }
-
-  const isDocumentsPage = pathname?.startsWith("/user/documents");
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-950 overflow-hidden transition-colors duration-300">

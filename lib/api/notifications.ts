@@ -70,10 +70,7 @@ export interface GetNotificationsByCreatedByResponse {
   limit: number;
 }
 
-export const getNotificationsByScope = async (
-  scope: "all" | "user" | "class",
-  scopeId?: number
-): Promise<NotificationResponse[]> => {
+export const getNotificationsByScope = async (scope: "all" | "user" | "class", scopeId?: number): Promise<NotificationResponse[]> => {
   try {
     const response = await apiClient.get(`/notifications/by-scope/${scope}`, {
       params: scope !== "all" ? { scope_id: scopeId } : undefined,
@@ -86,15 +83,14 @@ export const getNotificationsByScope = async (
 
     return data;
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể lấy danh sách thông báo";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách thông báo";
     throw new Error(errorMessage);
   }
 };
 
 export const getNotificationsByCreatedBy = async (
   userId: number | string,
-  params?: GetNotificationsByCreatedByParams
+  params?: GetNotificationsByCreatedByParams,
 ): Promise<GetNotificationsByCreatedByResponse> => {
   try {
     const numericId = typeof userId === "string" ? parseInt(userId, 10) : userId;
@@ -125,8 +121,7 @@ export const getNotificationsByCreatedBy = async (
       limit: data.limit ?? params?.limit ?? 10,
     };
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể lấy danh sách thông báo";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách thông báo";
     throw new Error(errorMessage);
   }
 };
@@ -174,17 +169,17 @@ export const getNotifications = async (params?: GetNotificationsParams): Promise
 export const getNotificationById = async (notificationId: number | string): Promise<NotificationResponse> => {
   try {
     const id = typeof notificationId === "string" ? parseInt(notificationId, 10) : notificationId;
-    
+
     if (isNaN(id)) {
       throw new Error("ID thông báo không hợp lệ");
     }
 
     const response = await apiClient.get(`/notifications/${id}`);
-    
+
     if (response.data.status && response.data.data) {
       return response.data.data;
     }
-    
+
     return response.data as any;
   } catch (error: any) {
     const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy thông tin thông báo";
@@ -211,10 +206,7 @@ export const createNotification = async (params: CreateNotificationParams): Prom
   }
 };
 
-export const updateNotification = async (
-  notificationId: number | string,
-  params: UpdateNotificationParams
-): Promise<NotificationResponse> => {
+export const updateNotification = async (notificationId: number | string, params: UpdateNotificationParams): Promise<NotificationResponse> => {
   try {
     const id = typeof notificationId === "string" ? parseInt(notificationId, 10) : notificationId;
     if (Number.isNaN(id)) {
@@ -231,16 +223,12 @@ export const updateNotification = async (
     const data = response.data?.data || response.data;
     return data as NotificationResponse;
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể cập nhật thông báo";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể cập nhật thông báo";
     throw new Error(errorMessage);
   }
 };
 
-export const deleteNotification = async (
-  notificationId: number | string, 
-  userId: number | string
-): Promise<void> => {
+export const deleteNotification = async (notificationId: number | string, userId: number | string): Promise<void> => {
   try {
     const id = typeof notificationId === "string" ? parseInt(notificationId, 10) : notificationId;
     if (Number.isNaN(id)) {
@@ -252,8 +240,7 @@ export const deleteNotification = async (
     });
     // API trả về 204, không cần xử lý body
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể xóa thông báo";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể xóa thông báo";
     throw new Error(errorMessage);
   }
 };
@@ -274,7 +261,7 @@ export interface GetNotificationsByScopeIdResult {
 
 export const getNotificationsByScopeId = async (
   scopeId: number | string,
-  params?: GetNotificationsByScopeIdParams
+  params?: GetNotificationsByScopeIdParams,
 ): Promise<GetNotificationsByScopeIdResult> => {
   try {
     const numericId = typeof scopeId === "string" ? parseInt(scopeId, 10) : scopeId;
@@ -306,8 +293,7 @@ export const getNotificationsByScopeId = async (
       limit: responseData.limit ?? params?.limit ?? 10,
     };
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể lấy danh sách thông báo";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách thông báo";
     throw new Error(errorMessage);
   }
 };
@@ -327,12 +313,24 @@ export interface GetNotificationsByUserIdResult {
 
 export const getNotificationsByUserId = async (
   userId: number | string,
-  params?: GetNotificationsByUserIdParams
+  params?: GetNotificationsByUserIdParams,
 ): Promise<GetNotificationsByUserIdResult> => {
   try {
+    if (!userId) {
+      return { data: [], total: 0, page: 1, limit: 20 };
+    }
+
     const numericId = typeof userId === "string" ? parseInt(userId, 10) : userId;
     if (Number.isNaN(numericId)) {
-      throw new Error("User ID không hợp lệ");
+      // If not a number, it might be a UUID string, try using it as is if numericId logic isn't strictly required
+      // but the current API seems to expect an ID in the URL.
+      // If the backend accepts UUIDs, we should not throw here.
+      // For now, let's just log and continue with the raw userId if it's a non-empty string.
+      if (typeof userId === "string" && userId.trim()) {
+        // Continue with userId
+      } else {
+        throw new Error("User ID không hợp lệ");
+      }
     }
 
     const requestParams: Record<string, any> = {
@@ -344,7 +342,7 @@ export const getNotificationsByUserId = async (
       requestParams.is_read = params.is_read;
     }
 
-    const response = await apiClient.get(`/notifications/by-user/${numericId}`, {
+    const response = await apiClient.get(`/notifications/by-user/${userId}`, {
       params: requestParams,
     });
 
@@ -358,8 +356,8 @@ export const getNotificationsByUserId = async (
       limit: responseData.limit ?? params?.limit ?? 20,
     };
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể lấy danh sách thông báo";
+    console.error("[API] getNotificationsByUserId error:", error);
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách thông báo";
     throw new Error(errorMessage);
   }
 };
@@ -369,14 +367,11 @@ export interface MarkNotificationReadParams {
   user_id: number;
 }
 
-export const markNotificationAsRead = async (
-  notificationId: number | string,
-  userId: number | string
-): Promise<void> => {
+export const markNotificationAsRead = async (notificationId: number | string, userId: number | string): Promise<void> => {
   try {
     const notifId = typeof notificationId === "string" ? parseInt(notificationId, 10) : notificationId;
     const userIdNum = typeof userId === "string" ? parseInt(userId, 10) : userId;
-    
+
     if (isNaN(notifId) || isNaN(userIdNum)) {
       throw new Error("ID không hợp lệ");
     }
@@ -384,9 +379,9 @@ export const markNotificationAsRead = async (
     // Get all recipients for this notification
     const recipientsResponse = await apiClient.get(`/notification-recipients/by-notification/${notifId}`);
     const recipients = recipientsResponse.data?.data || recipientsResponse.data || [];
-    
+
     // Find the recipient with matching user_id
-    const recipient = Array.isArray(recipients) 
+    const recipient = Array.isArray(recipients)
       ? recipients.find((r: any) => {
           // Check both direct user_id and nested user.user_id
           const rUserId = r.user_id || r.user?.user_id;
@@ -408,19 +403,15 @@ export const markNotificationAsRead = async (
       is_read: true,
     });
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể đánh dấu đã đọc";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể đánh dấu đã đọc";
     throw new Error(errorMessage);
   }
 };
 
-export const markMultipleNotificationsAsRead = async (
-  notificationIds: (number | string)[],
-  userId: number | string
-): Promise<void> => {
+export const markMultipleNotificationsAsRead = async (notificationIds: (number | string)[], userId: number | string): Promise<void> => {
   try {
     const userIdNum = typeof userId === "string" ? parseInt(userId, 10) : userId;
-    
+
     if (isNaN(userIdNum)) {
       throw new Error("User ID không hợp lệ");
     }
@@ -431,11 +422,10 @@ export const markMultipleNotificationsAsRead = async (
         const notifId = typeof id === "string" ? parseInt(id, 10) : id;
         if (isNaN(notifId)) return Promise.resolve();
         return markNotificationAsRead(notifId, userIdNum);
-      })
+      }),
     );
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể đánh dấu đã đọc";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể đánh dấu đã đọc";
     throw new Error(errorMessage);
   }
 };
@@ -450,9 +440,7 @@ export interface NotificationRecipientResponse {
   notification?: NotificationResponse;
 }
 
-export const getNotificationRecipientsByUserId = async (
-  userId: number | string
-): Promise<NotificationRecipientResponse[]> => {
+export const getNotificationRecipientsByUserId = async (userId: number | string): Promise<NotificationRecipientResponse[]> => {
   try {
     const userIdNum = typeof userId === "string" ? parseInt(userId, 10) : userId;
     if (Number.isNaN(userIdNum)) {
@@ -461,13 +449,10 @@ export const getNotificationRecipientsByUserId = async (
 
     const response = await apiClient.get(`/notification-recipients/by-user/${userIdNum}`);
     const data = response.data?.data || response.data || [];
-    
+
     return Array.isArray(data) ? data : [];
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể lấy danh sách recipients";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách recipients";
     throw new Error(errorMessage);
   }
 };
-
-

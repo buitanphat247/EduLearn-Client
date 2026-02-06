@@ -8,6 +8,7 @@ import type { ColumnsType } from "antd/es/table";
 import { getUsers, createUser, getUserInfo, type GetUsersResponse, type UserInfoResponse } from "@/lib/api/users";
 import UserDetailModal from "@/app/components/super-admin/UserDetailModal";
 import UpdateUserStatusModal from "@/app/components/super-admin/UpdateUserStatusModal";
+import { getPasswordValidationRules } from "@/lib/utils/validation";
 
 const { Option } = Select;
 
@@ -134,7 +135,7 @@ export default function SuperAdminAccounts() {
         pageSize: limit,
         total: total,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Ensure minimum loading time even on error
       const elapsedTime = Date.now() - startTime;
       const minLoadingTime = 250;
@@ -223,7 +224,7 @@ export default function SuperAdminAccounts() {
         data: userData,
         loading: false,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.message || "Không thể tải thông tin người dùng");
       // Close modal and reset on error
       setModalState((prev) => ({ ...prev, viewDetail: false }));
@@ -326,7 +327,7 @@ export default function SuperAdminAccounts() {
       title: "Hành động",
       key: "action",
       width: 200,
-      render: (_: any, record: AccountType) => {
+      render: (_: unknown, record: AccountType) => {
         const handleEdit = (e: React.MouseEvent) => {
           e.stopPropagation();
           setSelectedUser({
@@ -475,7 +476,7 @@ export default function SuperAdminAccounts() {
   );
 }
 
-function SingleAccountForm({ form, onSuccess }: { form: any; onSuccess: () => void }) {
+function SingleAccountForm({ form, onSuccess }: { form: ReturnType<typeof Form.useForm>[0]; onSuccess: () => void }) {
   const { message } = App.useApp();
   const [submitting, setSubmitting] = useState(false);
 
@@ -492,7 +493,7 @@ function SingleAccountForm({ form, onSuccess }: { form: any; onSuccess: () => vo
       });
       message.success("Tạo tài khoản thành công!");
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error?.message || "Không thể tạo tài khoản");
     } finally {
       setSubmitting(false);
@@ -532,7 +533,7 @@ function SingleAccountForm({ form, onSuccess }: { form: any; onSuccess: () => vo
         </Select>
       </Form.Item>
 
-      <Form.Item name="password" label="Mật khẩu" rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}>
+      <Form.Item name="password" label="Mật khẩu" rules={getPasswordValidationRules()}>
         <Input.Password placeholder="Nhập mật khẩu" />
       </Form.Item>
 

@@ -88,7 +88,7 @@ export default function EditNotificationModal({
       width={600}
       maskClosable={!submitting}
       closable={!submitting}
-      destroyOnClose={true}
+      destroyOnHidden={true}
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item

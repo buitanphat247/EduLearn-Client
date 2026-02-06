@@ -170,17 +170,20 @@ export default function UserClasses() {
         setClasses((prev) => prev.map((c) =>
           Number(c.classId) === Number(data.class_id)
             ? {
-              ...c,
-              studentStatus: "banned" as const,
-              students: data.student_count !== undefined ? data.student_count : c.students,
-            }
+                ...c,
+                studentStatus: "banned" as const,
+                students: data.student_count !== undefined ? data.student_count : c.students,
+              }
             : c
         ));
-        messageRef.current.error({
-          content: data.message || "Bạn đã bị chặn khỏi lớp học này",
-          key: `banned_${data.class_id}`,
-          duration: 5,
-        });
+        // Use setTimeout to avoid blocking state updates
+        setTimeout(() => {
+          messageRef.current.error({
+            content: data.message || "Bạn đã bị chặn khỏi lớp học này",
+            key: `banned_${data.class_id}`,
+            duration: 5,
+          });
+        }, 0);
       }
     });
 
@@ -189,17 +192,20 @@ export default function UserClasses() {
         setClasses((prev) => prev.map((c) =>
           Number(c.classId) === Number(data.class_id)
             ? {
-              ...c,
-              studentStatus: "online" as const,
-              students: data.student_count !== undefined ? data.student_count : c.students,
-            }
+                ...c,
+                studentStatus: "online" as const,
+                students: data.student_count !== undefined ? data.student_count : c.students,
+              }
             : c
         ));
-        messageRef.current.success({
-          content: data.message || "Bạn đã được gỡ chặn khỏi lớp học!",
-          key: `unbanned_${data.class_id}`,
-          duration: 5,
-        });
+        // Use setTimeout to avoid blocking state updates
+        setTimeout(() => {
+          messageRef.current.success({
+            content: data.message || "Bạn đã được gỡ chặn khỏi lớp học!",
+            key: `unbanned_${data.class_id}`,
+            duration: 5,
+          });
+        }, 0);
       }
     });
 
@@ -301,7 +307,10 @@ export default function UserClasses() {
         if (Number(data.user_id) === Number(currentUserId)) {
           // Current user was removed, remove class from list
           setClasses((prev) => prev.filter((c) => Number(c.classId) !== Number(data.class_id)));
-          messageRef.current.warning(`Bạn đã được mời khỏi lớp học`);
+          // Use setTimeout to avoid blocking state updates
+          setTimeout(() => {
+            messageRef.current.warning(`Bạn đã được mời khỏi lớp học`);
+          }, 0);
         } else {
           // Other student removed, update count
           setClasses((prev) => {
@@ -345,7 +354,10 @@ export default function UserClasses() {
       // Listen for class deleted
       const unsubscribeDeleted = classSocketClient.on("class_deleted", (data: any) => {
         setClasses((prev) => prev.filter((c) => Number(c.classId) !== Number(data.class_id)));
-        messageRef.current.info(`Lớp học "${data.name}" đã bị giải tán bởi giáo viên`);
+        // Use setTimeout to avoid blocking state updates
+        setTimeout(() => {
+          messageRef.current.info(`Lớp học "${data.name}" đã bị giải tán bởi giáo viên`);
+        }, 0);
       });
 
       unsubscribersRef.current = [
@@ -384,10 +396,6 @@ export default function UserClasses() {
   const handleTableChange = useCallback((page: number, pageSize: number) => {
     setPagination((prev) => ({ ...prev, current: page, pageSize }));
   }, []);
-
-  const handleView = useCallback((classId: string) => {
-    router.push(`/user/classes/${classId}`);
-  }, [router]);
 
   const handleOpenJoinModal = useCallback(() => {
     setIsJoinModalOpen(true);
@@ -430,6 +438,12 @@ export default function UserClasses() {
   const handleFilterChange = useCallback((value: string) => {
     setStatusFilter(value as ClassStatusFilter);
   }, []);
+
+  // Stable router ref - must be defined before columns
+  const routerRef = useRef(router);
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
 
   // Memoize columns to prevent re-render
   const columns: ColumnsType<ClassTableItem> = useMemo(() => [
@@ -485,13 +499,19 @@ export default function UserClasses() {
             </Button>
           </Tooltip>
         ) : (
-          <Button icon={<EyeOutlined />} size="small" type="primary" ghost onClick={() => handleView(record.classId)}>
+          <Button 
+            icon={<EyeOutlined />} 
+            size="small" 
+            type="primary" 
+            ghost 
+            onClick={() => routerRef.current.push(`/user/classes/${record.classId}`)}
+          >
             Xem
           </Button>
         )
       ),
     },
-  ], [handleView]);
+  ], []);
 
   // Memoize pagination config
   const paginationConfig = useMemo(() => ({

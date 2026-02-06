@@ -87,7 +87,7 @@ export default function UpdateEventModal({
       onCancel={handleCancel}
       footer={null}
       width={600}
-      destroyOnClose={false}
+      destroyOnHidden={false}
       maskClosable={!updating}
       closable={!updating}
     >

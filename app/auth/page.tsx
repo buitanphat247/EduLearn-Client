@@ -8,6 +8,7 @@ import Link from "next/link";
 import { signIn, signUp } from "@/lib/api/auth";
 import { getCurrentUser } from "@/lib/api/users";
 import { useTheme } from "@/app/context/ThemeContext";
+import { getPasswordValidationRules } from "@/lib/utils/validation";
 
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -23,13 +24,13 @@ export default function AuthPage() {
   // ✅ Fix race condition - Add isMounted check và cleanup
   useEffect(() => {
     let isMounted = true;
-    
+
     const checkAuth = async () => {
       // Wait a bit to ensure cookies are set
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       if (!isMounted) return;
-      
+
       const user = getCurrentUser();
       const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 
@@ -37,9 +38,9 @@ export default function AuthPage() {
         router.push("/profile");
       }
     };
-    
+
     checkAuth();
-    
+
     return () => {
       isMounted = false;
     };
@@ -77,24 +78,24 @@ export default function AuthPage() {
     // ✅ Rate limiting check
     const now = Date.now();
     const timeSinceLastAttempt = now - lastAttemptRef.current;
-    
+
     if (timeSinceLastAttempt < RATE_LIMIT_DELAY_MS) {
       message.warning("Vui lòng đợi một chút trước khi thử lại");
       return;
     }
-    
+
     // ✅ Check attempt count
     if (attemptCount >= MAX_ATTEMPTS) {
       message.error("Quá nhiều lần thử. Vui lòng thử lại sau 5 phút.");
       return;
     }
-    
+
     if (isSubmittingRef.current) return;
-    
+
     isSubmittingRef.current = true;
     setSignInLoading(true);
     lastAttemptRef.current = now;
-    
+
     try {
       const deviceName = navigator.userAgent || "Web Browser";
 
@@ -134,6 +135,7 @@ export default function AuthPage() {
   // ✅ Type safety - Define interface
   interface SignUpValues {
     name: string;
+    username: string;
     email: string;
     phone: string;
     password: string;
@@ -142,72 +144,38 @@ export default function AuthPage() {
     agreement: boolean;
   }
 
-  // ✅ Generate username with sanitization và collision reduction
-  const generateUsername = (email: string, name: string): string => {
-    // Extract from email
-    let baseUsername = email.split("@")[0];
-    
-    // ✅ Sanitize username
-    baseUsername = baseUsername
-      .toLowerCase()
-      .replace(/[^a-z0-9_]/g, "_")
-      .replace(/_+/g, "_")
-      .substring(0, 20); // Limit length
-    
-    // Fallback to name
-    if (!baseUsername || baseUsername.length < 3) {
-      baseUsername = name
-        .toLowerCase()
-        .replace(/\s+/g, "_")
-        .replace(/[^a-z0-9_]/g, "_")
-        .substring(0, 20);
-    }
-    
-    // ✅ Add random suffix to reduce collisions
-    const suffix = Math.random().toString(36).substring(2, 6);
-    return `${baseUsername}_${suffix}`;
-  };
-
   const handleSignUp = async (values: SignUpValues) => {
     // ✅ Rate limiting check
     const now = Date.now();
     const timeSinceLastAttempt = now - lastAttemptRef.current;
-    
+
     if (timeSinceLastAttempt < RATE_LIMIT_DELAY_MS) {
       message.warning("Vui lòng đợi một chút trước khi thử lại");
       return;
     }
-    
+
     if (isSubmittingRef.current) return;
-    
+
     isSubmittingRef.current = true;
     setSignUpLoading(true);
     lastAttemptRef.current = now;
-    
+
     try {
       const deviceName = navigator.userAgent || "Web Browser";
-      // ✅ Use improved username generation
-      const username = generateUsername(values.email, values.name);
 
       const response = await signUp({
-        username: username,
+        username: values.username, // ✅ User chooses their own username
         fullname: values.name,
         email: values.email,
         phone: values.phone || "",
-        password: values.password, // ✅ Password sent over HTTPS (acceptable - backend handles hashing)
+        password: values.password,
         role_id: values.role_id || 3,
         device_name: deviceName,
       });
 
       if (response.status && response.data?.user) {
-        // Backend đã mã hóa và set cookie rồi
-        // KHÔNG lưu vào localStorage nữa - chỉ dùng cookie đã mã hóa
-        // Tất cả thông tin sẽ được đọc từ cookie ở server-side
-
         message.success("Đăng ký thành công!");
-        // ✅ Reset attempt count on success
         setAttemptCount(0);
-        // ✅ Use router.push instead of window.location.href
         setTimeout(() => {
           router.push("/profile");
         }, REDIRECT_DELAY_MS);
@@ -378,6 +346,17 @@ export default function AuthPage() {
                         <Input placeholder="Họ và tên" size="large" prefix={<UserOutlined className="text-slate-400 dark:text-slate-500 mr-2" />} className="bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50 hover:bg-white dark:hover:bg-slate-900/80 transition-all font-medium" />
                       </Form.Item>
 
+                      <Form.Item
+                        name="username"
+                        rules={[
+                          { required: true, message: "Nhập username!" },
+                          { pattern: /^[a-z0-9_]{3,20}$/, message: "3-20 ký tự thường/số/_" }
+                        ]}
+                        className="mb-0"
+                      >
+                        <Input placeholder="Tên đăng nhập" size="large" prefix={<UserOutlined className="text-slate-400 dark:text-slate-500 mr-2" />} className="bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50 hover:bg-white dark:hover:bg-slate-900/80 transition-all font-medium" />
+                      </Form.Item>
+
                       <Form.Item name="email" rules={[{ required: true, message: "Vui lòng nhập email!" }, { type: "email", message: "Email không hợp lệ!" }]} className="mb-0">
                         <Input placeholder="Email" size="large" prefix={<MailOutlined className="text-slate-400 dark:text-slate-500 mr-2" />} className="bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50 hover:bg-white dark:hover:bg-slate-900/80 transition-all font-medium" />
                       </Form.Item>
@@ -386,10 +365,10 @@ export default function AuthPage() {
                         <Input placeholder="Số điện thoại" size="large" prefix={<i className="fas fa-phone text-slate-400 dark:text-slate-500 text-sm mr-2" />} className="bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50 hover:bg-white dark:hover:bg-slate-900/80 transition-all font-medium" />
                       </Form.Item>
 
-                      <Form.Item name="role_id" initialValue={3} className="mb-0">
+                      <Form.Item name="role_id" initialValue={3} className="mb-0 col-span-1 md:col-span-2">
                         <Select
                           size="large"
-                          popupClassName="dark:bg-slate-800 dark:border-slate-700"
+                          classNames={{ popup: { root: "dark:bg-slate-800 dark:border-slate-700" } }}
                           options={[
                             { value: 3, label: 'Học sinh' },
                             { value: 2, label: 'Giảng viên' },
@@ -397,7 +376,7 @@ export default function AuthPage() {
                         />
                       </Form.Item>
 
-                      <Form.Item name="password" rules={[{ required: true, message: "Nhập mật khẩu!" }, { min: 6, message: "Tối thiểu 6 ký tự!" }]} className="mb-0">
+                      <Form.Item name="password" rules={getPasswordValidationRules()} className="mb-0">
                         <Input.Password placeholder="Mật khẩu" size="large" prefix={<LockOutlined className="text-slate-400 dark:text-slate-500 mr-2" />} className="bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50 hover:bg-white dark:hover:bg-slate-900/80 transition-all font-medium" />
                       </Form.Item>
 

@@ -17,8 +17,6 @@ export default function EditClassNotificationModal({ open, notification, classId
         title: notification.title,
         message: notification.message,
       });
-    } else {
-      form.resetFields();
     }
   }, [open, notification, form]);
 
@@ -89,7 +87,7 @@ export default function EditClassNotificationModal({ open, notification, classId
       width={600}
       maskClosable={!submitting}
       closable={!submitting}
-      destroyOnClose={true}
+      destroyOnHidden={true}
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item

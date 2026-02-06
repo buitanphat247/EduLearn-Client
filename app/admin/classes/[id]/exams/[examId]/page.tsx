@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { useParams, useRouter } from "next/navigation";
+import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
 import { Table, Tag, Button, Card, Typography, Space, Badge, Statistic, Row, Col, Tooltip, Modal, List, Empty, Descriptions } from "antd";
 import {
   ArrowLeftOutlined,
@@ -376,6 +377,7 @@ export default function ExamDetailPage() {
 
   return (
     <div className="p-0 min-h-screen">
+    <RouteErrorBoundary routeName="admin">
       <div className="flex flex-col gap-6">
         {/* Simple Back Button */}
         <div>
@@ -421,6 +423,7 @@ export default function ExamDetailPage() {
 
       {/* Security Logs Modal Memoized */}
       <SecurityLogModal isOpen={isLogModalOpen} onClose={handleCloseLogs} selectedLogs={selectedLogs} />
+    </RouteErrorBoundary>
     </div>
   );
 }

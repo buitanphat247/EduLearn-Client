@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BookOutlined, FileTextOutlined, UserOutlined, AppstoreOutlined, CloudDownloadOutlined, ArrowRightOutlined, SettingOutlined } from "@ant-design/icons";
+import { FileTextOutlined, UserOutlined, AppstoreOutlined, CloudDownloadOutlined, ArrowRightOutlined, SettingOutlined } from "@ant-design/icons";
 import { IoBookOutline } from "react-icons/io5";
 import { App, Card } from "antd";
 import { useRouter } from "next/navigation";
@@ -117,7 +117,6 @@ function QuickActionsGrid({ items }: { items: DashboardItem[] }) {
 export default function UserDashboard() {
   const { message } = App.useApp();
   const [stats, setStats] = useState<StatsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // ✅ Add isMounted check to prevent state updates after unmount
@@ -126,7 +125,6 @@ export default function UserDashboard() {
 
     const fetchStats = async () => {
       try {
-        setLoading(true);
         const data = await getStats();
         // ✅ Only update state if component is still mounted
         if (isMounted && !abortController.signal.aborted) {
@@ -136,10 +134,6 @@ export default function UserDashboard() {
         // ✅ Only show error if component is still mounted
         if (isMounted && !abortController.signal.aborted) {
           message.error(error?.message || "Không thể tải thống kê");
-        }
-      } finally {
-        if (isMounted && !abortController.signal.aborted) {
-          setLoading(false);
         }
       }
     };

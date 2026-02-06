@@ -89,28 +89,28 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#fafbfc] dark:bg-[#0f172a] transition-all duration-500 ease-in-out">
       <Hero />
-      <ScrollAnimation direction="up" delay={0}>
+      <ScrollAnimation direction="up">
         <div className="border-b border-slate-200/60 dark:border-slate-800 transition-colors duration-500">
           <Stats />
         </div>
       </ScrollAnimation>
-      <ScrollAnimation direction="up" delay={100}>
+      <ScrollAnimation direction="up">
         <div className="border-b border-slate-200/60 dark:border-slate-800 transition-colors duration-500">
           <Features />
         </div>
       </ScrollAnimation>
-      <ScrollAnimation direction="up" delay={200}>
+      <ScrollAnimation direction="up">
         <div className="border-b border-slate-200/60 dark:border-slate-800 transition-colors duration-500">
           <Testimonials />
         </div>
       </ScrollAnimation>
-      <ScrollAnimation direction="up" delay={300}>
+      <ScrollAnimation direction="up">
         <Integrations />
       </ScrollAnimation>
-      <ScrollAnimation direction="up" delay={400}>
+      <ScrollAnimation direction="up">
         <ValueProps />
       </ScrollAnimation>
-      <ScrollAnimation direction="up" delay={500}>
+      <ScrollAnimation direction="up">
         <CallToAction />
       </ScrollAnimation>
     </div>

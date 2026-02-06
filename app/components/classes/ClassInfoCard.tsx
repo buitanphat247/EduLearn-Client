@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { Descriptions, Tag, Avatar, Button, App } from "antd";
+import { Descriptions, Tag, Avatar, Button } from "antd";
 import { UserOutlined, InfoCircleOutlined, CopyOutlined } from "@ant-design/icons";
 import CustomCard from "@/app/components/common/CustomCard";
 
@@ -47,7 +47,7 @@ function ClassInfoCard({ classInfo, onCopyCode }: ClassInfoCardProps) {
       }
       bodyClassName="py-6"
     >
-      <Descriptions column={2} bordered>
+      <Descriptions column={2} bordered layout="horizontal">
         <Descriptions.Item label="Tên lớp" span={1}>
           <span className="font-semibold text-gray-800 dark:text-gray-100">{classInfo.name}</span>
         </Descriptions.Item>
@@ -68,6 +68,11 @@ function ClassInfoCard({ classInfo, onCopyCode }: ClassInfoCardProps) {
             <UserOutlined className="text-blue-500" />
             <span className="font-medium dark:text-gray-200">{classInfo.students} học sinh</span>
           </span>
+        </Descriptions.Item>
+        <Descriptions.Item label="Trạng thái" span={1}>
+          <Tag color={classInfo.status === "Đang hoạt động" ? "success" : "default"}>
+            {classInfo.status}
+          </Tag>
         </Descriptions.Item>
         {classInfo.creator && (
           <Descriptions.Item label="Giáo viên chủ nhiệm" span={2}>

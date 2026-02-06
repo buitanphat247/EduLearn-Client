@@ -41,7 +41,7 @@ const getThemeTransitionDuration = (): number => {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
-  const [mounted, setMounted] = useState(false);
+
   const [isToggling, setIsToggling] = useState(false);
   const transitionDuration = getThemeTransitionDuration();
   // Track the latest request to prevent race conditions
@@ -49,7 +49,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const requestIdRef = React.useRef<number>(0);
 
   useEffect(() => {
-    setMounted(true);
+
     // Sync state with actual DOM class (already set by inline script)
     const isDark = document.documentElement.classList.contains("dark");
     setTheme(isDark ? "dark" : "light");
@@ -67,18 +67,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Cancel previous request if exists
     if (requestRef.current) {
       requestRef.current.abortController.abort();
-      if (process.env.NODE_ENV !== "production") {
-        console.log("[ThemeContext] Cancelled previous request");
-      }
+
     }
 
     setIsToggling(true);
     const newTheme = theme === "light" ? "dark" : "light";
-    
+
     // Generate unique request ID
     const currentRequestId = ++requestIdRef.current;
     const abortController = new AbortController();
-    
+
     // Track this request to prevent race conditions
     requestRef.current = { id: currentRequestId, abortController };
 
@@ -88,7 +86,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setTheme(newTheme);
         // Remove localStorage setting to rely on cookie
         const result = await setThemeCookie(newTheme);
-        
+
         // Check if this request is still the latest (prevent race condition)
         if (requestRef.current?.id !== currentRequestId || abortController.signal.aborted) {
           if (process.env.NODE_ENV !== "production") {
@@ -96,7 +94,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           }
           return;
         }
-        
+
         if (!result.success) {
           console.warn("[ThemeContext] Server action failed, using client-side fallback:", result.error);
           // Fallback to client-side cookie if server action fails
@@ -136,7 +134,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             }
             return;
           }
-          
+
           if (!result.success) {
             console.warn("[ThemeContext] Server action failed, using client-side fallback:", result.error);
             // Fallback to client-side cookie if server action fails
@@ -146,8 +144,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           // Only handle error if this is still the latest request and not aborted
           if (requestRef.current?.id === cookieRequestId && !abortController.signal.aborted) {
             console.error("[ThemeContext] Error setting theme cookie:", error);
-          // Fallback to client-side cookie
-          document.cookie = `theme=${newTheme}; path=/; max-age=31536000; SameSite=Lax`;
+            // Fallback to client-side cookie
+            document.cookie = `theme=${newTheme}; path=/; max-age=31536000; SameSite=Lax`;
           }
         });
         document.documentElement.classList.toggle("dark", newTheme === "dark");
@@ -177,39 +175,39 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         // Only handle error if this is still the latest request and not aborted
         if (requestRef.current?.id === currentRequestId && !abortController.signal.aborted) {
           console.error("[ThemeContext] Error during theme transition:", error);
-        // Fallback: ensure theme is set even if transition fails
-        setTheme(newTheme);
-        document.documentElement.classList.toggle("dark", newTheme === "dark");
+          // Fallback: ensure theme is set even if transition fails
+          setTheme(newTheme);
+          document.documentElement.classList.toggle("dark", newTheme === "dark");
         }
       } finally {
         // Only clean up if this is still the latest request
         if (requestRef.current?.id === currentRequestId && !abortController.signal.aborted) {
-        // Re-enable transitions after the view transition is starting/ready
-        // effectively we can remove it once the "new" snapshot is captured, 
-        // which happens when .ready resolves. 
-        // But keeping it off until animation finishes is also fine, 
-        // though we usually want hover effects to work during the 1.5s animation?
-        // Let's remove it when ready resolves.
-        document.documentElement.classList.remove('no-transitions');
+          // Re-enable transitions after the view transition is starting/ready
+          // effectively we can remove it once the "new" snapshot is captured, 
+          // which happens when .ready resolves. 
+          // But keeping it off until animation finishes is also fine, 
+          // though we usually want hover effects to work during the 1.5s animation?
+          // Let's remove it when ready resolves.
+          document.documentElement.classList.remove('no-transitions');
         }
       }
     } catch (error) {
       // Only handle error if this is still the latest request and not aborted
       if (requestRef.current?.id === currentRequestId && !abortController.signal.aborted) {
         console.error("[ThemeContext] Error during theme toggle:", error);
-      // Fallback: ensure theme is set even if toggle fails
-      setTheme(newTheme);
-      document.documentElement.classList.toggle("dark", newTheme === "dark");
+        // Fallback: ensure theme is set even if toggle fails
+        setTheme(newTheme);
+        document.documentElement.classList.toggle("dark", newTheme === "dark");
       }
     } finally {
       // Only reset toggling state if this is still the latest request
       if (requestRef.current?.id === currentRequestId) {
-      setIsToggling(false);
+        setIsToggling(false);
         requestRef.current = null;
       } else {
         // If a newer request is in progress, don't reset isToggling
         if (process.env.NODE_ENV !== "production") {
-          console.log("[ThemeContext] Skipping state reset - newer request in progress");
+
         }
       }
     }

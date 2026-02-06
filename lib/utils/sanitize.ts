@@ -11,17 +11,17 @@ export function sanitizeInput(value: string): string {
 
   // Remove HTML tags
   let sanitized = value.replace(/<[^>]*>/g, "");
-  
+
   // Remove potentially dangerous characters
   sanitized = sanitized.replace(/[<>'"&]/g, "");
-  
+
   // Remove script tags and event handlers (case insensitive)
   sanitized = sanitized.replace(/javascript:/gi, "");
   sanitized = sanitized.replace(/on\w+\s*=/gi, "");
-  
-  // Trim whitespace
-  sanitized = sanitized.trim();
-  
+
+  // Do not trim aggressively during typing
+  // sanitized = sanitized.trim();
+
   return sanitized;
 }
 
@@ -40,6 +40,6 @@ export function sanitizeForDisplay(value: string): string {
   let sanitized = value.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
   sanitized = sanitized.replace(/javascript:/gi, "");
   sanitized = sanitized.replace(/on\w+\s*=/gi, "");
-  
+
   return sanitized.trim();
 }

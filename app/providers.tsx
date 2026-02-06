@@ -5,7 +5,6 @@ import { ConfigProvider, App, theme as antTheme } from "antd";
 import { ThemeProvider, useTheme } from "@/app/context/ThemeContext";
 import ErrorBoundary from "@/app/error-boundary";
 import { WebVitalsTracker } from "@/app/components/common/WebVitalsTracker";
-import { measureProviderRender } from "@/lib/utils/web-vitals";
 
 function AntdConfigProvider({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme();
@@ -66,14 +65,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     // Measure provider mount time after render
     return () => {
       if (typeof window !== "undefined" && renderStartTime.current !== null) {
-        const mountTime = measureProviderRender(
-          "Providers",
-          renderStartTime.current
-        );
-        
-        if (process.env.NODE_ENV === "development") {
-          console.log(`[Performance] Providers mounted in ${mountTime.toFixed(2)}ms`);
-        }
+
+
+
       }
     };
   }, []);

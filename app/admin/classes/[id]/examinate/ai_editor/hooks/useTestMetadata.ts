@@ -2,21 +2,23 @@ import { useState } from "react";
 import { message } from "antd";
 import { updateRagTest, publishRagTest, RagTestDetail } from "@/lib/api/rag-exams";
 import { transactionQueue } from "../utils/transactionQueue";
+import { classSocketClient } from "@/lib/socket/class-client";
 
 interface UseTestMetadataProps {
   testId: string | null;
   test: RagTestDetail | null;
   setTest: (test: RagTestDetail | null) => void;
   refetch: () => Promise<void>;
+  classId: string | number;
 }
 
-export function useTestMetadata({ testId, test, setTest, refetch }: UseTestMetadataProps) {
+export function useTestMetadata({ testId, test, setTest, refetch, classId }: UseTestMetadataProps) {
   const [saving, setSaving] = useState(false);
 
   const saveMetadata = async (values: any) => {
     // Set saving state immediately for instant spinner
     setSaving(true);
-    
+
     try {
       // Enqueue the transaction to ensure sequential execution
       await transactionQueue.enqueue(async () => {
@@ -35,12 +37,14 @@ export function useTestMetadata({ testId, test, setTest, refetch }: UseTestMetad
             // Prepare payload
             const payload = { ...values };
             if (payload.end_at && typeof payload.end_at.format === "function") {
-               payload.end_at = payload.end_at.format("YYYY-MM-DD HH:mm:ss");
+              payload.end_at = payload.end_at.format("YYYY-MM-DD HH:mm:ss");
             }
 
             const success = await updateRagTest(testId!, payload);
             if (success) {
               message.success("Đã cập nhật cấu hình");
+              // Emit socket event
+              classSocketClient.emit("exam_updated", { class_id: classId, id: testId });
               await refetch();
             } else {
               message.error("Cập nhật thất bại");
@@ -62,7 +66,7 @@ export function useTestMetadata({ testId, test, setTest, refetch }: UseTestMetad
   const togglePublish = async (isPublished: boolean) => {
     // Set saving state immediately for instant spinner
     setSaving(true);
-    
+
     try {
       // Enqueue the transaction to ensure sequential execution
       await transactionQueue.enqueue(async () => {
@@ -81,6 +85,8 @@ export function useTestMetadata({ testId, test, setTest, refetch }: UseTestMetad
             const success = await publishRagTest(testId!, isPublished);
             if (success) {
               message.success(isPublished ? "Đã xuất bản đề thi thành công!" : "Đã hủy xuất bản đề thi thành công!");
+              // Emit socket event
+              classSocketClient.emit("exam_updated", { class_id: classId, id: testId });
               await refetch();
             } else {
               message.error(isPublished ? "Xuất bản thất bại" : "Hủy xuất bản thất bại");

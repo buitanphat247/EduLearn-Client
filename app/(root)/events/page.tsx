@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { App } from "antd";
+import { App, Empty } from "antd";
 import { getEvents, type EventResponse } from "@/lib/api/events";
 import EventCard from "@/app/components/events/EventCard";
 import EventDetailModal, { type EventDetail } from "@/app/components/events/EventDetailModal";
@@ -65,15 +65,22 @@ export default function EventsPage() {
         setEvents(result.events);
         setTotal(result.total);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Don't show error for aborted requests
-      if (error.name !== "AbortError" && !controller.signal.aborted) {
+      if (error instanceof Error && error.name !== "AbortError" && !controller.signal.aborted) {
         message.error(error.message || "Không thể tải danh sách sự kiện");
       }
     } finally {
       // Only update loading state if request wasn't aborted
       if (!controller.signal.aborted) {
         setLoading(false);
+        // Reset isChangingPage flag when request completes
+        setIsChangingPage(false);
+        // Clear timeout if exists
+        if (pageChangeTimeoutRef.current) {
+          clearTimeout(pageChangeTimeoutRef.current);
+          pageChangeTimeoutRef.current = null;
+        }
       }
     }
   }, [currentPage, debouncedSearchText, message]);
@@ -182,27 +189,36 @@ export default function EventsPage() {
   // Handle page change
   const handlePageChange = (page: number) => {
     // Prevent double click / rapid page changes
-    if (isChangingPage) return;
+    if (isChangingPage) {
+      return;
+    }
+
+    // Don't change if it's the same page
+    if (page === currentPage) {
+      return;
+    }
 
     // Clear any existing timeout
     if (pageChangeTimeoutRef.current) {
       clearTimeout(pageChangeTimeoutRef.current);
+      pageChangeTimeoutRef.current = null;
     }
 
     setIsChangingPage(true);
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
 
-    // Reset flag after a short delay to allow request to complete
+    // Fallback: Reset flag after timeout if request takes too long
+    // But normally it will be reset in fetchEvents finally block
     pageChangeTimeoutRef.current = setTimeout(() => {
       setIsChangingPage(false);
       pageChangeTimeoutRef.current = null;
-    }, 500);
+    }, 2000); // Increased timeout as fallback
   };
 
   return (
     <App>
-      <main className="min-h-screen bg-slate-50 dark:bg-[#0f172a] transition-colors duration-500">
+      <main className="h-full bg-slate-50 dark:bg-[#0f172a] transition-colors duration-500">
         <div className="container mx-auto px-4 py-12">
           <div className="text-center mb-12">
             <h1 className="text-5xl font-bold text-slate-800 dark:text-white mb-4 transition-colors duration-300">Sự kiện</h1>
@@ -259,20 +275,7 @@ export default function EventsPage() {
                 })}
               </div>
 
-              {filteredEvents.length > pageSize ? (
-                <DarkPagination
-                  current={currentPage}
-                  total={filteredEvents.length}
-                  pageSize={pageSize}
-                  onChange={handlePageChange}
-                  showTotal={(total, range) => (
-                    <span className="text-slate-500 dark:text-slate-300">
-                      {range[0]}-{range[1]} của {total} sự kiện
-                    </span>
-                  )}
-                  className="mt-12"
-                />
-              ) : total > pageSize ? (
+              {total > pageSize && (
                 <DarkPagination
                   current={currentPage}
                   total={total}
@@ -285,11 +288,11 @@ export default function EventsPage() {
                   )}
                   className="mt-12"
                 />
-              ) : null}
+              )}
             </>
           ) : (
-            <div className="text-center py-20 bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-700 transition-colors duration-300 shadow-sm">
-              <p className="text-slate-500 dark:text-slate-400 text-lg">Không tìm thấy sự kiện nào</p>
+            <div className="py-20 bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-700 transition-colors duration-300 shadow-sm">
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span className="text-slate-500 dark:text-slate-400 text-lg">Không tìm thấy sự kiện nào</span>} />
             </div>
           )}
         </div>

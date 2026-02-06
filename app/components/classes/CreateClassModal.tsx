@@ -124,7 +124,7 @@ export default function CreateClassModal({ open, onCancel, onSuccess }: CreateCl
       width={500}
       maskClosable={!submitting}
       closable={!submitting}
-      destroyOnClose={true}
+      destroyOnHidden={true}
       aria-labelledby="create-class-modal-title"
       aria-describedby="create-class-modal-description"
     >

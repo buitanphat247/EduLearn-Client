@@ -40,7 +40,7 @@ export default function DocumentPreviewModal({
       width="90%"
       styles={{ body: { padding: 0 } }}
       centered
-      destroyOnClose={false}
+      destroyOnHidden={false}
       maskClosable={true}
       title={title}
     >

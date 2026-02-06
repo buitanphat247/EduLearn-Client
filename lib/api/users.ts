@@ -455,3 +455,27 @@ export const changePassword = async (params: ChangePasswordParams): Promise<Chan
     throw new Error(errorMessage);
   }
 };
+
+export interface UpdateUserParams {
+  fullname?: string;
+  phone?: string;
+  avatar?: string;
+  username?: string;
+  role_id?: number;
+  status?: string;
+}
+
+export const updateUser = async (userId: number | string, params: UpdateUserParams): Promise<UserInfoResponse> => {
+  try {
+    const response = await apiClient.patch(`/users/${userId}`, params);
+
+    if (response.data.status && response.data.data) {
+      return response.data.data;
+    }
+
+    return response.data as any;
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể cập nhật thông tin user";
+    throw new Error(errorMessage);
+  }
+};

@@ -10,10 +10,17 @@ import {
   SaveOutlined,
   MailOutlined,
   PhoneOutlined,
+  CameraOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
-import { getUserInfo, changePassword, type UserInfoResponse } from "@/lib/api/users";
+import { getUserInfo, changePassword, updateUser, type UserInfoResponse } from "@/lib/api/users";
+import { uploadFile } from "@/lib/api/file-upload";
+import { getMediaUrl } from "@/lib/utils/media";
+import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import { useUserId } from "@/app/hooks/useUserId";
 import SettingsSkeleton from "@/app/components/settings/SettingsSkeleton";
+import { getNewPasswordValidationRules } from "@/lib/utils/validation";
+import { updateUserSettings } from "@/lib/api/settings";
 
 interface SettingsFormData {
   fullname: string;
@@ -29,15 +36,34 @@ export default function AdminSettings() {
   const [passwordForm] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
 
-  // Notification settings
+  const FALLBACK_CAT = getMediaUrl("/avatars/anh3_1770318347807_gt8xnc.jpeg");
+
+  // UI States for switches
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [systemUpdates, setSystemUpdates] = useState(true);
-
-  // Security settings
   const [twoFactorAuth, setTwoFactorAuth] = useState(false);
+
+  const handleUpdateSettings = async () => {
+    try {
+      setSaving(true);
+      await updateUserSettings({
+        emailNotifications,
+        pushNotifications,
+        systemUpdates,
+        twoFactorAuth
+      });
+      messageApi.success("Đã cập nhật cài đặt thành công");
+    } catch (error: any) {
+      messageApi.error(error?.message || "Không thể cập nhật cài đặt");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Fetch user info
   useEffect(() => {
@@ -70,51 +96,57 @@ export default function AdminSettings() {
     fetchUserInfo();
   }, [userId, userIdLoading, profileForm, messageApi]);
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+
+    if (!file.type.startsWith("image/")) {
+      messageApi.error("Vui lòng chọn tệp hình ảnh (jpg, png, webp...)");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      messageApi.error("Kích thước ảnh không được vượt quá 5MB");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const hideProgress = messageApi.loading("Đang tải ảnh lên...", 0);
+
+      const imageUrl = await uploadFile(file, "avatars");
+      const updatedUser = await updateUser(userId, { avatar: imageUrl });
+
+      setUserInfo(updatedUser);
+      setImgError(false);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event("user-updated"));
+
+      hideProgress();
+      messageApi.success("Cập nhật ảnh đại diện thành công");
+    } catch (error: any) {
+      console.error("Avatar upload error:", error);
+      messageApi.error(error.message || "Lỗi khi cập nhật ảnh đại diện");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSaveProfile = async (values: SettingsFormData) => {
     try {
       setSaving(true);
-      // TODO: Call API to update user profile
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+      if (userId) {
+        const updated = await updateUser(userId, values);
+        setUserInfo(updated);
+        localStorage.setItem("user", JSON.stringify(updated));
+        window.dispatchEvent(new Event("user-updated"));
+      }
       messageApi.success("Đã cập nhật thông tin thành công");
     } catch (error: any) {
       messageApi.error(error?.message || "Không thể cập nhật thông tin");
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleSaveNotifications = async () => {
-    try {
-      setSaving(true);
-      // TODO: Call API to save notification settings
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      messageApi.success("Đã lưu cài đặt thông báo");
-    } catch (error: any) {
-      messageApi.error("Không thể lưu cài đặt");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveSecurity = async () => {
-    try {
-      setSaving(true);
-      // TODO: Call API to save security settings
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      messageApi.success("Đã lưu cài đặt bảo mật");
-    } catch (error: any) {
-      messageApi.error("Không thể lưu cài đặt");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const getInitials = (name: string) => {
-    if (!name) return "A";
-    const parts = name.trim().split(" ");
-    return parts.length >= 2
-      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-      : name.substring(0, 2).toUpperCase();
   };
 
   // Custom Card Component
@@ -141,18 +173,47 @@ export default function AdminSettings() {
         }
       >
         <div className="flex items-start gap-6 mb-6">
-          <Avatar
-            size={100}
-            src={userInfo?.avatar}
-            icon={<UserOutlined />}
-            className="bg-blue-600 flex items-center justify-center text-white text-2xl font-bold"
-          >
-            {userInfo?.fullname ? getInitials(userInfo.fullname) : "A"}
-          </Avatar>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-1">{userInfo?.fullname || "Admin"}</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-1">@{userInfo?.username || "admin"}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-500">{userInfo?.role?.role_name || "Giáo viên"}</p>
+          <div className="relative group/avatar">
+            <div className="relative overflow-hidden rounded-full border-4 border-white dark:border-slate-700 shadow-lg">
+              <Avatar
+                size={120}
+                src={getCachedImageUrl((!userInfo?.avatar || imgError) ? FALLBACK_CAT : getMediaUrl(userInfo.avatar))}
+                onError={() => {
+                  setImgError(true);
+                  return true;
+                }}
+                className="flex items-center justify-center bg-slate-100 dark:bg-slate-800"
+                icon={<UserOutlined style={{ fontSize: 50, color: '#94a3b8' }} />}
+              />
+
+              {uploading && (
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-10">
+                  <LoadingOutlined className="text-white text-3xl" />
+                </div>
+              )}
+            </div>
+
+            <label className="absolute bottom-1 right-1 w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg transition-all duration-300 transform group-hover/avatar:scale-110 border-2 border-white dark:border-slate-800 z-20">
+              <CameraOutlined className="text-lg" />
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                disabled={uploading}
+              />
+            </label>
+          </div>
+          <div className="flex-1 pt-2">
+            <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">{userInfo?.fullname || "Admin"}</h3>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-gray-600 dark:text-gray-400">@{userInfo?.username || "admin"}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+              <span className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wider">Trực tuyến</span>
+            </div>
+            <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold uppercase tracking-widest border border-blue-100 dark:border-blue-800">
+              {userInfo?.role?.role_name || "Giáo viên"}
+            </div>
           </div>
         </div>
 
@@ -240,7 +301,6 @@ export default function AdminSettings() {
         <div className="space-y-4">
           <div
             className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-slate-600! cursor-pointer"
-            onClick={() => messageApi.info("Tính năng đang phát triển")}
           >
             <div>
               <p className="font-semibold text-gray-800 dark:text-gray-200">Thông báo qua email</p>
@@ -248,14 +308,12 @@ export default function AdminSettings() {
             </div>
             <Switch
               checked={emailNotifications}
-              onChange={() => { }}
-              disabled
+              onChange={setEmailNotifications}
             />
           </div>
 
           <div
             className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-slate-600! cursor-pointer"
-            onClick={() => messageApi.info("Tính năng đang phát triển")}
           >
             <div>
               <p className="font-semibold text-gray-800 dark:text-gray-200">Thông báo đẩy</p>
@@ -263,14 +321,12 @@ export default function AdminSettings() {
             </div>
             <Switch
               checked={pushNotifications}
-              onChange={() => { }}
-              disabled
+              onChange={setPushNotifications}
             />
           </div>
 
           <div
             className="flex items-center justify-between py-3 cursor-pointer"
-            onClick={() => messageApi.info("Tính năng đang phát triển")}
           >
             <div>
               <p className="font-semibold text-gray-800 dark:text-gray-200">Cập nhật hệ thống</p>
@@ -278,8 +334,7 @@ export default function AdminSettings() {
             </div>
             <Switch
               checked={systemUpdates}
-              onChange={() => { }}
-              disabled
+              onChange={setSystemUpdates}
             />
           </div>
         </div>
@@ -290,8 +345,7 @@ export default function AdminSettings() {
             icon={<SaveOutlined />}
             size="large"
             loading={saving}
-            onClick={() => messageApi.info("Tính năng đang phát triển")}
-            disabled
+            onClick={handleUpdateSettings}
             className="bg-blue-600 hover:bg-blue-700 border-none"
           >
             Lưu cài đặt
@@ -311,7 +365,6 @@ export default function AdminSettings() {
         <div className="space-y-4">
           <div
             className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-slate-600! cursor-pointer"
-            onClick={() => messageApi.info("Tính năng đang phát triển")}
           >
             <div>
               <p className="font-semibold text-gray-800 dark:text-gray-200">Xác thực hai yếu tố (2FA)</p>
@@ -319,8 +372,7 @@ export default function AdminSettings() {
             </div>
             <Switch
               checked={twoFactorAuth}
-              onChange={() => { }}
-              disabled
+              onChange={setTwoFactorAuth}
             />
           </div>
 
@@ -330,8 +382,7 @@ export default function AdminSettings() {
               icon={<SaveOutlined />}
               size="large"
               loading={saving}
-              onClick={() => messageApi.info("Tính năng đang phát triển")}
-              disabled
+              onClick={handleUpdateSettings}
               className="bg-blue-600 hover:bg-blue-700 border-none"
             >
               Lưu cài đặt
@@ -386,10 +437,7 @@ export default function AdminSettings() {
           <Form.Item
             label={<span className="text-gray-700 dark:text-gray-300">Mật khẩu mới</span>}
             name="newPassword"
-            rules={[
-              { required: true, message: "Vui lòng nhập mật khẩu mới" },
-              { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự" },
-            ]}
+            rules={getNewPasswordValidationRules()}
           >
             <Input.Password
               prefix={<LockOutlined className="text-gray-400 dark:text-gray-500" />}

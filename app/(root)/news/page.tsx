@@ -1,6 +1,6 @@
 "use client";
 
-import { Input, Select, ConfigProvider, theme } from "antd";
+import { Input, Select, ConfigProvider, theme, Empty } from "antd";
 import { useState, useMemo, useCallback } from "react";
 import NewsCard from "@/app/components/news/NewsCard";
 import { SearchOutlined } from "@ant-design/icons";
@@ -40,18 +40,14 @@ export default function News() {
     setIsLoading(true);
     setSearchText(value);
     setCurrentPage(1);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 300);
+    setIsLoading(false);
   }, []);
 
   const handleCategoryChange = useCallback((value: string) => {
     setIsLoading(true);
     setSelectedCategory(value);
     setCurrentPage(1);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 300);
+    setIsLoading(false);
   }, []);
 
   // Handle page change
@@ -59,11 +55,9 @@ export default function News() {
     setIsLoading(true);
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
+
     // Simulate loading delay for skeleton
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 300);
+    setIsLoading(false);
   }, []);
 
   return (
@@ -157,8 +151,8 @@ export default function News() {
             )}
           </>
         ) : (
-          <div className="text-center py-20 bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-700 transition-colors duration-300 shadow-sm">
-            <p className="text-slate-500 dark:text-slate-400 text-lg">Không tìm thấy tin tức nào</p>
+          <div className="py-20 bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-700 transition-colors duration-300 shadow-sm">
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span className="text-slate-500 dark:text-slate-400 text-lg">Không tìm thấy tin tức nào</span>} />
           </div>
         )}
       </div>

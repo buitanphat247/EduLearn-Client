@@ -156,13 +156,17 @@ export default function CustomSelect({
 
   return (
     <div className={`relative ${wrapperClassName}`} ref={selectRef}>
-      <button
-        type="button"
+      <div
+        role="combobox"
+        tabIndex={0}
         onClick={() => {
           setIsOpen(!isOpen);
           if (!isOpen) setFocusedIndex(0);
         }}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => {
+          // Main handleKeyDown logic
+          handleKeyDown(e as any);
+        }}
         aria-label={selectedOption ? `Selected: ${selectedOption.label}` : placeholder}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
@@ -176,6 +180,7 @@ export default function CustomSelect({
           focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50
           transition-all duration-200
           flex items-center justify-between
+          cursor-pointer
           ${selectClassName}
         `}
       >
@@ -189,15 +194,25 @@ export default function CustomSelect({
         </span>
         <div className="flex items-center gap-2 ml-2 flex-shrink-0">
           {value && allowClear && (
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onChange?.(undefined);
                 setFocusedIndex(-1);
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onChange?.(undefined);
+                  setFocusedIndex(-1);
+                }
+              }}
               aria-label="Xóa lựa chọn"
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 rounded"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 rounded cursor-pointer"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -209,7 +224,7 @@ export default function CustomSelect({
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </button>
+            </div>
           )}
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -221,7 +236,7 @@ export default function CustomSelect({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
-      </button>
+      </div>
 
       {isOpen && (
         <div

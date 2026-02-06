@@ -32,7 +32,8 @@ export default function ExaminatePage() {
   ];
 
   return (
-    <div className="bg-gray-50/50 dark:bg-gray-900/50 space-y-6">
+    <RouteErrorBoundary routeName="admin">
+      <div className="bg-gray-50/50 dark:bg-gray-900/50 space-y-6">
       <div className="flex items-center justify-start">
         <Button
           icon={<ArrowLeftOutlined />}
@@ -90,6 +91,7 @@ export default function ExaminatePage() {
           <p className="text-sm text-gray-500 dark:text-gray-400">Quá trình này có thể mất 30-60 giây tùy độ dài tài liệu</p>
         </div>
       </Modal>
-    </div>
+      </div>
+    </RouteErrorBoundary>
   );
 }

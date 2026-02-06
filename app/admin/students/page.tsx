@@ -1,6 +1,6 @@
 "use client";
 
-import { Table, Button, App, Input, Spin, Tag } from "antd";
+import { Table, Button, App, Input, Spin } from "antd";
 import { SearchOutlined, EyeOutlined, LoadingOutlined } from "@ant-design/icons";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { ColumnsType } from "antd/es/table";
@@ -72,9 +72,9 @@ export default function AdminStudents() {
         return;
       }
 
-      const startTime = Date.now();
+      setLoading(true);
+
       try {
-        setLoading(true);
         const result = await getStudentsByUserId(userId, {
           page,
           limit,
@@ -82,11 +82,6 @@ export default function AdminStudents() {
         });
 
         const mapped: StudentItem[] = (result.data || []).map(mapStudentResponse);
-
-        const elapsedTime = Date.now() - startTime;
-        const minLoadingTime = 250;
-        const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
         setStudents(mapped);
         setPagination((prev) => ({
@@ -96,11 +91,6 @@ export default function AdminStudents() {
           total: result.total || mapped.length,
         }));
       } catch (error: any) {
-        const elapsedTime = Date.now() - startTime;
-        const minLoadingTime = 250;
-        const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
         message.error(error?.message || "Không thể tải danh sách học sinh");
       } finally {
         setLoading(false);

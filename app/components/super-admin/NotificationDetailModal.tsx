@@ -67,7 +67,7 @@ export default function NotificationDetailModal({ open, notificationId, onCancel
       onCancel={onCancel}
       footer={null}
       width={700}
-      destroyOnClose={true}
+      destroyOnHidden={true}
     >
       <Spin spinning={loading}>
         {notification && (

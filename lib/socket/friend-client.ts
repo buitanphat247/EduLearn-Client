@@ -18,7 +18,7 @@ class FriendSocketClient {
    */
   private getSocketUrl(): string {
     if (typeof window === "undefined") return "";
-    
+
     // Try to get from environment variable
     const envUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
     if (envUrl) {
@@ -35,54 +35,56 @@ class FriendSocketClient {
    */
   private getUserId(): number | string | null {
     if (typeof window === "undefined") return null;
-    
+
     try {
+      const { getUserIdFromCookie } = require("@/lib/utils/cookies");
+      const userId = getUserIdFromCookie();
+      if (userId) return userId;
+
       const userStr = localStorage.getItem("user");
       if (userStr) {
         const user = JSON.parse(userStr);
-        return user.user_id || null;
+        if (user.user_id) return user.user_id;
+        if (user.id) return user.id;
       }
     } catch (error) {
       console.error("Error getting user ID:", error);
+    }
+    return null;
+  }
+
+  /**
+   * Get encrypted user data from cookie _u
+   * NOTE: Cookie _u is NOT httpOnly, so JavaScript can read it
+   */
+  private getEncryptedUser(): string | null {
+    if (typeof window === "undefined") return null;
+
+    try {
+      const { getCookie } = require("@/lib/utils/cookies");
+      // Get encrypted user from cookie _u
+      const encryptedUser = getCookie("_u");
+      if (encryptedUser) return encryptedUser;
+    } catch (e) {
+      console.error("Error getting encrypted user:", e);
     }
 
     return null;
   }
 
   /**
-   * Get access token from localStorage or cookie
+   * Get JWT token from cookie _at
    */
-  private getAccessToken(): string | null {
+  private getToken(): string | null {
     if (typeof window === "undefined") return null;
-    
-    // Try localStorage first
-    const token = localStorage.getItem("accessToken");
-    if (token) return token;
 
-    // Try to get from user cookie
     try {
-      const userStr = localStorage.getItem("user");
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        return user.access_token || null;
-      }
-    } catch (error) {
-      console.error("Error parsing user from localStorage:", error);
+      const { getCookie } = require("@/lib/utils/cookies");
+      const token = getCookie("_at");
+      if (token) return token;
+    } catch (e) {
+      console.error("Error getting token:", e);
     }
-
-    // Try to get from cookie
-    try {
-      const cookies = document.cookie.split(';');
-      for (const cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
-        if (name === 'accessToken') {
-          return decodeURIComponent(value);
-        }
-      }
-    } catch (error) {
-      console.error("Error getting token from cookie:", error);
-    }
-
     return null;
   }
 
@@ -107,26 +109,27 @@ class FriendSocketClient {
     }
 
     const userId = this.getUserId();
-    const token = this.getAccessToken();
-    
+    const encryptedUser = this.getEncryptedUser();
+    const token = this.getToken(); // ✅ Get JWT token
+
     if (!userId) {
-      console.warn("No user ID found. Friend socket connection requires user ID.");
+      console.warn("[FriendSocket] No user ID found, cannot connect");
       return null;
     }
 
     this.isConnecting = true;
 
     try {
+      console.log("[FriendSocket] Connecting to:", socketUrl);
+
       // Connect to /friends namespace with auth token and userId
-      // auth.token: JWT token for authentication
-      // query.userId: Fallback userId (for backward compatibility)
       this.socket = io(`${socketUrl}/friends`, {
         auth: {
-          token: token || undefined, // JWT token
-          user_id: userId, // Also send userId in auth for convenience
+          user_id: userId,
+          token: token, // ✅ Send token in handshake auth as well
         },
         query: {
-          userId: String(userId), // Fallback for backward compatibility
+          userId: String(userId),
         },
         transports: ["websocket", "polling"],
         reconnection: true,
@@ -138,16 +141,32 @@ class FriendSocketClient {
       // Connection event handlers
       this.socket.on("connect", () => {
         console.log("Friend socket connected:", this.socket?.id);
+
+        // Authenticate using encrypted user data
+        if (encryptedUser || token) {
+          console.log("[FriendSocket] Authenticating...");
+          this.socket?.emit("authenticate", {
+            encryptedData: encryptedUser,
+            token: token,
+          });
+        } else {
+          console.warn("[FriendSocket] Connected but no authentication data found!");
+        }
+
         this.isConnecting = false;
 
         // Notify all listeners
         this.connectionListeners.forEach((listener) => listener(true));
       });
 
+      this.socket.on("friend:authenticated", (data: any) => {
+        console.log("[FriendSocket] Authentication successful:", data);
+      });
+
       this.socket.on("disconnect", (reason: string) => {
         console.log("Friend socket disconnected:", reason);
         this.isConnecting = false;
-        
+
         // Notify all listeners
         this.connectionListeners.forEach((listener) => listener(false));
       });
@@ -155,11 +174,14 @@ class FriendSocketClient {
       this.socket.on("connect_error", (error: Error) => {
         console.error("Friend socket connection error:", error);
         this.isConnecting = false;
-        
+
         // Notify all listeners
         this.connectionListeners.forEach((listener) => listener(false));
       });
 
+      this.socket.on("friend:error", (data: any) => {
+        console.error("[FriendSocket] Server error:", data);
+      });
     } catch (error) {
       console.error("Error creating friend socket connection:", error);
       this.isConnecting = false;
@@ -199,7 +221,7 @@ class FriendSocketClient {
    */
   onConnectionChange(listener: (connected: boolean) => void): () => void {
     this.connectionListeners.add(listener);
-    
+
     return () => {
       this.connectionListeners.delete(listener);
     };
@@ -209,11 +231,13 @@ class FriendSocketClient {
    * Emit event to server
    */
   emit(event: string, data: any): void {
-    if (!this.socket || !this.socket.connected) {
-      console.warn(`Cannot emit ${event}: Friend socket not connected`);
-      return;
+    if (!this.socket) {
+      this.connect();
     }
-    this.socket.emit(event, data);
+
+    if (this.socket) {
+      this.socket.emit(event, data);
+    }
   }
 
   /**
@@ -221,18 +245,20 @@ class FriendSocketClient {
    */
   on(event: string, callback: (...args: any[]) => void): () => void {
     if (!this.socket) {
-      console.warn(`Cannot listen to ${event}: Friend socket not initialized`);
-      return () => {};
+      this.connect();
     }
 
-    this.socket.on(event, callback);
+    if (this.socket) {
+      this.socket.on(event, callback);
 
-    // Return unsubscribe function
-    return () => {
-      if (this.socket) {
-        this.socket.off(event, callback);
-      }
-    };
+      // Return unsubscribe function
+      return () => {
+        if (this.socket) {
+          this.socket.off(event, callback);
+        }
+      };
+    }
+    return () => {};
   }
 
   /**
@@ -240,7 +266,7 @@ class FriendSocketClient {
    */
   off(event: string, callback?: (...args: any[]) => void): void {
     if (!this.socket) return;
-    
+
     if (callback) {
       this.socket.off(event, callback);
     } else {
@@ -251,4 +277,3 @@ class FriendSocketClient {
 
 // Export singleton instance
 export const friendSocketClient = new FriendSocketClient();
-

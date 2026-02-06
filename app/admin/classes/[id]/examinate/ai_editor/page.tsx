@@ -1,6 +1,5 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
 import { Form } from "antd";
 import { useParams, useSearchParams } from "next/navigation";
 import { useTestData } from "./hooks/useTestData";
@@ -10,7 +9,6 @@ import QuestionCard from "./components/QuestionCard";
 import SettingsPanel from "./components/SettingsPanel";
 import LoadingState from "./components/LoadingState";
 import ErrorState from "./components/ErrorState";
-import { RagTestDetail } from "@/lib/api/rag-exams";
 
 export default function AIEditorPage() {
   const params = useParams();
@@ -33,6 +31,7 @@ export default function AIEditorPage() {
     test,
     setTest,
     refetch,
+    classId,
   });
 
   // Early returns

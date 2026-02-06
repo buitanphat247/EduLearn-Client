@@ -166,7 +166,7 @@ export default function WritingPracticePage() {
   // Memoized data
   const memoizedVietnameseSentences = useMemo(() => data?.vietnameseSentences || [], [data?.vietnameseSentences]);
   const memoizedEnglishSentences = useMemo(() => data?.englishSentences || [], [data?.englishSentences]);
-  const currentSentence = useMemo(() => data?.vietnameseSentences[currentSentenceIndex] || "", [data, currentSentenceIndex]);
+
   const currentEnglishSentence = useMemo(() => data?.englishSentences[currentSentenceIndex] || "", [data, currentSentenceIndex]);
 
   // Check handler
@@ -239,7 +239,7 @@ export default function WritingPracticePage() {
 
           message.success("Bạn đã hoàn thành bài luyện tập!");
         }
-      }, 1000);
+      }, 500);
     } else {
       const targetWords = targetContent.split(/\s+/);
       const userWords = userTranslation.trim().split(/\s+/);
@@ -294,44 +294,44 @@ export default function WritingPracticePage() {
         }}
       >
         <main className="h-full bg-slate-50 dark:bg-[#0f172a] py-8 text-slate-800 dark:text-slate-200 transition-colors duration-500">
-        <div className="container mx-auto px-4">
-          <WritingPracticeHeader
-            formattedTime={formattedTime}
-            currentSentenceIndex={currentSentenceIndex}
-            totalSentences={data.totalSentences}
-          />
-
-          {/* Content - 2 Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <WritingPracticeContent
-              vietnameseSentences={memoizedVietnameseSentences}
+          <div className="container mx-auto px-4">
+            <WritingPracticeHeader
+              formattedTime={formattedTime}
               currentSentenceIndex={currentSentenceIndex}
+              totalSentences={data.totalSentences}
             />
 
-            <WritingPracticeControls
-              englishSentences={memoizedEnglishSentences}
-              vietnameseSentences={memoizedVietnameseSentences}
-              currentSentenceIndex={currentSentenceIndex}
-              showTranscript={showTranscript}
-              showTranslation={showTranslation}
-              completedSentences={completedSentences}
-              revealedWordIndices={revealedWordIndices}
-              onToggleTranscript={toggleTranscript}
-              onToggleTranslation={toggleTranslation}
+            {/* Content - 2 Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <WritingPracticeContent
+                vietnameseSentences={memoizedVietnameseSentences}
+                currentSentenceIndex={currentSentenceIndex}
+              />
+
+              <WritingPracticeControls
+                englishSentences={memoizedEnglishSentences}
+                vietnameseSentences={memoizedVietnameseSentences}
+                currentSentenceIndex={currentSentenceIndex}
+                showTranscript={showTranscript}
+                showTranslation={showTranslation}
+                completedSentences={completedSentences}
+                revealedWordIndices={revealedWordIndices}
+                onToggleTranscript={toggleTranscript}
+                onToggleTranslation={toggleTranslation}
+              />
+            </div>
+
+            <WritingPracticeInput
+              userTranslation={userTranslation}
+              showHint={showHint}
+              currentEnglishSentence={currentEnglishSentence}
+              onTranslationChange={setUserTranslation}
+              onToggleHint={toggleHint}
+              onCheck={handleCheck}
             />
           </div>
-
-          <WritingPracticeInput
-            userTranslation={userTranslation}
-            showHint={showHint}
-            currentEnglishSentence={currentEnglishSentence}
-            onTranslationChange={setUserTranslation}
-            onToggleHint={toggleHint}
-            onCheck={handleCheck}
-          />
-        </div>
-      </main>
-    </ConfigProvider>
+        </main>
+      </ConfigProvider>
     </RouteErrorBoundary>
   );
 }

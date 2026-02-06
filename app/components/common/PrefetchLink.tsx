@@ -23,9 +23,7 @@ export default function PrefetchLink({ href, children, className, ...props }: Pr
       href={href}
       prefetch={false}
       onMouseEnter={() => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`🚀 [Prefetch] Hovering over: ${href}`);
-        }
+
         router.prefetch(href);
       }}
       className={className}

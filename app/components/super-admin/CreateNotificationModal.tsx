@@ -71,7 +71,7 @@ export default function CreateNotificationModal({ open, onCancel, onSuccess }: C
       width={600}
       maskClosable={!submitting}
       closable={!submitting}
-      destroyOnClose={true}
+      destroyOnHidden={true}
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item

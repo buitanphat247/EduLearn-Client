@@ -1,6 +1,7 @@
 "use client";
 
-import { Table, Button, Space, App, Tag } from "antd";
+import { memo, useMemo, useRef, useEffect } from "react";
+import { Table, Button, Space, App } from "antd";
 import { EditOutlined, DeleteOutlined, UserOutlined, EyeOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import type { ColumnsType } from "antd/es/table";
@@ -19,11 +20,25 @@ interface ClassesTableProps {
   onDelete?: (classItem: ClassItem) => void;
 }
 
-export default function ClassesTable({ data, loading, pagination, onEdit, onDelete }: ClassesTableProps) {
+function ClassesTable({ data, loading, pagination, onEdit, onDelete }: ClassesTableProps) {
   const router = useRouter();
   const { modal, message } = App.useApp();
+  
+  // Stable refs to avoid re-renders
+  const modalRef = useRef(modal);
+  const messageRef = useRef(message);
+  const onEditRef = useRef(onEdit);
+  const onDeleteRef = useRef(onDelete);
+  
+  useEffect(() => {
+    modalRef.current = modal;
+    messageRef.current = message;
+    onEditRef.current = onEdit;
+    onDeleteRef.current = onDelete;
+  }, [modal, message, onEdit, onDelete]);
 
-  const columns: ColumnsType<ClassItem> = [
+  // Memoize columns to prevent re-render
+  const columns: ColumnsType<ClassItem> = useMemo(() => [
     {
       title: "Tên lớp",
       dataIndex: "name",
@@ -66,29 +81,34 @@ export default function ClassesTable({ data, loading, pagination, onEdit, onDele
       render: (_: any, record: ClassItem) => {
         const handleEdit = (e: React.MouseEvent) => {
           e.stopPropagation();
-          if (onEdit) {
-            onEdit(record);
+          if (onEditRef.current) {
+            onEditRef.current(record);
           } else {
-            message.warning("Tính năng sửa đang được phát triển");
+            messageRef.current.warning("Tính năng sửa đang được phát triển");
           }
         };
 
         const handleDelete = (e: React.MouseEvent) => {
           e.stopPropagation();
-          if (onDelete) {
-            onDelete(record);
+          if (onDeleteRef.current) {
+            onDeleteRef.current(record);
           } else {
-            modal.confirm({
+            modalRef.current.confirm({
               title: "Xác nhận xóa",
               content: `Bạn có chắc chắn muốn xóa lớp học "${record.name}"?`,
               okText: "Xóa",
               okType: "danger",
               cancelText: "Hủy",
               onOk() {
-                message.warning("Tính năng xóa đang được phát triển");
+                messageRef.current.warning("Tính năng xóa đang được phát triển");
               },
             });
           }
+        };
+
+        const handleView = (e: React.MouseEvent) => {
+          e.stopPropagation();
+          router.push(`/admin/classes/${record.key}`);
         };
 
         return (
@@ -97,10 +117,7 @@ export default function ClassesTable({ data, loading, pagination, onEdit, onDele
               icon={<EyeOutlined />}
               size="small"
               className="hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-200"
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/admin/classes/${record.key}`);
-              }}
+              onClick={handleView}
             >
               Xem
             </Button>
@@ -125,35 +142,40 @@ export default function ClassesTable({ data, loading, pagination, onEdit, onDele
         );
       },
     },
-  ];
+  ], [router]);
+
+  // Memoize pagination config
+  const paginationConfig = useMemo(() => {
+    if (!pagination) {
+      return {
+        showSizeChanger: false,
+        showTotal: (total: number) => <span className="text-gray-600 dark:text-gray-400">Tổng {total} lớp học</span>,
+        size: "small" as const,
+      };
+    }
+    return {
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+      total: pagination.total,
+      showSizeChanger: false,
+      showTotal: (total: number) => <span className="text-gray-600 dark:text-gray-400">Tổng {total} lớp học</span>,
+      size: "small" as const,
+      onChange: pagination.onChange,
+    };
+  }, [pagination]);
 
   return (
     <Table
       columns={columns}
       dataSource={data}
       loading={loading}
-      pagination={
-        pagination
-          ? {
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            showSizeChanger: false,
-            showTotal: (total) => <span className="text-gray-600 dark:text-gray-400">Tổng {total} lớp học</span>,
-            // pageSizeOptions: ["10", "20", "50"],
-            size: "small",
-            onChange: pagination.onChange,
-          }
-          : {
-            showSizeChanger: false,
-            showTotal: (total) => <span className="text-gray-600 dark:text-gray-400">Tổng {total} lớp học</span>,
-            // pageSizeOptions: ["10", "20", "50"], // Hidden since showSizeChanger is false
-            size: "small",
-          }
-      }
+      pagination={paginationConfig}
       className="[&_.ant-pagination]:px-6 [&_.ant-pagination]:pb-4"
       rowClassName="group hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-200 cursor-pointer border-b border-gray-100 dark:border-gray-800"
       size="small"
+      rowKey="key"
     />
   );
 }
+
+export default memo(ClassesTable);

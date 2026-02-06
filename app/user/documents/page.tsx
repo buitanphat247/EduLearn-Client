@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Table, Tag, Button, Input, Space, App, message, Select } from "antd";
+import { Table, Tag, Button, Input, Space, App, Select } from "antd";
 import { SearchOutlined, EyeOutlined, DownloadOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
@@ -52,8 +52,8 @@ export default function UserDocuments() {
     }
 
     isFetching.current = true;
+    isFetching.current = true;
     setLoading(true);
-    const startTime = Date.now();
 
     try {
       const result = await getDocumentAttachmentsCrawl({ page, limit, fileName, fileType });
@@ -74,10 +74,7 @@ export default function UserDocuments() {
       }));
 
       // Ensure minimum loading time
-      const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 250;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
+
 
       setDocuments(formattedData);
       setPagination((prev) => ({
@@ -88,12 +85,6 @@ export default function UserDocuments() {
       }));
       pageSizeRef.current = limit;
     } catch (error: any) {
-      // Ensure minimum loading time even on error
-      const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 250;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
       messageApi.error(error?.message || "Không thể tải danh sách tài liệu");
       setDocuments([]);
     } finally {
@@ -367,7 +358,7 @@ export default function UserDocuments() {
           onChange={setSelectedFileType}
           allowClear
           style={{ width: 200 }}
-          popupClassName="dark:bg-gray-800 dark:text-gray-200"
+          classNames={{ popup: { root: "dark:bg-gray-800 dark:text-gray-200" } }}
         >
           <Option value="pdf">PDF</Option>
           <Option value="docx">Word</Option>

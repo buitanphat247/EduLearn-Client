@@ -84,7 +84,7 @@ export default function UpdateClassModal({
       width={500}
       maskClosable={!submitting}
       closable={!submitting}
-      destroyOnClose={true}
+      destroyOnHidden={true}
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item

@@ -140,15 +140,7 @@ export default function WritingFeature() {
 
   // Helper function to log topics for debugging - memoized
   const logTopics = useCallback((topicsData: Record<string, WritingTopic[]>) => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("Topics data:", topicsData);
-      Object.entries(topicsData).forEach(([groupName, topicList]) => {
-        console.log(`Group: ${groupName}, Topics count: ${topicList?.length || 0}`);
-        topicList?.forEach((topic) => {
-          console.log(`  - ${topic.label} (${topic.value})`);
-        });
-      });
-    }
+
   }, []);
 
   // Map goal value to category - memoized
@@ -447,7 +439,7 @@ export default function WritingFeature() {
                   className="w-full text-sm"
                   disabled
                   size="middle"
-                  popupClassName="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                  classNames={{ popup: { root: "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700" } }}
                   options={languageOptions}
                 />
               </Form.Item>
@@ -548,7 +540,7 @@ export default function WritingFeature() {
                   <Select
                     className="w-full text-sm"
                     size="middle"
-                    popupClassName="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                    classNames={{ popup: { root: "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700" } }}
                     placeholder="Chọn chủ đề..."
                     loading={loadingTopics}
                     notFoundContent={loadingTopics ? <Spin size="small" /> : "Không có chủ đề nào"}

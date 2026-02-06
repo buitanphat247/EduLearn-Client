@@ -9,6 +9,7 @@ import Swal from "sweetalert2";
 import type { ClassExamsTabProps, Exam } from "./types";
 import { getRagTestsByClass, deleteRagTest } from "@/lib/api/rag-exams";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { classSocketClient } from "@/lib/socket/class-client";
 
 const ClassExamsTab = memo(function ClassExamsTab({
   classId,
@@ -18,6 +19,7 @@ const ClassExamsTab = memo(function ClassExamsTab({
   pageSize,
   onPageChange,
   readOnly = false,
+  onRefresh,
 }: ClassExamsTabProps) {
   const router = useRouter();
   const { message, modal } = App.useApp();
@@ -46,19 +48,10 @@ const ClassExamsTab = memo(function ClassExamsTab({
         // Optional: handle not logged in
       }
 
-      console.log("Fetching exams for Student ID:", studentId);
+
       const tests = await getRagTestsByClass(classId, studentId, !readOnly);
 
-      console.log(
-        "RAG Tests Debug Data:",
-        tests.map((t) => ({
-          title: t.title,
-          max_attempts: t.max_attempts,
-          user_attempt_count: t.user_attempt_count,
-          attemptsLeft: t.max_attempts - t.user_attempt_count,
-          isLocked: t.max_attempts - t.user_attempt_count <= 0,
-        }))
-      );
+
 
       const mappedTests: Exam[] = tests.map((t) => {
         const max = Number(t.max_attempts);
@@ -103,6 +96,13 @@ const ClassExamsTab = memo(function ClassExamsTab({
     fetchRagTests();
   }, [fetchRagTests]);
 
+  // Expose refresh function to parent
+  useEffect(() => {
+    if (onRefresh) {
+      onRefresh(() => fetchRagTests());
+    }
+  }, [onRefresh, fetchRagTests]);
+
   // Mock exam data - Emptying to show only real data
   const allExams: Exam[] = useMemo(() => [], []);
 
@@ -135,6 +135,7 @@ const ClassExamsTab = memo(function ClassExamsTab({
         {
           key: "view",
           label: "Xem chi tiết",
+          disabled: !exam.id,
         },
       ];
 
@@ -187,12 +188,25 @@ const ClassExamsTab = memo(function ClassExamsTab({
               okType: "danger",
               cancelText: "Hủy",
               onOk: async () => {
-                const success = await deleteRagTest(exam.id);
-                if (success) {
-                  message.success("Đã xóa bộ đề AI thành công");
-                  fetchRagTests(); // Làm mới danh sách
-                } else {
-                  message.error("Lỗi khi xóa bộ đề AI");
+                try {
+                  // Optimistic update: remove from list immediately
+                  setRagExams((prev) => prev.filter((item) => String(item.id) !== String(exam.id)));
+
+                  // Delete from server
+                  const success = await deleteRagTest(exam.id);
+                  if (success) {
+                    message.success("Đã xóa bộ đề AI thành công");
+                    // Emit socket event to notify other users
+                    classSocketClient.emit("exam_deleted", { class_id: classId, id: exam.id });
+                    // Refresh list to ensure consistency
+                    await fetchRagTests();
+                  } else {
+                    throw new Error("Lỗi khi xóa bộ đề AI");
+                  }
+                } catch (error: any) {
+                  // Rollback on error: refresh to get correct state
+                  message.error(error?.message || "Lỗi khi xóa bộ đề AI");
+                  await fetchRagTests();
                 }
               },
             });

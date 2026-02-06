@@ -286,10 +286,10 @@ export default function ExamEditorPage() {
     // Get latest mathMap from ref để tránh stale closure
     const currentMathMap = mathMapRef.current;
     let value = isRaw ? key : (currentMathMap[key] || "");
-    
+
     // Strip <b> tags from the value when loading into editor
     value = stripBoldTags(value);
-    
+
     setMathModal({
       isOpen: true,
       key: key,
@@ -303,7 +303,7 @@ export default function ExamEditorPage() {
       setMathModal((prev) => {
         // Strip <b> tags from the new value before saving
         const cleanedValue = stripBoldTags(newValue);
-        
+
         if (prev.isRaw) {
           // Copy to clipboard for raw
           message.info("Copied raw LaTeX to clipboard");
@@ -325,18 +325,18 @@ export default function ExamEditorPage() {
   const keyboardTimerRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     if (!mathModal.isOpen) return;
-    
+
     // Clear any existing timer
     if (keyboardTimerRef.current) {
       clearTimeout(keyboardTimerRef.current);
     }
-    
+
     // Đợi modal và MathLive render xong
     keyboardTimerRef.current = setTimeout(() => {
       const mathField = document.querySelector('math-field') as any;
       if (mathField) {
         mathField.focus();
-        
+
         // Force show keyboard
         setTimeout(() => {
           const mvk = (window as any).mathVirtualKeyboard;
@@ -346,7 +346,7 @@ export default function ExamEditorPage() {
         }, 200);
       }
     }, 500);
-    
+
     return () => {
       if (keyboardTimerRef.current) {
         clearTimeout(keyboardTimerRef.current);
@@ -371,10 +371,10 @@ export default function ExamEditorPage() {
       partsData,
       mathMap,
     };
-    
+
     // Console log data as JSON
-    console.log("Exam Data:", JSON.stringify(examData, null, 2));
-    
+
+
     message.success("Lưu đề thi thành công!");
   }, [message, examTitle, timeMinutes, maxScore, totalQuestions, status, partsData, mathMap]);
 
@@ -389,11 +389,11 @@ export default function ExamEditorPage() {
   const handleCreateQuestion = useCallback((type: QuestionType) => {
     setPartsData((prev) => {
       if (prev.length === 0) return prev;
-      
+
       const partIndex = 0;
       const part = prev[partIndex];
       if (!part) return prev;
-      
+
       const newQuestion: QuestionItem = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // More unique ID
         question: "",
@@ -401,17 +401,17 @@ export default function ExamEditorPage() {
           type === "fill_blank"
             ? [{ key: "A", content: "" }]
             : type === "true_false"
-            ? [
+              ? [
                 { key: "A", content: "" },
                 { key: "B", content: "" },
               ]
-            : [
+              : [
                 { key: "A", content: "" },
                 { key: "B", content: "" },
               ],
         correct_answer: type === "fill_blank" ? { A: false } : type === "true_false" ? { A: false, B: false } : { A: false, B: false },
       };
-      
+
       const newParts = [...prev];
       newParts[partIndex] = {
         ...part,
@@ -426,7 +426,7 @@ export default function ExamEditorPage() {
     setPartsData((prev) => {
       const part = prev[partIndex];
       if (!part) return prev;
-      
+
       const newParts = [...prev];
       newParts[partIndex] = {
         ...part,
@@ -440,10 +440,10 @@ export default function ExamEditorPage() {
     setPartsData((prev) => {
       const part = prev[partIndex];
       if (!part) return prev;
-      
+
       const questionIndex = part.questions.findIndex((q) => q.id === questionId);
       if (questionIndex === -1) return prev;
-      
+
       const newParts = [...prev];
       newParts[partIndex] = {
         ...part,
@@ -457,10 +457,10 @@ export default function ExamEditorPage() {
     setPartsData((prev) => {
       const part = prev[partIndex];
       if (!part) return prev;
-      
+
       const question = part.questions.find((q) => q.id === questionId);
       if (!question || !question.answers[answerIndex]) return prev;
-      
+
       const newParts = [...prev];
       newParts[partIndex] = {
         ...part,
@@ -481,23 +481,23 @@ export default function ExamEditorPage() {
     setPartsData((prev) => {
       const part = prev[partIndex];
       if (!part) return prev;
-      
+
       const question = part.questions.find((q) => q.id === questionId);
       if (!question) return prev;
-      
+
       const nextKey = String.fromCharCode(65 + question.answers.length); // A, B, C, D...
       const newAnswer = { key: nextKey, content: "" };
-      
+
       const newParts = [...prev];
       newParts[partIndex] = {
         ...part,
         questions: part.questions.map((q) =>
           q.id === questionId
             ? {
-                ...q,
-                answers: [...q.answers, newAnswer],
-                correct_answer: { ...q.correct_answer, [nextKey]: false },
-              }
+              ...q,
+              answers: [...q.answers, newAnswer],
+              correct_answer: { ...q.correct_answer, [nextKey]: false },
+            }
             : q
         ),
       };
@@ -509,25 +509,25 @@ export default function ExamEditorPage() {
     setPartsData((prev) => {
       const part = prev[partIndex];
       if (!part) return prev;
-      
+
       const question = part.questions.find((q) => q.id === questionId);
       if (!question || !question.answers[answerIndex]) return prev;
-      
+
       const removedAnswer = question.answers[answerIndex];
       const newAnswers = question.answers.filter((_, index) => index !== answerIndex);
       const newCorrectAnswer = { ...question.correct_answer };
       delete newCorrectAnswer[removedAnswer.key];
-      
+
       const newParts = [...prev];
       newParts[partIndex] = {
         ...part,
         questions: part.questions.map((q) =>
           q.id === questionId
             ? {
-                ...q,
-                answers: newAnswers,
-                correct_answer: newCorrectAnswer,
-              }
+              ...q,
+              answers: newAnswers,
+              correct_answer: newCorrectAnswer,
+            }
             : q
         ),
       };
@@ -539,13 +539,13 @@ export default function ExamEditorPage() {
     setPartsData((prev) => {
       const part = prev[partIndex];
       if (!part) return prev;
-      
+
       const question = part.questions.find((q) => q.id === questionId);
       if (!question) return prev;
-      
+
       const selectedAnswer = question.answers[answerIndex];
       if (!selectedAnswer) return prev;
-      
+
       const questionType = getQuestionType(part.name);
       const newCorrectAnswer: Record<string, boolean> = {};
 
@@ -577,7 +577,7 @@ export default function ExamEditorPage() {
           q.id === questionId ? { ...q, correct_answer: newCorrectAnswer } : q
         ),
       };
-      
+
       return newParts;
     });
   }, []);
@@ -643,36 +643,36 @@ export default function ExamEditorPage() {
       <div className="flex-1 overflow-hidden min-h-0">
         {/* Main Content Area - Full Width */}
         <div ref={questionsListRef} className="h-full overflow-y-auto space-y-6 pr-2 custom-scrollbar relative max-w-full">
-            {/* General Configuration */}
-            <GeneralConfig
-              timeMinutes={timeMinutes}
-              maxScore={maxScore}
-              totalQuestions={totalQuestions}
-              status={status}
-              onTimeChange={handleTimeChange}
-              onMaxScoreChange={handleMaxScoreChange}
-              onTotalQuestionsChange={handleTotalQuestionsChange}
-              onStatusChange={handleStatusChange}
-            />
+          {/* General Configuration */}
+          <GeneralConfig
+            timeMinutes={timeMinutes}
+            maxScore={maxScore}
+            totalQuestions={totalQuestions}
+            status={status}
+            onTimeChange={handleTimeChange}
+            onMaxScoreChange={handleMaxScoreChange}
+            onTotalQuestionsChange={handleTotalQuestionsChange}
+            onStatusChange={handleStatusChange}
+          />
 
-            {/* Questions Section */}
-            {partsData.map((part, partIndex) => (
-              <div key={partIndex} className="space-y-6">
-                {/* Part Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold text-blue-600">{part.name}</h3>
-                    <Button type="link" icon={<StarOutlined />} className="text-blue-600 p-0 h-auto">
-                      Cố định câu hỏi
-                    </Button>
-                  </div>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={handleAddQuestion} className="bg-blue-600">
-                    Thêm câu hỏi
+          {/* Questions Section */}
+          {partsData.map((part, partIndex) => (
+            <div key={partIndex} className="space-y-6">
+              {/* Part Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-semibold text-blue-600">{part.name}</h3>
+                  <Button type="link" icon={<StarOutlined />} className="text-blue-600 p-0 h-auto">
+                    Cố định câu hỏi
                   </Button>
                 </div>
+                <Button type="primary" icon={<PlusOutlined />} onClick={handleAddQuestion} className="bg-blue-600">
+                  Thêm câu hỏi
+                </Button>
+              </div>
 
-                {/* Questions List */}
-                {part.questions.map((question, questionIndex) => (
+              {/* Questions List */}
+              {part.questions.map((question, questionIndex) => (
                 <div id={question.id} key={question.id} className="scroll-mt-4">
                   <QuestionCard
                     question={question}
@@ -689,9 +689,9 @@ export default function ExamEditorPage() {
                     mathData={mathMap}
                   />
                 </div>
-                ))}
-              </div>
-            ))}
+              ))}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -763,7 +763,7 @@ export default function ExamEditorPage() {
         )}
         width={600}
         style={{ top: 80 }}
-        destroyOnClose
+        destroyOnHidden
         maskClosable={true}
         zIndex={1052}
       >

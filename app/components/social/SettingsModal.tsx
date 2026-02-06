@@ -66,7 +66,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
               <Select
                 defaultValue="vi"
                 style={{ width: 120 }}
-                popupClassName="bg-slate-800 text-white"
+                classNames={{ popup: { root: "bg-slate-800 text-white" } }}
                 options={[
                   { value: "vi", label: "Tiếng Việt" },
                   { value: "en", label: "English" },
@@ -153,11 +153,10 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                   <div
                     key={item.key}
                     onClick={() => setActiveSection(item.key)}
-                    className={`flex items-center gap-3 px-3 py-3 rounded-lg cursor-pointer transition-all ${
-                      activeSection === item.key
+                    className={`flex items-center gap-3 px-3 py-3 rounded-lg cursor-pointer transition-all ${activeSection === item.key
                         ? "bg-blue-600 text-white font-medium shadow-lg shadow-blue-500/20"
                         : "text-slate-400 hover:bg-slate-700/50 hover:text-slate-200"
-                    }`}
+                      }`}
                   >
                     <div className="text-lg opacity-80">{item.icon}</div>
                     <span className="text-sm">{item.label}</span>
