@@ -1,29 +1,17 @@
-# Cá nhân hóa học tập (Adaptive Learning)
+# Cá nhân hóa học tập
 
-Hệ thống "Cá nhân hóa học tập" giải quyết vấn đề lớn nhất của giáo dục truyền thống: "Một cách dạy áp dụng cho tất cả mọi người" (One-size-fits-all). Tại Thư Viện Số, mỗi học sinh sở hữu một lộ trình độc bản.
+Hỗ trợ học sinh theo dõi và tối ưu lộ trình học tập của bản thân.
 
-## 1. Hồ sơ năng lực số (Digital Knowledge Graph)
-Hệ thống xây dựng một "bản đồ tri thức" cho riêng bạn:
-- **Theo dõi thời gian thực:** Ghi nhận mọi tương tác, từ thời gian xem video, số lần tạm dừng, đến lựa chọn đáp án trong bài kiểm tra.
-- **Phân tích điểm hạt:** Xác định chính xác bạn đang yếu ở kỹ năng nhỏ nào. Ví dụ: Bạn giỏi "Hình học không gian" nhưng yếu phần "Tính khoảng cách".
-- **Biểu đồ trực quan:** Hiển thị sự tiến bộ qua các biểu đồ Spider Chart, Line Chart dễ hiểu.
+## 1. Hồ sơ học tập
 
-## 2. Hệ thống gợi ý thông minh (Recommender System)
-Dựa trên Hồ sơ năng lực, thuật toán sẽ đề xuất:
-- **Nội dung phù hợp:** Nếu bạn là người học qua hình ảnh (Visual Learner), hệ thống sẽ ưu tiên gợi ý các video/infographic. Nếu bạn thích đọc, hệ thống gợi ý bài viết chuyên sâu.
-- **Độ khó thích ứng (Adaptive Difficulty):** Bài tập sẽ tự động điều chỉnh độ khó. Nếu bạn làm đúng liên tiếp, bài tiếp theo sẽ khó hơn. Nếu sai, hệ thống sẽ đưa ra bài dễ hơn hoặc bài ôn tập lại kiến thức cũ.
+- **Lịch sử chi tiết:** Hệ thống ghi lại toàn bộ các khóa học đã tham gia, bài tập đã làm và điểm số đạt được.
+- **Theo dõi tiến độ:** Học sinh có thể xem phần trăm hoàn thành của từng khóa học để biết mình đang ở đâu trên lộ trình.
 
-## 3. Tối ưu hóa thời gian ôn tập
-Áp dụng ngyên lý **Spaced Repetition (Lặp lại ngắt quãng)**:
-- Hệ thống tính toán "điểm rơi" của trí nhớ (thời điểm bạn sắp quên kiến thức).
-- Tự động nhắc nhở ôn tập đúng lúc đó để chuyển kiến thức vào trí nhớ dài hạn.
-- Giúp giảm 40% thời gian học "nhồi nhét" mà hiệu quả ghi nhớ tăng gấp đôi.
+## 2. Gợi ý ôn tập
 
-## 4. Định hướng nghề nghiệp sớm
-Dựa trên sở trường và kết quả học tập dài hạn, AI sẽ phân tích xu hướng và gợi ý:
-- Các khối thi Đại học phù hợp.
-- Các ngành nghề tiềm năng có liên quan đến điểm mạnh của bạn.
-- Các khóa học kỹ năng mềm cần bổ sung để chuẩn bị cho tương lai.
+- **Nhắc nhở học tập:** Dựa trên lịch sử hoạt động, hệ thống nhắc nhở học sinh hoàn thành các bài tập còn dang dở.
+- **Học từ vựng:** Ứng dụng phương pháp lặp lại ngắt quãng (Spaced Repetition) trong module học từ vựng để giúp ghi nhớ lâu hơn.
 
----
-*Mục tiêu cuối cùng: Giúp học sinh học ít hơn nhưng hiểu sâu hơn, và tìm thấy niềm vui trong sự tiến bộ mỗi ngày.*
+## 3. Định hướng
+
+- **Thống kê điểm số:** Biểu đồ điểm số giúp học sinh nhận diện môn học thế mạnh và môn cần cải thiện.

@@ -1,20 +1,16 @@
-# Bảo vệ dữ liệu người dùng
+# Bảo mật dữ liệu
 
-Quyền riêng tư và bảo mật dữ liệu là cam kết cao nhất của chúng tôi đối với người dùng.
+Cam kết bảo vệ quyền riêng tư và dữ liệu của người dùng.
 
-## 1. Mã hóa đầu cuối (End-to-End Encryption)
-Mọi dữ liệu truyền tải trên hệ thống đều được bảo vệ:
-- **Dữ liệu đường truyền (In-transit):** Sử dụng giao thức HTTPS/TLS 1.3 tiêu chuẩn ngân hàng để mã hóa dữ liệu khi truyền từ thiết bị người dùng đến máy chủ.
-- **Dữ liệu lưu trữ (At-rest):** Dữ liệu nhạy cảm (mật khẩu, thông tin cá nhân, điểm số) được mã hóa AES-256 trong cơ sở dữ liệu. Ngay cả quản trị viên hệ thống cũng không thể đọc được mật khẩu của người dùng.
+## 1. Bảo mật tài khoản
 
-## 2. Tuân thủ tiêu chuẩn quốc tế
-Chúng tôi tuân thủ nghiêm ngặt các quy định về bảo vệ dữ liệu:
-- **GDPR (Châu Âu):** Tôn trọng quyền được quên (Right to be forgotten), quyền truy cập dữ liệu (Right to access) của người dùng.
-- **ISO 27001:** Quy trình vận hành đạt chuẩn an toàn thông tin quốc tế.
+- **Mã hóa mật khẩu:** Mật khẩu người dùng được mã hóa một chiều (Hashing) trước khi lưu vào cơ sở dữ liệu, đảm bảo không ai có thể đọc được, kể cả quản trị viên.
+- **Token an toàn:** Sử dụng cơ chế JWT với thời gian hết hạn ngắn hạn để bảo vệ phiên đăng nhập.
 
-## 3. Sao lưu & Khôi phục (Backup & Recovery)
-- **Backup thời gian thực:** Dữ liệu được sao lưu liên tục (Incremental Backup) để đảm bảo không mất mát dù chỉ 1 giây dữ liệu.
-- **Disaster Recovery:** Hệ thống máy chủ dự phòng luôn sẵn sàng kích hoạt trong trường hợp máy chủ chính gặp sự cố, đảm bảo thời gian hoạt động (Uptime) đạt 99.9%.
+## 2. Bảo mật đường truyền
 
----
-*Dữ liệu của bạn là của bạn. Chúng tôi chỉ là người bảo vệ.*
+Hệ thống sử dụng giao thức HTTPS để mã hóa toàn bộ dữ liệu truyền tải giữa thiết bị người dùng và máy chủ, ngăn chặn việc nghe lén.
+
+## 3. Sao lưu dữ liệu
+
+Cơ sở dữ liệu được sao lưu định kỳ để đảm bảo an toàn và khả năng khôi phục trong trường hợp sự cố.

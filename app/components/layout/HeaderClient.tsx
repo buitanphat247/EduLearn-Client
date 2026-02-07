@@ -57,6 +57,7 @@ const ABOUT_ITEMS: MenuProps["items"] = [
   { key: "system", label: "Hệ thống" },
   { key: "guide", label: "Hướng dẫn" },
   { key: "innovation", label: "Công nghệ & Đổi mới" },
+  { key: "roadmap", label: "Lộ trình phát triển" },
   { key: "faq", label: "FAQ" },
 ];
 
@@ -65,6 +66,7 @@ const ABOUT_ROUTES: Record<string, string> = {
   system: "/system",
   guide: "/guide",
   innovation: "/innovation",
+  roadmap: "/roadmap",
   faq: "/faq",
 };
 

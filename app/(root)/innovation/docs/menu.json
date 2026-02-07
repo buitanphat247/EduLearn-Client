@@ -1,29 +1,35 @@
 [
   {
-    "title": "Công nghệ cốt lõi",
+    "title": "Tổng quan",
+    "items": [{ "title": "Hệ sinh thái Công nghệ", "slug": "overview" }]
+  },
+  {
+    "title": "Trí tuệ nhân tạo (AI)",
     "items": [
-      { "title": "Tổng quan hệ sinh thái", "slug": "overview" },
-      { "title": "Trợ giảng AI thông minh", "slug": "ai-tutor" },
+      { "title": "Trợ giảng AI", "slug": "ai-tutor" },
       { "title": "Tạo sinh đề thi AI", "slug": "ai-exam-generation" },
-      { "title": "Công nghệ Chống gian lận", "slug": "anti-cheating" },
-      { "title": "Cá nhân hóa học tập", "slug": "personalized-learning" },
-      { "title": "Tương tác thời gian thực", "slug": "real-time-interaction" }
+      { "title": "Cá nhân hóa học tập", "slug": "personalized-learning" }
     ]
   },
   {
-    "title": "Module Quản lý Đào tạo",
+    "title": "Quản lý & Vận hành",
     "items": [
-      { "title": "Quản lý Lớp học & Học viên", "slug": "class-management" },
-      { "title": "Ngân hàng đề & Tổ chức thi", "slug": "exam-management" },
-      { "title": "Báo cáo & Phân tích số liệu", "slug": "analytics-reporting" }
+      { "title": "Quản lý Lớp học", "slug": "class-management" },
+      { "title": "Ngân hàng đề thi", "slug": "exam-management" },
+      { "title": "Báo cáo & Phân tích", "slug": "analytics-reporting" }
     ]
   },
   {
-    "title": "Bảo mật & An toàn",
+    "title": "An toàn & Bảo mật",
     "items": [
-      { "title": "Bảo vệ dữ liệu người dùng", "slug": "data-security" },
-      { "title": "Hệ thống phân quyền (RBAC)", "slug": "access-control" },
+      { "title": "Chống gian lận", "slug": "anti-cheating" },
+      { "title": "Bảo mật dữ liệu", "slug": "data-security" },
+      { "title": "Phân quyền truy cập", "slug": "access-control" },
       { "title": "Kiểm duyệt nội dung", "slug": "content-moderation" }
     ]
+  },
+  {
+    "title": "Tương tác",
+    "items": [{ "title": "Tương tác thời gian thực", "slug": "real-time-interaction" }]
   }
 ]

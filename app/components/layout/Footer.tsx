@@ -8,7 +8,7 @@ export default function Footer() {
   const router = useRouter();
   return (
     <footer className="bg-white dark:bg-[#001529] border-t border-slate-200 dark:border-slate-800 transition-colors duration-500">
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2">
             <Link
@@ -154,6 +154,7 @@ export default function Footer() {
 
         <div className="border-t border-slate-200 dark:border-white/5 mt-8 pt-8 text-center text-sm text-slate-500 dark:text-slate-400">
           <p>&copy; {new Date().getFullYear()} Thư viện số. Tất cả quyền được bảo lưu.</p>
+          <p className="mt-2 text-xs">Version 1.0</p>
         </div>
       </div>
     </footer>

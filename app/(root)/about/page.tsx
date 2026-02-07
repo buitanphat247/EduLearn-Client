@@ -240,6 +240,7 @@ export default function About() {
         </section>
       </ScrollAnimation>
 
+      {/* Future Roadmap Section */}
 
     </main>
   );

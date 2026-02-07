@@ -12,7 +12,7 @@
       { "title": "Đăng ký tài khoản", "slug": "account-registration" },
       { "title": "Đăng nhập & Đăng xuất", "slug": "login-logout" },
       { "title": "Khôi phục mật khẩu", "slug": "password-recovery" },
-      { "title": "Đổi mật khẩu & Bảo mật 2 lớp", "slug": "security-settings" }
+      { "title": "Bảo mật tài khoản", "slug": "security-settings" }
     ]
   },
   {
@@ -23,16 +23,14 @@
       { "title": "Bài Tập & Kiểm Tra", "slug": "exercises-guide" },
       { "title": "Theo dõi tiến độ học tập", "slug": "track-progress" },
       { "title": "Thư viện & Tài liệu", "slug": "library-resources" },
-      { "title": "Thống Kê & Thành Tích", "slug": "gamification-stats" }
+      { "title": "Thống Kê Học Tập", "slug": "gamification-stats" }
     ]
   },
   {
     "title": "Dành cho Giáo viên",
     "items": [
       { "title": "Tạo lớp học mới", "slug": "create-class" },
-      { "title": "Quản lý học sinh", "slug": "manage-students" },
-      { "title": "Tạo ngân hàng câu hỏi", "slug": "question-bank" },
-      { "title": "Đăng ký học sinh vào lớp", "slug": "student-registration" }
+      { "title": "Quản lý học sinh", "slug": "manage-students" }
     ]
   },
   {
@@ -56,9 +54,6 @@
   },
   {
     "title": "Câu hỏi thường gặp",
-    "items": [
-      { "title": "Vấn đề kỹ thuật", "slug": "technical-issues" },
-      { "title": "Thanh toán & Hoàn tiền", "slug": "payment-policy" }
-    ]
+    "items": [{ "title": "Vấn đề kỹ thuật", "slug": "technical-issues" }]
   }
 ]
