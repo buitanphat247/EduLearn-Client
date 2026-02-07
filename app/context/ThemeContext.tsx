@@ -104,15 +104,6 @@ export function ThemeProvider({ children, initialTheme }: { children: React.Reac
         return;
       }
 
-      // Get click position or default to top-right corner
-      const x = e?.clientX ?? window.innerWidth;
-      const y = e?.clientY ?? 0;
-
-      const endRadius = Math.hypot(
-        Math.max(x, innerWidth - x),
-        Math.max(y, innerHeight - y)
-      );
-
       // Disable transitions during the capture phase to ensure the new snapshot is the final state
       document.documentElement.classList.add('no-transitions');
 
@@ -155,20 +146,26 @@ export function ThemeProvider({ children, initialTheme }: { children: React.Reac
       try {
         await transition.ready;
 
-        const clipPath = [
-          `circle(0px at ${x}px ${y}px)`,
-          `circle(${endRadius}px at ${x}px ${y}px)`,
-        ];
-
-        // Animate the new view expanding from the click position
+        // Simple fade animation instead of circle expand
+        // Fade out the old view
         document.documentElement.animate(
+          { opacity: [1, 0] },
           {
-            clipPath: clipPath,
-          },
+            duration: transitionDuration / 2,
+            easing: "ease-out",
+            pseudoElement: "::view-transition-old(root)",
+            fill: "forwards",
+          }
+        );
+
+        // Fade in the new view
+        document.documentElement.animate(
+          { opacity: [0, 1] },
           {
-            duration: transitionDuration,
-            easing: "cubic-bezier(0.25, 1, 0.5, 1)", // Smoother quart-like easing
+            duration: transitionDuration / 2,
+            easing: "ease-in",
             pseudoElement: "::view-transition-new(root)",
+            fill: "forwards",
           }
         );
       } catch (error) {

@@ -733,6 +733,19 @@ html.dark .user-dropdown-menu .ant-dropdown-menu-item-divider {
   animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
 .animation-delay-2000 {
   animation-delay: 2s;
 }

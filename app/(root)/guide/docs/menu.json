@@ -20,8 +20,10 @@
     "items": [
       { "title": "Tìm kiếm & Tham gia khóa học", "slug": "find-courses" },
       { "title": "Làm bài thi Online", "slug": "taking-exams" },
+      { "title": "Bài Tập & Kiểm Tra", "slug": "exercises-guide" },
       { "title": "Theo dõi tiến độ học tập", "slug": "track-progress" },
-      { "title": "Thư viện & Tài liệu", "slug": "library-resources" }
+      { "title": "Thư viện & Tài liệu", "slug": "library-resources" },
+      { "title": "Thống Kê & Thành Tích", "slug": "gamification-stats" }
     ]
   },
   {
@@ -29,7 +31,27 @@
     "items": [
       { "title": "Tạo lớp học mới", "slug": "create-class" },
       { "title": "Quản lý học sinh", "slug": "manage-students" },
-      { "title": "Tạo ngân hàng câu hỏi", "slug": "question-bank" }
+      { "title": "Tạo ngân hàng câu hỏi", "slug": "question-bank" },
+      { "title": "Đăng ký học sinh vào lớp", "slug": "student-registration" }
+    ]
+  },
+  {
+    "title": "Luyện Tập",
+    "items": [
+      { "title": "Học Từ Vựng", "slug": "vocabulary-learning" },
+      { "title": "Luyện Nghe", "slug": "listening-practice" },
+      { "title": "Luyện Viết", "slug": "writing-practice" }
+    ]
+  },
+  {
+    "title": "Tính năng Nâng cao",
+    "items": [
+      { "title": "Gia sư AI", "slug": "ai-tutor" },
+      { "title": "Học tập cá nhân hóa", "slug": "personalized-learning" },
+      { "title": "Tương tác thời gian thực", "slug": "real-time-interaction" },
+      { "title": "Thông Báo & Cập Nhật", "slug": "notifications-guide" },
+      { "title": "Sự Kiện & Lịch Học", "slug": "events-calendar" },
+      { "title": "Chat & Giao Tiếp", "slug": "chat-communication" }
     ]
   },
   {
