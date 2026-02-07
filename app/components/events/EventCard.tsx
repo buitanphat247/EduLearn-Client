@@ -34,10 +34,10 @@ export default function EventCard({ id, title, date, time, location, status, col
       {/* Side Accent Line */}
       <div className={`absolute top-0 left-0 w-1.5 h-full ${accentColorClass}`}></div>
       
-      <div className="p-6 pl-8 flex-1 flex flex-col relative z-10">
+      <div className="p-6 flex-1 flex flex-col relative z-10">
         
         {/* Header: Status & Icon */}
-        <div className="flex justify-between items-start mb-5">
+        <div className="flex justify-between items-start">
            <span className={`px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wide ${statusStyle}`}>
               {status}
            </span>
@@ -47,12 +47,12 @@ export default function EventCard({ id, title, date, time, location, status, col
         </div>
 
         {/* Title */}
-        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 line-clamp-2 min-h-[3.5rem]">
+        <h3 className="text-xl font-bold text-slate-800 dark:text-white leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 line-clamp-2 mb-2">
           {title}
         </h3>
 
         {/* Details Grid */}
-        <div className="space-y-3 mb-6 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/50">
+        <div className="space-y-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/50">
           <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400 text-sm">
              <CalendarOutlined className="text-blue-500 dark:text-blue-400"/>
              <span className="font-semibold text-slate-700 dark:text-slate-300">{date}</span>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { ConfigProvider, App, theme as antTheme } from "antd";
-import { ThemeProvider, useTheme } from "@/app/context/ThemeContext";
+import { ThemeProvider, useTheme, type Theme } from "@/app/context/ThemeContext";
 import ErrorBoundary from "@/app/error-boundary";
 import { WebVitalsTracker } from "@/app/components/common/WebVitalsTracker";
 
@@ -53,7 +53,7 @@ function AntdConfigProvider({ children }: { children: React.ReactNode }) {
  * - Web Vitals Tracking: Monitor Core Web Vitals
  * - Performance Monitoring: Track provider render time
  */
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children, theme }: { children: React.ReactNode; theme?: Theme }) {
   const renderStartTime = useRef<number | null>(null);
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ErrorBoundary>
-      <ThemeProvider>
+      <ThemeProvider initialTheme={theme}>
         <AntdConfigProvider>
           <WebVitalsTracker />
           {children}

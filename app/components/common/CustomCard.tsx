@@ -83,7 +83,7 @@ export default function CustomCard({
   if (title) {
     return (
       <article
-        className={`bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm transition-colors duration-300 ${className} ${onClick ? "cursor-pointer" : ""}`}
+        className={`bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm ${className} ${onClick ? "cursor-pointer" : ""}`}
         style={style}
         onClick={onClick}
         onKeyDown={handleKeyDown}
@@ -102,9 +102,8 @@ export default function CustomCard({
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-md transition-all duration-300 ${
-        paddingClasses[padding]
-      } ${className} ${onClick ? "cursor-pointer" : ""}`}
+      className={`bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-md transition-transform duration-300 ${paddingClasses[padding]
+        } ${className} ${onClick ? "cursor-pointer" : ""}`}
       style={style}
       onClick={onClick}
       onKeyDown={handleKeyDown}

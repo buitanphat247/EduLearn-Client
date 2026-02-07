@@ -97,66 +97,68 @@ export default function StudentDetailModal({ open, onCancel, student, classInfo 
                 icon={<UserOutlined />}
                 className="mb-3"
               />
-              <h3 className="text-xl font-bold text-gray-800 mb-2">{displayData.name}</h3>
+              <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">{displayData.name}</h3>
               <Tag color="blue" className="mb-4">
                 {displayData.studentId}
               </Tag>
             </div>
 
             {/* Thông tin chi tiết */}
-            <Descriptions column={1} bordered>
+            <Descriptions column={1} bordered className="[&_.ant-descriptions-item-label]:dark:bg-gray-800 [&_.ant-descriptions-item-content]:dark:bg-gray-900">
               <Descriptions.Item
                 label={
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <IdcardOutlined />
                     Mã học sinh
                   </span>
                 }
               >
-                <span className="font-mono text-sm bg-gray-50 rounded">{displayData.studentId}</span>
+                <span className="font-mono text-sm bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-2 py-1 rounded border border-gray-200 dark:border-gray-700">
+                  {displayData.studentId}
+                </span>
               </Descriptions.Item>
               <Descriptions.Item
                 label={
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <UserOutlined />
                     Họ và tên
                   </span>
                 }
               >
-                <span className="font-semibold text-gray-800">{displayData.name}</span>
+                <span className="font-semibold text-gray-800 dark:text-gray-100">{displayData.name}</span>
               </Descriptions.Item>
               <Descriptions.Item
                 label={
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <MailOutlined />
                     Email
                   </span>
                 }
               >
-                {displayData.email}
+                <span className="text-gray-800 dark:text-gray-200">{displayData.email}</span>
               </Descriptions.Item>
               {displayData.phone && (
                 <Descriptions.Item
                   label={
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <PhoneOutlined />
                       Số điện thoại
                     </span>
                   }
                 >
-                  {displayData.phone}
+                  <span className="text-gray-800 dark:text-gray-200">{displayData.phone}</span>
                 </Descriptions.Item>
               )}
               {classInfo && (
                 <Descriptions.Item
                   label={
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <BookOutlined />
                       Lớp học
                     </span>
                   }
                 >
-                  {`${classInfo.name} (${classInfo.code})`}
+                  <span className="text-gray-800 dark:text-gray-200">{`${classInfo.name} (${classInfo.code})`}</span>
                 </Descriptions.Item>
               )}
             </Descriptions>

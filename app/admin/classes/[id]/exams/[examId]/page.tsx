@@ -39,21 +39,21 @@ const ExamInfoDescription = memo(
       title={
         <div className="flex items-center gap-2 py-1">
           <InfoCircleOutlined className="text-blue-500" />
-          <span className="text-sm font-bold uppercase tracking-wider text-gray-600">Thông tin bài kiểm tra</span>
+          <span className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">Thông tin bài kiểm tra</span>
         </div>
       }
       bordered={false}
-      className="rounded-xl overflow-hidden border border-gray-100"
+      className="rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800"
       bodyStyle={{ padding: 0 }}
     >
       <Descriptions
         bordered
         column={2}
-        labelStyle={{ background: "#fafafa", fontWeight: 600, width: "200px", color: "#666", borderRight: "1px solid #f0f0f0" }}
+        className="[&_.ant-descriptions-item-label]:bg-gray-50 [&_.ant-descriptions-item-label]:dark:bg-gray-900 [&_.ant-descriptions-item-label]:dark:text-gray-300 [&_.ant-descriptions-item-label]:font-semibold [&_.ant-descriptions-item-label]:w-[200px] [&_.ant-descriptions-item-content]:dark:bg-gray-800 [&_.ant-descriptions-item-content]:dark:text-gray-200"
       >
         <Descriptions.Item label="Tiêu đề đề thi">
           <Space direction="vertical" size={2}>
-            <Text strong className="text-gray-800 text-base">
+            <Text strong className="text-gray-800 dark:text-gray-100 text-base">
               {test?.title || "Đang tải..."}
             </Text>
             <Tag color="cyan" className="m-0 border-0 font-bold text-[10px] px-2 py-0">
@@ -63,21 +63,21 @@ const ExamInfoDescription = memo(
         </Descriptions.Item>
         <Descriptions.Item label="Thời gian làm bài">
           <Space>
-            <ClockCircleOutlined className="text-blue-500" /> <Text strong>{test?.duration_minutes} phút</Text>
+            <ClockCircleOutlined className="text-blue-500" /> <Text strong className="dark:text-gray-200">{test?.duration_minutes} phút</Text>
           </Space>
         </Descriptions.Item>
         <Descriptions.Item label="Số lượng câu hỏi">
           <Space>
-            <InfoCircleOutlined className="text-blue-500" /> <Text strong>{test?.num_questions} câu hỏi</Text>
+            <InfoCircleOutlined className="text-blue-500" /> <Text strong className="dark:text-gray-200">{test?.num_questions} câu hỏi</Text>
           </Space>
         </Descriptions.Item>
         <Descriptions.Item label="Ngày tạo">
           <Space>
-            <CalendarOutlined className="text-blue-500" /> <Text strong>{dayjs(test?.created_at).format("DD/MM/YYYY - HH:mm")}</Text>
+            <CalendarOutlined className="text-blue-500" /> <Text strong className="dark:text-gray-200">{dayjs(test?.created_at).format("DD/MM/YYYY - HH:mm")}</Text>
           </Space>
         </Descriptions.Item>
         <Descriptions.Item label="Mô tả" span={2}>
-          <Paragraph ellipsis={{ rows: 2, expandable: true }} className="text-gray-500 m-0 leading-relaxed italic">
+          <Paragraph ellipsis={{ rows: 2, expandable: true }} className="text-gray-500 dark:text-gray-400 m-0 leading-relaxed italic">
             {test?.description || "Không có mô tả cho đề thi này."}
           </Paragraph>
         </Descriptions.Item>
@@ -86,12 +86,13 @@ const ExamInfoDescription = memo(
             <Col span={8}>
               <Statistic
                 title={
-                  <Text type="secondary" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                  <Text type="secondary" className="dark:text-gray-400" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
                     Học sinh tham gia
                   </Text>
                 }
                 value={attemptsCount}
-                valueStyle={{ fontWeight: 800, color: "#1e293b" }}
+                valueStyle={{ fontWeight: 800 }}
+                className="[&_.ant-statistic-content-value]:dark:text-gray-200"
                 prefix={<UserOutlined className="text-blue-400" />}
                 suffix={<span className="text-xs text-gray-400 font-normal ml-1">học sinh</span>}
               />
@@ -99,20 +100,21 @@ const ExamInfoDescription = memo(
             <Col span={8}>
               <Statistic
                 title={
-                  <Text type="secondary" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                  <Text type="secondary" className="dark:text-gray-400" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
                     Điểm trung bình
                   </Text>
                 }
                 value={averageScore}
                 suffix={<span className="text-sm text-gray-400 font-normal">/{test?.total_score}</span>}
-                valueStyle={{ fontWeight: 800, color: "#1e293b" }}
+                valueStyle={{ fontWeight: 800 }}
+                className="[&_.ant-statistic-content-value]:dark:text-gray-200"
                 prefix={<LineChartOutlined className="text-emerald-400" />}
               />
             </Col>
             <Col span={8}>
               <Statistic
                 title={
-                  <Text type="secondary" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                  <Text type="secondary" className="dark:text-gray-400" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
                     Tỷ lệ hoàn thành
                   </Text>
                 }
@@ -152,24 +154,23 @@ const SecurityLogModal = memo(({ isOpen, onClose, selectedLogs }: { isOpen: bool
       itemLayout="horizontal"
       dataSource={selectedLogs?.security.logs || []}
       renderItem={(log) => (
-        <List.Item className="border-b last:border-0 py-5 px-0">
+        <List.Item className="border-b last:border-0 py-5 px-0 border-gray-100 dark:border-gray-700">
           <div className="flex items-start gap-4 w-full">
             <div
-              className={`p-3.5 rounded-2xl flex items-center justify-center shrink-0 ${
-                log.type === "disconnect" ? "bg-red-50 text-red-500" : "bg-orange-50 text-orange-500"
-              }`}
+              className={`p-3.5 rounded-2xl flex items-center justify-center shrink-0 ${log.type === "disconnect" ? "bg-red-50 dark:bg-red-900/20 text-red-500" : "bg-orange-50 dark:bg-orange-900/20 text-orange-500"
+                }`}
             >
               <SafetyCertificateOutlined style={{ fontSize: "22px" }} />
             </div>
             <div className="flex-1">
               <div className="flex justify-between items-start mb-1">
-                <Text strong className="text-gray-800 text-[16px] uppercase tracking-tight">
+                <Text strong className="text-gray-800 dark:text-gray-200 text-[16px] uppercase tracking-tight">
                   {log.type.replace("_", " ")}
                 </Text>
-                <Text className="text-gray-400 text-[13px] font-medium pt-1">{dayjs(log.timestamp).format("HH:mm:ss DD/MM/YYYY")}</Text>
+                <Text className="text-gray-400 dark:text-gray-500 text-[13px] font-medium pt-1">{dayjs(log.timestamp).format("HH:mm:ss DD/MM/YYYY")}</Text>
               </div>
               <div>
-                <Text className="text-gray-500 text-[14px] leading-relaxed">{log.details || "Hệ thống tự động ghi nhận vi phạm."}</Text>
+                <Text className="text-gray-500 dark:text-gray-400 text-[14px] leading-relaxed">{log.details || "Hệ thống tự động ghi nhận vi phạm."}</Text>
               </div>
             </div>
           </div>
@@ -242,7 +243,7 @@ export default function ExamDetailPage() {
         render: (text: string) => (
           <Space>
             <UserOutlined className="text-blue-500" />
-            <Text strong className="text-gray-700">
+            <Text strong className="text-gray-700 dark:text-gray-300">
               {text}
             </Text>
           </Space>
@@ -277,13 +278,13 @@ export default function ExamDetailPage() {
           const maxAttempts = test?.max_attempts || 0;
           const displayMax = maxAttempts > 0 ? maxAttempts : "∞";
           const isAtLimit = maxAttempts > 0 && count >= maxAttempts;
-          
+
           return (
             <Space direction="vertical" size={0}>
-              <Text strong className={isAtLimit ? "text-red-500" : "text-gray-700"}>
+              <Text strong className={isAtLimit ? "text-red-500" : "text-gray-700 dark:text-gray-300"}>
                 {count} / {displayMax}
               </Text>
-              <Text type="secondary" style={{ fontSize: "10px" }}>
+              <Text type="secondary" className="dark:text-gray-400" style={{ fontSize: "10px" }}>
                 lượt đã dùng
               </Text>
             </Space>
@@ -295,10 +296,10 @@ export default function ExamDetailPage() {
         key: "progress",
         render: (_: any, record: StudentAttempt) => (
           <Space direction="vertical" size={0}>
-            <Text strong>
+            <Text strong className="dark:text-gray-300">
               {record.answered_count} / {test?.num_questions}
             </Text>
-            <Text type="secondary" style={{ fontSize: "10px" }}>
+            <Text type="secondary" className="dark:text-gray-400" style={{ fontSize: "10px" }}>
               đã làm
             </Text>
           </Space>
@@ -309,10 +310,10 @@ export default function ExamDetailPage() {
         key: "score",
         render: (_: any, record: StudentAttempt) => (
           <div className="flex flex-col">
-            <Text strong className={record.score >= (test?.total_score || 0) * 0.5 ? "text-green-600" : "text-red-500"}>
+            <Text strong className={record.score >= (test?.total_score || 0) * 0.5 ? "text-green-600 dark:text-green-400" : "text-red-500"}>
               {record.score.toFixed(1)} / {test?.total_score}
             </Text>
-            <Text type="secondary" style={{ fontSize: "11px" }}>
+            <Text type="secondary" className="dark:text-gray-400" style={{ fontSize: "11px" }}>
               ({Math.round((record.score / (test?.total_score || 1)) * 100)}%)
             </Text>
           </div>
@@ -322,7 +323,7 @@ export default function ExamDetailPage() {
         title: "Thời gian",
         key: "time",
         render: (_: any, record: StudentAttempt) => (
-          <div className="flex flex-col text-xs text-gray-500">
+          <div className="flex flex-col text-xs text-gray-500 dark:text-gray-400">
             <Space size={4}>
               <ClockCircleOutlined /> Bắt đầu: {dayjs(record.started_at).format("HH:mm:ss DD/MM")}
             </Space>
@@ -377,53 +378,53 @@ export default function ExamDetailPage() {
 
   return (
     <div className="p-0 min-h-screen">
-    <RouteErrorBoundary routeName="admin">
-      <div className="flex flex-col gap-6">
-        {/* Simple Back Button */}
-        <div>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            className="rounded-lg font-medium border-gray-200"
-            onClick={() => router.push(`/admin/classes/${classId}`)}
-          >
-            Quay lại
-          </Button>
-        </div>
+      <RouteErrorBoundary routeName="admin">
+        <div className="flex flex-col gap-6">
+          {/* Simple Back Button */}
+          <div>
+            <Button
+              icon={<ArrowLeftOutlined />}
+              className="rounded-lg font-medium border-gray-200"
+              onClick={() => router.push(`/admin/classes/${classId}`)}
+            >
+              Quay lại
+            </Button>
+          </div>
 
-        {/* Exam Information Memoized */}
-        <ExamInfoDescription test={test} averageScore={averageScore} attemptsCount={attempts.length} completionRate={completionRate} />
+          {/* Exam Information Memoized */}
+          <ExamInfoDescription test={test} averageScore={averageScore} attemptsCount={attempts.length} completionRate={completionRate} />
 
-        {/* Attempts Table Container - Matching Image 2 Table style */}
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <div className="p-4 border-b bg-gray-50/50 flex items-center justify-between">
-            <Title level={5} style={{ margin: 0 }} className="text-gray-700 uppercase text-[11px] tracking-widest font-bold">
-              Danh sách học sinh tham gia kiểm tra
-            </Title>
-            <div className="flex gap-2">
-              <Badge dot color="green">
-                <Text className="text-[10px] text-gray-400 uppercase font-bold">Live Tracking Enabled</Text>
-              </Badge>
+          {/* Attempts Table Container - Matching Image 2 Table style */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/50 flex items-center justify-between">
+              <Title level={5} style={{ margin: 0 }} className="text-gray-700 dark:text-gray-300 uppercase text-[11px] tracking-widest font-bold">
+                Danh sách học sinh tham gia kiểm tra
+              </Title>
+              <div className="flex gap-2">
+                <Badge dot color="green">
+                  <Text className="text-[10px] text-gray-400 uppercase font-bold">Live Tracking Enabled</Text>
+                </Badge>
+              </div>
+            </div>
+            <div className="p-0">
+              <Table
+                loading={loading}
+                dataSource={attempts}
+                columns={columns}
+                rowKey="id"
+                pagination={{
+                  pageSize: 10,
+                  className: "p-4",
+                }}
+                className="custom-admin-table"
+              />
             </div>
           </div>
-          <div className="p-0">
-            <Table
-              loading={loading}
-              dataSource={attempts}
-              columns={columns}
-              rowKey="id"
-              pagination={{
-                pageSize: 10,
-                className: "p-4",
-              }}
-              className="custom-admin-table"
-            />
-          </div>
         </div>
-      </div>
 
-      {/* Security Logs Modal Memoized */}
-      <SecurityLogModal isOpen={isLogModalOpen} onClose={handleCloseLogs} selectedLogs={selectedLogs} />
-    </RouteErrorBoundary>
+        {/* Security Logs Modal Memoized */}
+        <SecurityLogModal isOpen={isLogModalOpen} onClose={handleCloseLogs} selectedLogs={selectedLogs} />
+      </RouteErrorBoundary>
     </div>
   );
 }

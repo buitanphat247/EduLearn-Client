@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { AppstoreOutlined, UserOutlined, ArrowRightOutlined, CloudDownloadOutlined, FileTextOutlined, SettingOutlined, ReadOutlined } from "@ant-design/icons";
 import { IoBookOutline } from "react-icons/io5";
-import { Card, App } from "antd";
+import { App } from "antd";
 import { useRouter } from "next/navigation";
 import { getStats, type StatsResponse } from "@/lib/api/stats";
 import dynamic from "next/dynamic";
@@ -12,6 +12,7 @@ import type { ComponentType } from "react";
 // Dynamic import for CountUp - only load when needed (below the fold)
 const CountUp = dynamic(() => import("react-countup"), {
   ssr: false, // CountUp is animation library, not needed for SSR
+  loading: () => <span>0</span>,
 });
 
 // Type definitions
@@ -21,6 +22,7 @@ interface StatCard {
   icon: ComponentType<any>;
   color: string;
   bgColor: string;
+  hexColor: string;
   numericValue?: number;
 }
 
@@ -118,27 +120,24 @@ function StatisticsCards({ stats }: { stats: StatCard[] }) {
       {statsCards.map((stat) => {
         const Icon = stat.icon;
         return (
-          <Card
+          <div
             key={stat.label}
-            className="border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm transition-all duration-300 cursor-default bg-white dark:bg-gray-800"
-            styles={{
-              body: { padding: "24px" },
-            }}
+            className="border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm cursor-default bg-white dark:bg-gray-800 rounded-lg p-6"
           >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{stat.label}</p>
-                <p className={`text-3xl font-bold ${stat.color} dark:brightness-110`}>
-                  <Suspense fallback={<span>{stat.value}</span>}>
+                <p className="text-3xl font-bold" style={{ color: stat.hexColor }}>
+                  <Suspense fallback={<span>0</span>}>
                     <CountUp start={0} end={stat.numericValue} duration={2} separator="," decimals={0} />
                   </Suspense>
                 </p>
               </div>
               <div className={`${stat.bgColor} p-4 rounded-xl`}>
-                <Icon className={`text-2xl ${stat.color} dark:brightness-110`} />
+                <Icon className="text-2xl" style={{ color: stat.hexColor }} />
               </div>
             </div>
-          </Card>
+          </div>
         );
       })}
     </div>
@@ -154,9 +153,8 @@ function QuickActionsGrid({ items }: { items: QuickActionItem[] }) {
       {items.map((item) => {
         const Icon = item.icon;
         return (
-          <Card
+          <div
             key={item.path}
-            hoverable
             onClick={() => {
               if (item.isComingSoon) {
                 message.info("Tính năng đang phát triển");
@@ -164,10 +162,7 @@ function QuickActionsGrid({ items }: { items: QuickActionItem[] }) {
               }
               router.push(item.path);
             }}
-            className="group cursor-pointer border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm transition-shadow duration-300 overflow-hidden bg-white dark:bg-gray-800"
-            styles={{
-              body: { padding: 0 },
-            }}
+            className="group cursor-pointer border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm overflow-hidden bg-white dark:bg-gray-800 rounded-lg hover:shadow-md"
           >
             <div className={`bg-linear-to-br ${item.gradient} p-6 text-white relative overflow-hidden`}>
               <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
@@ -185,12 +180,12 @@ function QuickActionsGrid({ items }: { items: QuickActionItem[] }) {
               </div>
             </div>
             <div className="p-6 bg-white dark:bg-gray-800">
-              <div className="flex items-center justify-between text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <div className="flex items-center justify-between text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400">
                 <span className="text-sm font-medium">Truy cập ngay</span>
                 <ArrowRightOutlined className="group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
-          </Card>
+          </div>
         );
       })}
     </div>
@@ -231,6 +226,7 @@ export default function AdminDashboard() {
       icon: FileTextOutlined,
       color: "text-purple-600 dark:text-purple-400",
       bgColor: "bg-purple-50 dark:bg-purple-900/30",
+      hexColor: "#9333ea",
     },
     {
       label: "Người dùng",
@@ -238,6 +234,7 @@ export default function AdminDashboard() {
       icon: UserOutlined,
       color: "text-cyan-600 dark:text-cyan-400",
       bgColor: "bg-cyan-50 dark:bg-cyan-900/30",
+      hexColor: "#0891b2",
     },
     {
       label: "Tin tức",
@@ -245,6 +242,7 @@ export default function AdminDashboard() {
       icon: AppstoreOutlined,
       color: "text-green-600 dark:text-green-400",
       bgColor: "bg-green-50 dark:bg-green-900/30",
+      hexColor: "#16a34a",
     },
     {
       label: "Sự kiện",
@@ -252,6 +250,7 @@ export default function AdminDashboard() {
       icon: CloudDownloadOutlined,
       color: "text-indigo-600 dark:text-indigo-400",
       bgColor: "bg-indigo-50 dark:bg-indigo-900/30",
+      hexColor: "#4f46e5",
     },
   ];
 

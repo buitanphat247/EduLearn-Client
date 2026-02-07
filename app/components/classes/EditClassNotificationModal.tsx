@@ -1,24 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { App, Modal, Form, Input, Button } from "antd";
+import { App, Modal, Form, Input, Button, Spin } from "antd";
 import { updateNotification, type UpdateNotificationParams } from "@/lib/api/notifications";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
 import type { EditClassNotificationModalProps } from "./types";
 
-export default function EditClassNotificationModal({ open, notification, classId, onCancel, onSuccess }: EditClassNotificationModalProps) {
+export default function EditClassNotificationModal({ open, notification, classId, onCancel, onSuccess, loading = false }: EditClassNotificationModalProps) {
   const [form] = Form.useForm();
   const { message } = App.useApp();
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (open && notification) {
+    if (open && notification && !loading) {
       form.setFieldsValue({
         title: notification.title,
         message: notification.message,
       });
     }
-  }, [open, notification, form]);
+  }, [open, notification, form, loading]);
 
   const handleSubmit = async (values: any) => {
     if (!notification) return;
@@ -68,8 +68,8 @@ export default function EditClassNotificationModal({ open, notification, classId
   };
 
   const handleCancel = () => {
-    if (submitting) {
-      message.warning("Đang cập nhật thông báo, vui lòng đợi...");
+    if (submitting || loading) {
+      if (submitting) message.warning("Đang cập nhật thông báo, vui lòng đợi...");
       return;
     }
     form.resetFields();
@@ -85,55 +85,56 @@ export default function EditClassNotificationModal({ open, notification, classId
       onCancel={handleCancel}
       footer={null}
       width={600}
-      maskClosable={!submitting}
-      closable={!submitting}
-      destroyOnHidden={true}
+      maskClosable={!submitting && !loading}
+      closable={!submitting && !loading}
+      destroyOnClose={true}
     >
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Form.Item
-          name="title"
-          label="Tiêu đề"
-          rules={[
-            { required: true, message: "Vui lòng nhập tiêu đề" },
-            { max: 255, message: "Tiêu đề không được vượt quá 255 ký tự" },
-          ]}
-        >
-          <Input placeholder="Nhập tiêu đề thông báo" disabled={submitting} size="middle" />
-        </Form.Item>
+      <Spin spinning={loading}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Form.Item
+            name="title"
+            label="Tiêu đề"
+            rules={[
+              { required: true, message: "Vui lòng nhập tiêu đề" },
+              { max: 255, message: "Tiêu đề không được vượt quá 255 ký tự" },
+            ]}
+          >
+            <Input placeholder="Nhập tiêu đề thông báo" disabled={submitting || loading} size="middle" />
+          </Form.Item>
 
-        <Form.Item name="message" label="Nội dung" rules={[{ required: true, message: "Vui lòng nhập nội dung thông báo" }]}>
-          <TextArea
-            placeholder="Nhập nội dung thông báo"
-            rows={4}
-            disabled={submitting}
-            showCount
-            maxLength={5000}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-          />
-        </Form.Item>
+          <Form.Item name="message" label="Nội dung" rules={[{ required: true, message: "Vui lòng nhập nội dung thông báo" }]}>
+            <TextArea
+              placeholder="Nhập nội dung thông báo"
+              rows={4}
+              disabled={submitting || loading}
+              showCount
+              maxLength={5000}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+            />
+          </Form.Item>
 
-        <Form.Item className="mb-0">
-          <div className="flex justify-end gap-2">
-            <Button onClick={handleCancel} disabled={submitting} size="middle">
-              Hủy
-            </Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={submitting}
-              disabled={submitting}
-              size="middle"
-              className="bg-blue-500 hover:bg-blue-600"
-            >
-              {submitting ? "Đang cập nhật..." : "Cập nhật thông báo"}
-            </Button>
-          </div>
-        </Form.Item>
-      </Form>
+          <Form.Item className="mb-0">
+            <div className="flex justify-end gap-2">
+              <Button onClick={handleCancel} disabled={submitting || loading} size="middle">
+                Hủy
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={submitting}
+                disabled={submitting || loading}
+                size="middle"
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                {submitting ? "Đang cập nhật..." : "Cập nhật thông báo"}
+              </Button>
+            </div>
+          </Form.Item>
+        </Form>
+      </Spin>
     </Modal>
   );
 }
-

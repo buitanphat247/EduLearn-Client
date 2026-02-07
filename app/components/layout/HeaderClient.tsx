@@ -3,16 +3,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useLayoutEffect, useMemo, useCallback, memo } from "react";
-import { Button, Dropdown, Avatar } from "antd"; // Added Avatar
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { Button, Dropdown, Avatar } from "antd";
 import Swal from "sweetalert2";
 import type { MenuProps } from "antd";
-// Icons import from registry to avoid HMR issues
 import {
   UserOutlined,
   AppstoreOutlined,
   MessageOutlined,
 } from "@/app/components/common/iconRegistry";
+import { BulbOutlined, BulbFilled } from "@ant-design/icons";
 import { signOut } from "@/lib/api/auth";
 import type { AuthState } from "@/lib/utils/auth-server";
 import { useTheme } from "@/app/context/ThemeContext";
@@ -23,48 +23,11 @@ import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import "./Header.css";
 
-/**
- * HeaderClient - Main navigation header component
- * 
- * @description 
- * Provides the main navigation header for the application with:
- * - Logo and branding
- * - Navigation links (Home, News, Events)
- * - Feature dropdown menu
- * - About dropdown menu
- * - User menu with profile, chat, dashboard, and logout options
- * - Theme-aware styling (light/dark mode)
- * - Scroll progress indicator
- * 
- * @example
- * ```tsx
- * <HeaderClient
- *   initialAuth={{
- *     authenticated: true,
- *     userData: { user_id: 1, fullname: "John Doe", role_id: 3 }
- *   }}
- *   initialTheme="dark"
- * />
- * ```
- * 
- * @param {HeaderClientProps} props - Component props
- * @param {AuthState} props.initialAuth - Initial authentication state with user data
- * @param {"light" | "dark"} [props.initialTheme] - Initial theme preference (optional)
- * 
- * @returns {JSX.Element} Rendered header component with navigation
- * 
- * @accessibility
- * - Navigation links have proper ARIA labels
- * - Dropdown menus support keyboard navigation
- * - User menu is keyboard accessible
- * - Logo link has descriptive alt text
- */
 interface HeaderClientProps {
   initialAuth: AuthState;
   initialTheme?: "light" | "dark";
 }
 
-// Helper: Fix UTF-8 encoding errors
 const fixUtf8 = (str: string | undefined | null): string => {
   if (!str) return "";
   try {
@@ -77,7 +40,6 @@ const fixUtf8 = (str: string | undefined | null): string => {
   }
 };
 
-// Navigation configuration
 const NAV_LINKS = [
   { to: "/", label: "Trang chủ" },
   { to: "/news", label: "Tin tức" },
@@ -106,25 +68,11 @@ const ABOUT_ROUTES: Record<string, string> = {
   faq: "/faq",
 };
 
-// Helper function to apply color to element
-const applyColorToElement = (el: HTMLElement, color: string) => {
-  el.style.setProperty('color', color, 'important');
-  el.style.setProperty('-webkit-text-fill-color', color, 'important');
-  el.style.color = color;
-  const span = el.querySelector('span');
-  if (span) {
-    (span as HTMLElement).style.setProperty('color', 'inherit', 'important');
-    (span as HTMLElement).style.setProperty('-webkit-text-fill-color', 'inherit', 'important');
-    (span as HTMLElement).style.color = 'inherit';
-  }
-};
-
 export default function HeaderClient({ initialAuth }: HeaderClientProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { theme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
 
-  // Local state
   const [isFeatureDropdownOpen, setIsFeatureDropdownOpen] = useState(false);
   const [isAboutDropdownOpen, setIsAboutDropdownOpen] = useState(false);
   const [user, setUser] = useState<any>(() => {
@@ -134,7 +82,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
 
   const FALLBACK_CAT = getMediaUrl("/avatars/anh3_1770318347807_gt8xnc.jpeg");
 
-  // Sync user data with localStorage
   useEffect(() => {
     const syncUser = () => {
       if (typeof window !== "undefined") {
@@ -143,7 +90,7 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
           try {
             const parsedUser = JSON.parse(storedUser);
             setUser(parsedUser);
-            setImgError(false); // Reset error when user changes
+            setImgError(false);
           } catch (e) {
             console.error("Error parsing user from localStorage", e);
           }
@@ -151,15 +98,12 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
       }
     };
 
-    // Initial sync
     syncUser();
 
-    // Listen for storage changes (from other tabs)
     window.addEventListener("storage", (e) => {
       if (e.key === "user") syncUser();
     });
 
-    // Custom event for same-tab updates
     window.addEventListener("user-updated", syncUser);
 
     return () => {
@@ -168,27 +112,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
     };
   }, []);
 
-  // Memoize colors
-  const linkColor = useMemo(() => theme === 'dark' ? '#ffffff' : '#475569', [theme]);
-  const underlineColor = useMemo(() => theme === 'dark' ? '#60a5fa' : '#2563eb', [theme]);
-
-  // Optimized force color effect - combined useLayoutEffect and useEffect
-  useLayoutEffect(() => {
-    const forceAllColors = () => {
-      const navLinks = document.querySelectorAll('header nav a');
-      const navButtons = document.querySelectorAll('header nav button');
-
-      navLinks.forEach((link) => applyColorToElement(link as HTMLElement, linkColor));
-      navButtons.forEach((button) => applyColorToElement(button as HTMLElement, linkColor));
-    };
-
-    forceAllColors();
-    // Single timeout instead of multiple
-    const timeout = setTimeout(forceAllColors, 50);
-    return () => clearTimeout(timeout);
-  }, [theme, pathname, linkColor]);
-
-  // Sync user data on mount
   useEffect(() => {
     if (user && typeof window !== "undefined") {
       localStorage.setItem("user", JSON.stringify(user));
@@ -204,7 +127,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [user]);
 
-  // Navigation handlers - memoized with useCallback
   const handleFeatureClick: MenuProps["onClick"] = useCallback(({ key }: { key: string }) => {
     router.push(`/${key}`);
     setIsFeatureDropdownOpen(false);
@@ -242,7 +164,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
     }
   }, [router, theme]);
 
-  // Active state detection - memoized
   const isFeatureActive = useMemo(() => {
     return pathname === "/vocabulary" || pathname === "/writing" || pathname === "/listening" || pathname?.startsWith("/vocabulary/") || pathname?.startsWith("/writing/") || pathname?.startsWith("/listening/");
   }, [pathname]);
@@ -251,7 +172,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
     [pathname]
   );
 
-  // User role utilities - memoized
   const userRoleLabel = useMemo(() => {
     if (!user) return "Thành viên";
     const roleId = user.role_id || user.role?.role_id;
@@ -272,17 +192,8 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
     return null;
   }, [user]);
 
-  // Optimized force color handler
-  const createForceColorHandler = useCallback((color: string) => {
-    return (e: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>) => {
-      applyColorToElement(e.currentTarget, color);
-    };
-  }, []);
-
-  // Navigation link component - memoized
   const NavLink = memo(({ to, label }: { to: string; label: string }) => {
     const isActive = pathname === to;
-    const forceColor = createForceColorHandler(linkColor);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLAnchorElement>) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -295,56 +206,23 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
       <Link
         href={to}
         prefetch={true}
-        onMouseEnter={(e) => {
-          router.prefetch(to);
-          forceColor(e);
-        }}
-        onMouseLeave={forceColor}
-        onFocus={forceColor}
-        onBlur={forceColor}
-        onClick={forceColor}
+        onMouseEnter={() => router.prefetch(to)}
         onKeyDown={handleKeyDown}
         aria-current={isActive ? 'page' : undefined}
         aria-label={`Điều hướng đến ${label}`}
-        ref={(el) => {
-          if (el) {
-            applyColorToElement(el, linkColor);
-            setTimeout(() => applyColorToElement(el, linkColor), 0);
-          }
-        }}
-        style={{
-          position: 'relative',
-          paddingTop: '0.5rem',
-          paddingBottom: '0.5rem',
-          fontWeight: '700',
-          fontSize: '1.125rem',
-          color: linkColor,
-          textDecoration: 'none',
-          display: 'inline-block',
-          WebkitTextFillColor: linkColor,
-          '--nav-link-color': linkColor,
-        } as React.CSSProperties & { '--nav-link-color': string }}
+        className={`relative py-2 font-bold text-lg no-underline transition-colors duration-200 inline-block
+          ${isActive
+            ? 'text-blue-600 dark:text-blue-400'
+            : 'text-slate-600 dark:text-white hover:text-blue-600 dark:hover:text-blue-400'
+          }`}
       >
-        <span style={{
-          position: 'relative',
-          zIndex: 10,
-          color: 'inherit',
-          display: 'inline-block',
-        }}>
+        <span className="relative z-10 inline-block">
           {label}
         </span>
         {isActive && (
           <span
             aria-hidden="true"
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              width: '100%',
-              height: '2px',
-              borderRadius: '9999px',
-              backgroundColor: underlineColor,
-            }}
+            className="absolute bottom-0 left-0 w-full h-0.5 rounded-full bg-blue-600 dark:bg-blue-400"
           />
         )}
       </Link>
@@ -352,7 +230,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
   });
   NavLink.displayName = 'NavLink';
 
-  // Dropdown button component - memoized
   const DropdownNavButton = memo(({
     label,
     isActive,
@@ -369,7 +246,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
     onClick: MenuProps["onClick"];
   }) => {
     const showUnderline = isActive || isOpen;
-    const forceColor = createForceColorHandler(linkColor);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -392,59 +268,23 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
         onOpenChange={onOpenChange}
       >
         <button
-          onMouseEnter={forceColor}
-          onMouseLeave={forceColor}
-          onFocus={forceColor}
-          onBlur={forceColor}
-          onClick={forceColor}
           onKeyDown={handleKeyDown}
           aria-label={`${label} menu`}
           aria-expanded={isOpen}
           aria-haspopup="true"
-          ref={(el) => {
-            if (el) {
-              applyColorToElement(el, linkColor);
-              setTimeout(() => applyColorToElement(el, linkColor), 0);
-            }
-          }}
-          style={{
-            position: 'relative',
-            paddingTop: '0.5rem',
-            paddingBottom: '0.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.25rem',
-            fontWeight: '700',
-            fontSize: '1.125rem',
-            color: linkColor,
-            textDecoration: 'none',
-            border: 'none',
-            background: 'transparent',
-            cursor: 'pointer',
-            WebkitTextFillColor: linkColor,
-            '--nav-button-color': linkColor,
-          } as React.CSSProperties & { '--nav-button-color': string }}
+          className={`relative py-2 flex items-center gap-1 font-bold text-lg border-none bg-transparent cursor-pointer transition-colors duration-200
+            ${showUnderline || isOpen
+              ? 'text-blue-600 dark:text-blue-400'
+              : 'text-slate-600 dark:text-white hover:text-blue-600 dark:hover:text-blue-400'
+            }`}
         >
-          <span style={{
-            position: 'relative',
-            zIndex: 10,
-            color: 'inherit',
-            display: 'inline-block',
-          }}>
+          <span className="relative z-10 inline-block">
             {label}
           </span>
-          {showUnderline && (
+          {(showUnderline) && (
             <span
               aria-hidden="true"
-              style={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                width: '100%',
-                height: '2px',
-                borderRadius: '9999px',
-                backgroundColor: underlineColor,
-              }}
+              className="absolute bottom-0 left-0 w-full h-0.5 rounded-full bg-blue-600 dark:bg-blue-400"
             />
           )}
         </button>
@@ -453,7 +293,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
   });
   DropdownNavButton.displayName = 'DropdownNavButton';
 
-  // Memoize user menu items
   const userMenuItems = useMemo<MenuProps["items"]>(() => {
     if (!user) return [];
     return [
@@ -593,6 +432,17 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
 
           {/* Right Side: User Menu */}
           <div className="flex items-center gap-5">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 focus:outline-none"
+              aria-label={theme === 'dark' ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
+            >
+              {theme === 'dark' ? (
+                <BulbFilled className="text-yellow-400 text-xl" />
+              ) : (
+                <BulbOutlined className="text-slate-600 text-xl" />
+              )}
+            </button>
             {user ? (
               <>
                 <NotificationBell userId={user.user_id || user.userId} />

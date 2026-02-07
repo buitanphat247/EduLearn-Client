@@ -219,7 +219,7 @@ export default function EventsPage() {
   return (
     <App>
       <main className="h-full bg-slate-50 dark:bg-[#0f172a] transition-colors duration-500">
-        <div className="container mx-auto px-4 py-12">
+        <div className="container mx-auto py-12">
           <div className="text-center mb-12">
             <h1 className="text-5xl font-bold text-slate-800 dark:text-white mb-4 transition-colors duration-300">Sự kiện</h1>
             <p className="text-slate-600 dark:text-slate-400 text-lg max-w-2xl mx-auto transition-colors duration-300">

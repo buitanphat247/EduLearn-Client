@@ -92,4 +92,5 @@ export interface EditClassNotificationModalProps {
   classId: string;
   onCancel: () => void;
   onSuccess: () => void;
+  loading?: boolean;
 }

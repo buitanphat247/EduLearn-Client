@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Form, Input, Button, Switch, Divider, Avatar, App } from "antd";
+import { useState, useEffect, useRef } from "react";
+import { Form, Input, Button, Divider, Avatar, App } from "antd";
+import Swal from "sweetalert2";
 import {
   UserOutlined,
   LockOutlined,
-  BellOutlined,
-  SecurityScanOutlined,
   SaveOutlined,
   MailOutlined,
   PhoneOutlined,
@@ -20,7 +19,7 @@ import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
 import SettingsSkeleton from "@/app/components/settings/SettingsSkeleton";
 import { getNewPasswordValidationRules } from "@/lib/utils/validation";
-import { updateUserSettings } from "@/lib/api/settings";
+import { useTheme } from "@/app/context/ThemeContext";
 
 interface SettingsFormData {
   fullname: string;
@@ -38,31 +37,10 @@ export default function UserSettings() {
   const [uploading, setUploading] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
+  const { theme } = useTheme();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const FALLBACK_CAT = getMediaUrl("/avatars/anh3_1770318347807_gt8xnc.jpeg");
-
-  // UI States for switches
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [pushNotifications, setPushNotifications] = useState(true);
-  const [systemUpdates, setSystemUpdates] = useState(true);
-  const [twoFactorAuth, setTwoFactorAuth] = useState(false);
-
-  const handleUpdateSettings = async () => {
-    try {
-      setSaving(true);
-      await updateUserSettings({
-        emailNotifications,
-        pushNotifications,
-        systemUpdates,
-        twoFactorAuth
-      });
-      messageApi.success("Đã cập nhật cài đặt thành công");
-    } catch (error: any) {
-      messageApi.error(error?.message || "Không thể cập nhật cài đặt");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // Fetch user info
   useEffect(() => {
@@ -94,6 +72,27 @@ export default function UserSettings() {
     fetchUserInfo();
   }, [profileForm, messageApi]);
 
+  const handleAvatarClick = () => {
+    if (uploading) return;
+
+    Swal.fire({
+      title: "Đổi ảnh đại diện?",
+      text: "Bạn có muốn thay đổi ảnh đại diện mới không?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#3b82f6",
+      cancelButtonColor: "#ef4444",
+      confirmButtonText: "Đổi ngay",
+      cancelButtonText: "Hủy",
+      background: theme === 'dark' ? '#1e293b' : '#fff',
+      color: theme === 'dark' ? '#fff' : '#000',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        fileInputRef.current?.click();
+      }
+    });
+  };
+
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     const userId = getUserIdFromCookie();
@@ -122,12 +121,24 @@ export default function UserSettings() {
       window.dispatchEvent(new Event("user-updated"));
 
       hideProgress();
-      messageApi.success("Cập nhật ảnh đại diện thành công");
+
+      Swal.fire({
+        title: "Thành công!",
+        text: "Ảnh đại diện đã được cập nhật.",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+        background: theme === 'dark' ? '#1e293b' : '#fff',
+        color: theme === 'dark' ? '#fff' : '#000',
+      });
     } catch (error: any) {
       console.error("Avatar upload error:", error);
       messageApi.error(error.message || "Lỗi khi cập nhật ảnh đại diện");
     } finally {
       setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -193,16 +204,21 @@ export default function UserSettings() {
               )}
             </div>
 
-            <label className="absolute bottom-1 right-1 w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg transition-all duration-300 transform group-hover/avatar:scale-110 border-2 border-white dark:border-slate-800 z-20">
+            <button
+              onClick={handleAvatarClick}
+              className="absolute bottom-1 right-1 w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg transition-all duration-300 transform group-hover/avatar:scale-110 border-2 border-white dark:border-slate-800 z-20"
+              disabled={uploading}
+            >
               <CameraOutlined className="text-lg" />
               <input
                 type="file"
+                ref={fileInputRef}
                 className="hidden"
                 accept="image/*"
                 onChange={handleAvatarChange}
                 disabled={uploading}
               />
-            </label>
+            </button>
           </div>
           <div className="flex-1 pt-2">
             <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">{userInfo?.fullname || "Học sinh"}</h3>
@@ -287,108 +303,6 @@ export default function UserSettings() {
             </Button>
           </div>
         </Form>
-      </CustomCard>
-
-      {/* Notification Settings */}
-      <CustomCard
-        title={
-          <div className="flex items-center gap-3">
-            <BellOutlined className="text-blue-600 dark:text-blue-400" />
-            <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">Cài đặt thông báo</span>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <div
-            className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-slate-600! cursor-pointer"
-          >
-            <div>
-              <p className="font-semibold text-gray-800 dark:text-gray-200">Thông báo qua email</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Nhận thông báo quan trọng qua email</p>
-            </div>
-            <Switch
-              checked={emailNotifications}
-              onChange={setEmailNotifications}
-            />
-          </div>
-
-          <div
-            className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-slate-600! cursor-pointer"
-          >
-            <div>
-              <p className="font-semibold text-gray-800 dark:text-gray-200">Thông báo đẩy</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Nhận thông báo ngay trên trình duyệt</p>
-            </div>
-            <Switch
-              checked={pushNotifications}
-              onChange={setPushNotifications}
-            />
-          </div>
-
-          <div
-            className="flex items-center justify-between py-3 cursor-pointer"
-          >
-            <div>
-              <p className="font-semibold text-gray-800 dark:text-gray-200">Cập nhật hệ thống</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Nhận thông báo về các cập nhật hệ thống</p>
-            </div>
-            <Switch
-              checked={systemUpdates}
-              onChange={setSystemUpdates}
-            />
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            size="large"
-            loading={saving}
-            onClick={handleUpdateSettings}
-            className="bg-blue-600 hover:bg-blue-700 border-none"
-          >
-            Lưu cài đặt
-          </Button>
-        </div>
-      </CustomCard>
-
-      {/* Security Settings */}
-      <CustomCard
-        title={
-          <div className="flex items-center gap-3">
-            <SecurityScanOutlined className="text-blue-600 dark:text-blue-400" />
-            <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">Bảo mật</span>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <div
-            className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-slate-600! cursor-pointer"
-          >
-            <div>
-              <p className="font-semibold text-gray-800 dark:text-gray-200">Xác thực hai yếu tố (2FA)</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Bảo vệ tài khoản của bạn bằng xác thực hai yếu tố</p>
-            </div>
-            <Switch
-              checked={twoFactorAuth}
-              onChange={setTwoFactorAuth}
-            />
-          </div>
-
-          <div className="mt-6">
-            <Button
-              type="primary"
-              icon={<SaveOutlined />}
-              size="large"
-              loading={saving}
-              onClick={handleUpdateSettings}
-              className="bg-blue-600 hover:bg-blue-700 border-none"
-            >
-              Lưu cài đặt
-            </Button>
-          </div>
-        </div>
       </CustomCard>
 
       {/* Change Password */}

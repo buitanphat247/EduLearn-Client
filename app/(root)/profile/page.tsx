@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Avatar, message } from "antd";
+import Swal from "sweetalert2";
 import {
   UserOutlined,
   MailOutlined,
@@ -27,6 +28,7 @@ export default function Profile() {
   const [uploading, setUploading] = useState(false);
   const [imgError, setImgError] = useState(false);
   const { theme } = useTheme();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const FALLBACK_CAT = getMediaUrl("/avatars/anh3_1770318347807_gt8xnc.jpeg");
 
@@ -67,6 +69,27 @@ export default function Profile() {
     };
   }, []);
 
+  const handleAvatarClick = () => {
+    if (uploading) return;
+
+    Swal.fire({
+      title: "Đổi ảnh đại diện?",
+      text: "Bạn có muốn thay đổi ảnh đại diện mới không?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#3b82f6",
+      cancelButtonColor: "#ef4444",
+      confirmButtonText: "Đổi ngay",
+      cancelButtonText: "Hủy",
+      background: theme === 'dark' ? '#1e293b' : '#fff',
+      color: theme === 'dark' ? '#fff' : '#000',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        fileInputRef.current?.click();
+      }
+    });
+  };
+
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
@@ -104,12 +127,26 @@ export default function Profile() {
       window.dispatchEvent(new Event("user-updated"));
 
       hideProgress();
-      message.success("Cập nhật ảnh đại diện thành công");
+
+      Swal.fire({
+        title: "Thành công!",
+        text: "Ảnh đại diện đã được cập nhật.",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+        background: theme === 'dark' ? '#1e293b' : '#fff',
+        color: theme === 'dark' ? '#fff' : '#000',
+      });
+
     } catch (error: any) {
       console.error("Avatar upload error:", error);
       message.error(error.message || "Lỗi khi cập nhật ảnh đại diện");
     } finally {
       setUploading(false);
+      // Reset input value to allow selecting the same file again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -178,9 +215,10 @@ export default function Profile() {
               </div>
 
               {/* Enhanced floating edit button */}
-              <label
-                htmlFor="avatar-upload"
+              <button
+                onClick={handleAvatarClick}
                 className={`absolute bottom-1 right-1 w-10 h-10 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-lg cursor-pointer border-2 border-white dark:border-[#1e293b] hover:bg-blue-50 dark:hover:bg-slate-700 transition-all duration-300 z-10 group/btn ${uploading ? 'pointer-events-none' : 'hover:scale-110 active:scale-95'}`}
+                disabled={uploading}
               >
                 {uploading ? (
                   <LoadingOutlined className="text-blue-500 animate-spin" />
@@ -189,13 +227,14 @@ export default function Profile() {
                 )}
                 <input
                   type="file"
+                  ref={fileInputRef}
                   id="avatar-upload"
                   className="hidden"
                   accept="image/*"
                   onChange={handleAvatarChange}
                   disabled={uploading}
                 />
-              </label>
+              </button>
 
               {/* Subtle overlay on hover for the whole avatar */}
               <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full pointer-events-none" />

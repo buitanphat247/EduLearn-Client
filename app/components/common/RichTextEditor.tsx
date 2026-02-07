@@ -84,30 +84,30 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
   const addImage = () => {
     const url = window.prompt("URL hình ảnh:");
     if (!url) return;
-    
+
     // ✅ Validate URL to prevent XSS
     if (!isValidUrl(url)) {
       alert("URL không hợp lệ. Chỉ chấp nhận http:// hoặc https://");
       return;
     }
-    
+
     editor.chain().focus().setImage({ src: url }).run();
   };
 
   return (
-    <div className="border-b border-gray-200 p-2 flex flex-wrap gap-1 bg-gray-50/50 sticky top-0 z-10 rounded-t-lg">
+    <div className="border-b border-gray-200 dark:border-gray-700 p-2 flex flex-wrap gap-1 bg-gray-50/50 dark:bg-gray-800 sticky top-0 z-10 rounded-t-lg [&_button]:dark:text-gray-400 [&_button:hover]:dark:bg-gray-700 [&_button.bg-gray-200]:dark:bg-blue-900/40 [&_button.bg-gray-200]:dark:text-blue-400">
       <Button
         type="text"
         size="small"
         onClick={() => editor.chain().focus().toggleBold().run()}
-        className={editor.isActive("bold") ? "bg-gray-200 text-blue-600" : ""}
+        className={editor.isActive("bold") ? "bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400" : "dark:text-gray-300 dark:hover:bg-gray-700"}
         icon={<BoldOutlined />}
       />
       <Button
         type="text"
         size="small"
         onClick={() => editor.chain().focus().toggleItalic().run()}
-        className={editor.isActive("italic") ? "bg-gray-200 text-blue-600" : ""}
+        className={editor.isActive("italic") ? "bg-gray-200 dark:bg-gray-700 text-blue-600 dark:text-blue-400" : "dark:text-gray-300 dark:hover:bg-gray-700"}
         icon={<ItalicOutlined />}
       />
       <Button
@@ -387,7 +387,7 @@ export default function RichTextEditor({
 
   // Call onEditorReady when editor is ready
   const onEditorReadyRef = useRef(onEditorReady);
-  
+
   useEffect(() => {
     onEditorReadyRef.current = onEditorReady;
   }, [onEditorReady]);
@@ -420,9 +420,9 @@ export default function RichTextEditor({
 
   return (
     <>
-      <div className="border border-gray-200 rounded-lg overflow-hidden bg-white focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-400 transition-all">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900 focus-within:ring-2 focus-within:ring-blue-100 dark:focus-within:ring-blue-900 focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-all">
         <MenuBar editor={editor} />
-        <EditorContent editor={editor} />
+        <EditorContent editor={editor} className="[&_.ProseMirror]:text-gray-800 [&_.ProseMirror]:dark:text-gray-200" />
       </div>
       <style jsx global>{`
         .ProseMirror p.is-editor-empty:first-child::before {

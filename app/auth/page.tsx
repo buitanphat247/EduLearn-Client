@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Form, Input, Button, Checkbox, App, ConfigProvider, theme, Select } from "antd";
-import { UserOutlined, LockOutlined, MailOutlined, GoogleOutlined, FacebookFilled } from "@ant-design/icons";
+import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -10,6 +10,7 @@ import { signIn, signUp } from "@/lib/api/auth";
 import { getCurrentUser } from "@/lib/api/users";
 import { useTheme } from "@/app/context/ThemeContext";
 import { getPasswordValidationRules } from "@/lib/utils/validation";
+import ForgotPasswordModal from "@/app/components/auth/ForgotPasswordModal";
 
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -17,6 +18,7 @@ export default function AuthPage() {
   const [signUpForm] = Form.useForm();
   const [signInLoading, setSignInLoading] = useState(false);
   const [signUpLoading, setSignUpLoading] = useState(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const router = useRouter();
   const { message } = App.useApp();
 
@@ -324,29 +326,7 @@ export default function AuthPage() {
                     autoComplete="off"
                     className="flex flex-col gap-4"
                   >
-                    <div className="grid grid-cols-2 gap-3 mb-2">
-                      <Button
-                        block
-                        icon={<GoogleOutlined className="text-sm" />}
-                        className="flex items-center justify-center h-10 rounded-xl text-slate-600 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-slate-500 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-medium text-sm shadow-sm"
-                        onClick={() => message.info("Tính năng đang phát triển")}
-                      >
-                        Google
-                      </Button>
-                      <Button
-                        block
-                        icon={<FacebookFilled className="text-sm" />}
-                        className="flex items-center justify-center h-10 rounded-xl text-slate-600 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-slate-500 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-medium text-sm shadow-sm"
-                        onClick={() => message.info("Tính năng đang phát triển")}
-                      >
-                        Facebook
-                      </Button>
-                    </div>
 
-                    <div className="relative my-1">
-                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-700/60"></div></div>
-                      <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-wider"><span className="bg-slate-100 dark:bg-[#131b2e] px-3 text-slate-500 rounded-full transition-colors">Hoặc với email</span></div>
-                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <Form.Item name="name" rules={[{ required: true, message: "Vui lòng nhập họ tên!" }]} className="mb-0">
@@ -405,9 +385,7 @@ export default function AuthPage() {
                       </Form.Item>
                     </div>
 
-                    <Form.Item name="agreement" valuePropName="checked" rules={[{ validator: (_, val) => val ? Promise.resolve() : Promise.reject(new Error("Bạn chưa đồng ý điều khoản!")) }]} className="mb-2 mt-2">
-                      <Checkbox className="text-slate-500 dark:text-slate-400 text-sm">Tôi đồng ý với <a href="#" className="text-blue-500 dark:text-blue-400 hover:underline font-medium">Điều khoản</a> & <a href="#" className="text-blue-500 dark:text-blue-400 hover:underline font-medium">Chính sách</a></Checkbox>
-                    </Form.Item>
+
 
                     <Button type="primary" htmlType="submit" loading={signUpLoading} block size="middle" className="bg-linear-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 border-none shadow-lg shadow-blue-500/30 dark:shadow-blue-900/30 font-bold h-11 rounded-xl text-base mt-2 transition-all">
                       Đăng Ký Ngay
@@ -432,29 +410,7 @@ export default function AuthPage() {
                     autoComplete="off"
                     className="flex flex-col gap-5"
                   >
-                    <div className="grid grid-cols-2 gap-3 mb-2">
-                      <Button
-                        block
-                        icon={<GoogleOutlined className="text-sm" />}
-                        className="flex items-center justify-center h-10 rounded-xl text-slate-600 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-slate-500 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-medium text-sm shadow-sm"
-                        onClick={() => message.info("Tính năng đang phát triển")}
-                      >
-                        Google
-                      </Button>
-                      <Button
-                        block
-                        icon={<FacebookFilled className="text-sm" />}
-                        className="flex items-center justify-center h-10 rounded-xl text-slate-600 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-slate-500 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-medium text-sm shadow-sm"
-                        onClick={() => message.info("Tính năng đang phát triển")}
-                      >
-                        Facebook
-                      </Button>
-                    </div>
 
-                    <div className="relative my-2">
-                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-700/60"></div></div>
-                      <div className="relative flex justify-center text-xs font-medium uppercase tracking-wider"><span className="bg-slate-100 dark:bg-[#131b2e] px-4 text-slate-500 rounded-full py-1">Hoặc tiếp tục với email</span></div>
-                    </div>
 
                     <Form.Item name="email" rules={[{ required: true, message: "Vui lòng nhập email!" }, { type: "email", message: "Email không hợp lệ!" }]} className="mb-2">
                       <Input size="large" placeholder="Email của bạn" prefix={<MailOutlined className="text-slate-400 dark:text-slate-500 mr-2" />} className="rounded-xl bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50 hover:bg-white dark:hover:bg-slate-900/80 transition-all" />
@@ -464,11 +420,8 @@ export default function AuthPage() {
                       <Input.Password size="large" placeholder="Mật khẩu" prefix={<LockOutlined className="text-slate-400 dark:text-slate-500 mr-2" />} className="rounded-xl bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50 hover:bg-white dark:hover:bg-slate-900/80 transition-all" />
                     </Form.Item>
 
-                    <div className="flex justify-between items-center -mt-2">
-                      <Form.Item name="remember" valuePropName="checked" noStyle>
-                        <Checkbox className="text-slate-500 dark:text-slate-400 text-sm">Ghi nhớ</Checkbox>
-                      </Form.Item>
-                      <a href="#" className="text-sm font-medium text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors">Quên mật khẩu?</a>
+                    <div className="flex justify-end items-center -mt-2">
+                      <a onClick={(e) => { e.preventDefault(); setIsForgotPasswordOpen(true); }} className="text-sm font-medium text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors cursor-pointer">Quên mật khẩu?</a>
                     </div>
 
                     <Button type="primary" htmlType="submit" loading={signInLoading} block size="middle" className="bg-linear-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 border-none shadow-lg shadow-blue-500/30 dark:shadow-blue-900/30 font-bold h-11 rounded-xl text-base mt-2 transition-all">
@@ -491,6 +444,11 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
+
+      <ForgotPasswordModal
+        open={isForgotPasswordOpen}
+        onCancel={() => setIsForgotPasswordOpen(false)}
+      />
     </div>
   );
 }

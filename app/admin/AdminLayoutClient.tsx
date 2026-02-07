@@ -31,8 +31,13 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const FALLBACK_CAT = getMediaUrl("/avatars/anh3_1770318347807_gt8xnc.jpeg");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Memoize page title calculation
   const currentPageTitle = useMemo(() => {
@@ -74,7 +79,7 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
         setLoadingProfile(false);
       }
     }
-  }, [userId]); // Remove message dependency
+  }, [userId]);
 
   const fetchUserInfoRef = useRef(fetchUserInfo);
   fetchUserInfoRef.current = fetchUserInfo;
@@ -115,7 +120,6 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
   // Memoize initials for avatar
   const displayInitials = useMemo(() => getInitials(displayName), [displayName, getInitials]);
 
-  // ✅ Move useMemo to top level (before return)
   const formattedCreatedAt = useMemo(() => {
     if (!userInfo?.created_at) return "Chưa có thông tin";
     const date = new Date(userInfo.created_at);
@@ -124,6 +128,13 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
     const year = date.getFullYear();
     return `${day} ${month} ${year}`;
   }, [userInfo?.created_at]);
+
+  const avatarUrl = useMemo(() => {
+    // Server safe URL calculation
+    if (imgError) return FALLBACK_CAT;
+    const url = userInfo?.avatar || initialUserData?.avatar;
+    return url ? getMediaUrl(url) : FALLBACK_CAT;
+  }, [userInfo?.avatar, initialUserData?.avatar, imgError]);
 
   return (
     <>
@@ -146,7 +157,7 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
           >
             <Avatar
               size={40}
-              src={getCachedImageUrl((imgError || (!userInfo?.avatar && !initialUserData?.avatar)) ? FALLBACK_CAT : getMediaUrl(userInfo?.avatar || initialUserData?.avatar!))}
+              src={mounted ? getCachedImageUrl(avatarUrl) : avatarUrl}
               onError={() => {
                 setImgError(true);
                 return true;
@@ -170,7 +181,7 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
               <div className="flex items-center gap-4">
                 <Avatar
                   size={80}
-                  src={getCachedImageUrl((imgError || !userInfo.avatar) ? FALLBACK_CAT : getMediaUrl(userInfo.avatar))}
+                  src={mounted ? getCachedImageUrl((imgError || !userInfo.avatar) ? FALLBACK_CAT : getMediaUrl(userInfo.avatar)) : ((imgError || !userInfo.avatar) ? FALLBACK_CAT : getMediaUrl(userInfo.avatar))}
                   className="flex items-center justify-center bg-blue-600"
                 >
                   {getInitials(userInfo.fullname || userInfo.username || "A")}

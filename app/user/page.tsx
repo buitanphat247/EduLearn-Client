@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { FileTextOutlined, UserOutlined, AppstoreOutlined, CloudDownloadOutlined, ArrowRightOutlined, SettingOutlined } from "@ant-design/icons";
 import { IoBookOutline } from "react-icons/io5";
-import { App, Card } from "antd";
+import { App } from "antd";
 import { useRouter } from "next/navigation";
 import UserWelcomeBanner from "@/app/components/user/dashboard/UserWelcomeBanner";
 import UserStatisticsCards from "@/app/components/user/dashboard/UserStatisticsCards";
@@ -69,9 +69,8 @@ function QuickActionsGrid({ items }: { items: DashboardItem[] }) {
       {items.map((item) => {
         const Icon = item.icon;
         return (
-          <Card
+          <div
             key={item.path}
-            hoverable
             onClick={() => {
               if (item.isComingSoon) {
                 message.info("Tính năng đang phát triển");
@@ -79,10 +78,7 @@ function QuickActionsGrid({ items }: { items: DashboardItem[] }) {
               }
               router.push(item.path);
             }}
-            className="group cursor-pointer border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm transition-shadow duration-300 overflow-hidden bg-white dark:bg-gray-800"
-            styles={{
-              body: { padding: 0 },
-            }}
+            className="group cursor-pointer border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm overflow-hidden bg-white dark:bg-gray-800 rounded-lg hover:shadow-md"
           >
             <div className={`bg-linear-to-br ${item.gradient} p-6 text-white relative overflow-hidden`}>
               <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
@@ -100,12 +96,12 @@ function QuickActionsGrid({ items }: { items: DashboardItem[] }) {
               </div>
             </div>
             <div className="p-6 bg-white dark:bg-gray-800">
-              <div className="flex items-center justify-between text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <div className="flex items-center justify-between text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400">
                 <span className="text-sm font-medium">Truy cập ngay</span>
                 <ArrowRightOutlined className="group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
-          </Card>
+          </div>
         );
       })}
     </div>
@@ -154,6 +150,7 @@ export default function UserDashboard() {
       icon: FileTextOutlined,
       color: "text-purple-600 dark:text-purple-400",
       bgColor: "bg-purple-50 dark:bg-purple-900/30",
+      hexColor: "#9333ea",
     },
     {
       label: "Người dùng",
@@ -161,6 +158,7 @@ export default function UserDashboard() {
       icon: UserOutlined,
       color: "text-cyan-600 dark:text-cyan-400",
       bgColor: "bg-cyan-50 dark:bg-cyan-900/30",
+      hexColor: "#0891b2",
     },
     {
       label: "Tin tức",
@@ -168,6 +166,7 @@ export default function UserDashboard() {
       icon: AppstoreOutlined,
       color: "text-green-600 dark:text-green-400",
       bgColor: "bg-green-50 dark:bg-green-900/30",
+      hexColor: "#16a34a",
     },
     {
       label: "Sự kiện",
@@ -175,6 +174,7 @@ export default function UserDashboard() {
       icon: CloudDownloadOutlined,
       color: "text-indigo-600 dark:text-indigo-400",
       bgColor: "bg-indigo-50 dark:bg-indigo-900/30",
+      hexColor: "#4f46e5",
     },
   ];
 

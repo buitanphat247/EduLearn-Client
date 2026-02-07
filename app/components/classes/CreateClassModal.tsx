@@ -59,7 +59,7 @@ const generateClassCode = (): string => {
   const minutes = String(now.getMinutes()).padStart(2, "0");
   const seconds = String(now.getSeconds()).padStart(2, "0");
   const milliseconds = String(now.getMilliseconds()).padStart(3, "0");
-  
+
   return `${year}${month}${day}${hours}${minutes}${seconds}${milliseconds}`;
 };
 
@@ -124,7 +124,7 @@ export default function CreateClassModal({ open, onCancel, onSuccess }: CreateCl
       width={500}
       maskClosable={!submitting}
       closable={!submitting}
-      destroyOnHidden={true}
+      destroyOnHidden
       aria-labelledby="create-class-modal-title"
       aria-describedby="create-class-modal-description"
     >
@@ -140,9 +140,9 @@ export default function CreateClassModal({ open, onCancel, onSuccess }: CreateCl
             { max: 255, message: "Tên lớp không được vượt quá 255 ký tự" },
           ]}
         >
-          <Input 
-            placeholder="Nhập tên lớp học" 
-            disabled={submitting} 
+          <Input
+            placeholder="Nhập tên lớp học"
+            disabled={submitting}
             size="middle"
             aria-label="Tên lớp học"
             aria-required="true"
@@ -158,10 +158,10 @@ export default function CreateClassModal({ open, onCancel, onSuccess }: CreateCl
           label="Mã lớp (tự động)"
           tooltip="Mã lớp được tạo tự động để tránh trùng lặp"
         >
-          <Input 
-            placeholder="Mã lớp sẽ được tạo tự động" 
-            disabled 
-            size="middle" 
+          <Input
+            placeholder="Mã lớp sẽ được tạo tự động"
+            disabled
+            size="middle"
             className="bg-gray-50"
             aria-label="Mã lớp tự động"
             aria-readonly="true"

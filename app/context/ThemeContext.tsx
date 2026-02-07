@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { setThemeCookie } from "../actions/theme";
 
-type Theme = "light" | "dark";
+export type Theme = "light" | "dark";
 
 interface ThemeContextType {
   theme: Theme;
@@ -39,8 +39,8 @@ const getThemeTransitionDuration = (): number => {
   return 1500; // Default: 1.5 seconds
 };
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+export function ThemeProvider({ children, initialTheme }: { children: React.ReactNode; initialTheme?: Theme }) {
+  const [theme, setTheme] = useState<Theme>(() => initialTheme || getInitialTheme());
 
   const [isToggling, setIsToggling] = useState(false);
   const transitionDuration = getThemeTransitionDuration();

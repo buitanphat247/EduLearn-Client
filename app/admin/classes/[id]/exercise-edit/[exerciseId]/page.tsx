@@ -454,7 +454,7 @@ export default function ExerciseEditPage() {
 
   if (loading || editorLoading) {
     return (
-      <div className="bg-gray-50/50 min-h-screen">
+      <div className="bg-gray-50/50 dark:bg-gray-900 min-h-screen">
         <div className="mx-auto space-y-6">
           {/* Header Skeleton */}
           <div className="w-24">
@@ -464,7 +464,7 @@ export default function ExerciseEditPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column Skeleton */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-sm">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <Skeleton.Input active size="small" style={{ width: 150 }} />
@@ -476,19 +476,19 @@ export default function ExerciseEditPage() {
                   </div>
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-sm">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
                 <Skeleton active paragraph={{ rows: 3 }} />
               </div>
             </div>
 
             {/* Right Column Skeleton */}
             <div className="lg:col-span-1">
-              <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-sm sticky top-6">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm sticky top-6">
                 <div className="space-y-5">
                   <Skeleton.Input active size="small" style={{ width: '40%' }} />
                   <Skeleton.Input active size="large" block />
                   <Skeleton.Button active size="large" block style={{ height: 80 }} />
-                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Skeleton.Button active size="large" style={{ width: 100 }} />
                     <Skeleton.Button active size="large" style={{ width: 120 }} />
                   </div>
@@ -502,14 +502,14 @@ export default function ExerciseEditPage() {
   }
 
   return (
-    <div className="bg-gray-50/50">
+    <div className="bg-gray-50/50 dark:bg-gray-900 min-h-screen">
       <div className="mx-auto space-y-6">
         {/* Header Section */}
         <div className="flex items-center justify-start">
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={handleCancel}
-            className="border-gray-300 text-gray-600 hover:text-blue-600 hover:border-blue-600 transition-colors"
+            className="border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-600 dark:hover:border-blue-400 transition-colors bg-white dark:bg-gray-800"
           >
             Quay lại
           </Button>
@@ -534,7 +534,7 @@ export default function ExerciseEditPage() {
                   <Form.Item
                     name="title"
                     label={
-                      <span className="text-sm font-semibold text-gray-700">
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                         Tiêu đề bài tập <span className="text-red-500">*</span>
                       </span>
                     }
@@ -543,13 +543,13 @@ export default function ExerciseEditPage() {
                   >
                     <Input
                       placeholder="VD: Bài tập về nhà Chương 1: Đại số"
-                      className="py-2.5 px-3 text-base border-gray-300 rounded-lg hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-medium"
+                      className="py-2.5 px-3 text-base border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-medium dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                     />
                   </Form.Item>
 
                   {/* Description - Rich Text Editor */}
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
                       Mô tả chi tiết <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -584,14 +584,14 @@ export default function ExerciseEditPage() {
 
             {/* Right Column - Settings */}
             <div className="lg:col-span-1 space-y-6">
-              <CustomCard title={<span className="text-base font-bold text-gray-800">Cài đặt bài tập</span>} padding="md" className="sticky top-6">
+              <CustomCard title={<span className="text-base font-bold text-gray-800 dark:text-white">Cài đặt bài tập</span>} padding="md" className="sticky top-6">
                 <div className="space-y-5">
                   {/* Due Date */}
                   <Form.Item
                     name="dueDate"
-                    label={<span className="font-medium text-gray-700">Hạn nộp</span>}
+                    label={<span className="font-medium text-gray-700 dark:text-gray-300">Hạn nộp</span>}
                     className="mb-0"
-                    help={<span className="text-xs text-gray-400">Để trống nếu không có hạn nộp</span>}
+                    help={<span className="text-xs text-gray-400 dark:text-gray-500">Để trống nếu không có hạn nộp</span>}
                   >
                     <DatePicker
                       showTime
@@ -605,22 +605,22 @@ export default function ExerciseEditPage() {
                   </Form.Item>
 
                   {/* Teacher Note */}
-                  <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100/50">
+                  <div className="bg-blue-50/50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-100/50 dark:border-blue-800/30">
                     <div className="flex gap-3">
                       <InfoCircleOutlined className="text-blue-500 text-lg shrink-0 mt-0.5" />
-                      <div className="text-sm text-gray-600 leading-relaxed">
-                        <p className="font-semibold text-blue-800 mb-1">Lưu ý giáo viên</p>
+                      <div className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                        <p className="font-semibold text-blue-800 dark:text-blue-300 mb-1">Lưu ý giáo viên</p>
                         Học sinh sẽ nhận được thông báo khi bài tập được cập nhật.
                       </div>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-3">
+                  <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-end gap-3">
                     <Button
                       onClick={handleCancel}
                       size="large"
-                      className="min-w-[100px] border-gray-300 hover:border-gray-400 hover:text-gray-700 rounded-lg font-medium"
+                      className="min-w-[100px] border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:border-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg font-medium"
                     >
                       Hủy bỏ
                     </Button>
@@ -630,7 +630,7 @@ export default function ExerciseEditPage() {
                       icon={<SaveOutlined />}
                       loading={submitting}
                       size="large"
-                      className="min-w-[120px] bg-blue-600 hover:bg-blue-700 shadow-blue-200 shadow-lg border-none rounded-lg font-medium"
+                      className="min-w-[120px] bg-blue-600 hover:bg-blue-700 shadow-blue-200 dark:shadow-none shadow-lg border-none rounded-lg font-medium"
                     >
                       Cập nhật
                     </Button>

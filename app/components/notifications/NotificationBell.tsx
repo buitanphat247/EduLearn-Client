@@ -192,6 +192,7 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
     }, [router]);
 
     // Format helpers
+    // Format helpers
     const formatTimeAgo = useCallback((dateString: string) => {
         try {
             const date = new Date(dateString);
@@ -208,10 +209,25 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
         }
     }, []);
 
+    // Custom Bell SVG - uses CSS currentColor to avoid hydration mismatch
+    // Color is determined by parent's text color class, set by CSS (not JS)
+    const BellIcon = () => (
+        <svg
+            viewBox="64 64 896 896"
+            focusable="false"
+            width="1.25em"
+            height="1.25em"
+            fill="currentColor"
+            aria-hidden="true"
+        >
+            <path d="M816 768h-24V428c0-141.1-104.3-257.7-240-277.1V112c0-22.1-17.9-40-40-40s-40 17.9-40 40v38.9c-135.7 19.4-240 136-240 277.1v340h-24c-17.7 0-32 14.3-32 32v32c0 4.4 3.6 8 8 8h216c0 61.8 50.2 112 112 112s112-50.2 112-112h216c4.4 0 8-3.6 8-8v-32c0-17.7-14.3-32-32-32zM512 888c-26.5 0-48-21.5-48-48h96c0 26.5-21.5 48-48 48zM304 768V428c0-55.6 21.6-107.8 60.9-147.1S456 220 512 220s107.8 21.6 147.1 60.9S720 372.4 720 428v340H304z" />
+        </svg>
+    );
+
     if (!mounted || !userId) {
         return (
-            <div className={`notification-bell-wrapper ${className} w-10 h-10 flex items-center justify-center`}>
-                <BellOutlined className="text-xl text-slate-600 dark:text-slate-300" />
+            <div className={`notification-bell-wrapper ${className} w-10 h-10 flex items-center justify-center text-slate-600 dark:text-white`}>
+                <BellIcon />
             </div>
         );
     }
@@ -235,25 +251,22 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
 
     return (
         <>
-            <div
-                className={`notification-bell-wrapper ${className} w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer relative active:scale-95`}
-                role="button"
-                tabIndex={0}
+            <button
+                className={`notification-bell-wrapper ${className} w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer relative active:scale-95 border-none bg-transparent focus:outline-none text-slate-600 dark:text-white`}
                 aria-label="Thông báo"
                 onClick={() => setDrawerOpen(true)}
             >
                 <Badge count={unreadCount} overflowCount={99} size="small" offset={[-3, 4]}>
-                    <BellOutlined className="text-xl text-gray-600 dark:text-gray-300" />
+                    <BellIcon />
                 </Badge>
-            </div>
+            </button>
 
             <Drawer
                 title={drawerHeader}
                 placement="right"
                 onClose={() => setDrawerOpen(false)}
                 open={drawerOpen}
-                width={400}
-                className="notification-drawer"
+                className="notification-drawer w-full md:w-[400px]"
                 styles={{
                     header: { padding: '16px 20px', borderBottom: '1px solid var(--border-color)' },
                     body: { padding: 0 },

@@ -167,14 +167,15 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
 
   const handleEditNotification = useCallback(async (n: Notification) => {
     try {
+      setIsEditModalOpen(true);
       setLoadingEdit(true);
       const id = Number(n.id);
       if (isNaN(id)) return;
       const detail = await getNotificationById(id);
       setEditNotification(detail);
-      setIsEditModalOpen(true);
     } catch (error: any) {
       messageRef.current.error(error?.message || "Lỗi tải thông báo");
+      setIsEditModalOpen(false);
     } finally {
       setLoadingEdit(false);
     }
@@ -294,7 +295,7 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
       )}
 
       <CreateClassNotificationModal open={isCreateModalOpen} classId={classId} onCancel={() => setIsCreateModalOpen(false)} onSuccess={handleCreateSuccess} />
-      <EditClassNotificationModal open={isEditModalOpen} notification={editNotification} classId={classId} onCancel={() => { setIsEditModalOpen(false); setEditNotification(null); }} onSuccess={handleEditSuccess} />
+      <EditClassNotificationModal open={isEditModalOpen} notification={editNotification} classId={classId} onCancel={() => { setIsEditModalOpen(false); setEditNotification(null); }} onSuccess={handleEditSuccess} loading={loadingEdit} />
 
       <Modal
         title={<span className="font-bold text-slate-800 dark:text-white">Chi tiết thông báo</span>}
@@ -303,7 +304,7 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
         footer={null}
         width={700}
         centered
-        destroyOnHidden
+        destroyOnClose
         styles={{
           mask: { backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' }
         }}
@@ -401,8 +402,6 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
           </div>
         )}
       </Modal>
-
-      {loadingEdit && <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-[9999] p-20"><Skeleton active /></div>}
     </div>
   );
 });

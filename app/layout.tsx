@@ -74,7 +74,7 @@ export default async function RootLayout({
       >
         <AntdRegistry>
           <ErrorBoundary>
-            <Providers>
+            <Providers theme={isDark ? "dark" : "light"}>
               <PrefetchRoutes />
               {children}
             </Providers>
