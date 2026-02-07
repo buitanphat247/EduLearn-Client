@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Input, Collapse, ConfigProvider, theme as antTheme, Button, Empty } from "antd";
+import { Input, Collapse, ConfigProvider, theme as antTheme, Empty } from "antd";
 import {
   SearchOutlined,
   QuestionCircleOutlined,
@@ -13,7 +13,7 @@ import {
 } from "@ant-design/icons";
 import { useTheme } from "@/app/context/ThemeContext";
 
-const { Panel } = Collapse;
+
 
 interface FAQItem {
   id: string | number;
@@ -119,10 +119,9 @@ export default function FAQClient({ faqData }: FAQClientProps) {
                       onClick={() => setActiveCategory(cat.id)}
                       className={`
                         w-full text-left px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center gap-3
-                        ${
-                          activeCategory === cat.id
-                            ? "bg-blue-600 text-white shadow-md shadow-blue-500/30"
-                            : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400"
+                        ${activeCategory === cat.id
+                          ? "bg-blue-600 text-white shadow-md shadow-blue-500/30"
+                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400"
                         }
                       `}
                     >

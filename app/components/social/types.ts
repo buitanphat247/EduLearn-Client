@@ -63,3 +63,13 @@ export interface FriendRequestResponse {
     avatar: string | null;
   };
 }
+
+export interface User {
+  id: string | number;
+  username: string;
+  fullname: string;
+  email?: string;
+  phone?: string | null;
+  avatar: string | null;
+  role_id?: number | string;
+}

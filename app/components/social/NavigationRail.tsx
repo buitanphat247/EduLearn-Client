@@ -8,7 +8,7 @@ interface NavigationRailProps {
   onSettingsClick: () => void;
   onProfileClick: () => void;
   user: {
-    avatar?: string;
+    avatar?: string | null;
     fullname?: string;
     username?: string;
   } | null;
@@ -40,9 +40,8 @@ export default function NavigationRail({ onSettingsClick, onProfileClick, user }
         <button
           onClick={() => router.push("/social")}
           title="Tin nhắn"
-          className={`w-12 h-12 rounded-xl transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto ${
-            isMessages ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
-          }`}
+          className={`w-12 h-12 rounded-xl transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto ${isMessages ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+            }`}
         >
           <MessageOutlined className="text-xl" />
         </button>
@@ -50,9 +49,8 @@ export default function NavigationRail({ onSettingsClick, onProfileClick, user }
         <button
           onClick={() => router.push("/social/contacts")}
           title="Danh bạ"
-          className={`w-12 h-12 rounded-xl transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto ${
-            isContacts ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
-          }`}
+          className={`w-12 h-12 rounded-xl transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto ${isContacts ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+            }`}
         >
           <ContactsOutlined className="text-xl" />
         </button>

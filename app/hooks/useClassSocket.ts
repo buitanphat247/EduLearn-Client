@@ -51,7 +51,7 @@ export function useClassSocket({ classId, userId, events }: ClassSocketOptions) 
 
     if (eventsRef.current?.onClassUpdated) {
       unsubscribers.push(
-        classSocketClient.on("class_updated", (data) => {
+        classSocketClient.on("class_updated", (data: any) => {
           if (String(data.class_id) === classIdStr) eventsRef.current?.onClassUpdated?.(data);
         }),
       );
@@ -59,7 +59,7 @@ export function useClassSocket({ classId, userId, events }: ClassSocketOptions) 
 
     if (eventsRef.current?.onClassDeleted) {
       unsubscribers.push(
-        classSocketClient.on("class_deleted", (data) => {
+        classSocketClient.on("class_deleted", (data: any) => {
           if (String(data.class_id) === classIdStr) eventsRef.current?.onClassDeleted?.(data);
         }),
       );
@@ -67,7 +67,7 @@ export function useClassSocket({ classId, userId, events }: ClassSocketOptions) 
 
     if (eventsRef.current?.onStudentJoined) {
       unsubscribers.push(
-        classSocketClient.on("student_joined", (data) => {
+        classSocketClient.on("student_joined", (data: any) => {
           if (String(data.class_id) === classIdStr) eventsRef.current?.onStudentJoined?.(data);
         }),
       );
@@ -75,7 +75,7 @@ export function useClassSocket({ classId, userId, events }: ClassSocketOptions) 
 
     if (eventsRef.current?.onStudentRemoved) {
       unsubscribers.push(
-        classSocketClient.on("student_removed", (data) => {
+        classSocketClient.on("student_removed", (data: any) => {
           if (String(data.class_id) === classIdStr) eventsRef.current?.onStudentRemoved?.(data);
         }),
       );
@@ -83,7 +83,7 @@ export function useClassSocket({ classId, userId, events }: ClassSocketOptions) 
 
     if (eventsRef.current?.onStudentStatusUpdated) {
       unsubscribers.push(
-        classSocketClient.on("student_status_updated", (data) => {
+        classSocketClient.on("student_status_updated", (data: any) => {
           if (String(data.class_id) === classIdStr) eventsRef.current?.onStudentStatusUpdated?.(data);
         }),
       );
@@ -92,21 +92,21 @@ export function useClassSocket({ classId, userId, events }: ClassSocketOptions) 
     // Assignment Events
     if (eventsRef.current?.onAssignmentCreated) {
       unsubscribers.push(
-        classSocketClient.on("assignment_created", (data) => {
+        classSocketClient.on("assignment_created", (data: any) => {
           if (String(data.class_id) === classIdStr) eventsRef.current?.onAssignmentCreated?.(data);
         }),
       );
     }
     if (eventsRef.current?.onAssignmentUpdated) {
       unsubscribers.push(
-        classSocketClient.on("assignment_updated", (data) => {
+        classSocketClient.on("assignment_updated", (data: any) => {
           if (String(data.class_id) === classIdStr) eventsRef.current?.onAssignmentUpdated?.(data);
         }),
       );
     }
     if (eventsRef.current?.onAssignmentDeleted) {
       unsubscribers.push(
-        classSocketClient.on("assignment_deleted", (data) => {
+        classSocketClient.on("assignment_deleted", (data: any) => {
           if (String(data.class_id) === classIdStr) eventsRef.current?.onAssignmentDeleted?.(data);
         }),
       );
@@ -115,21 +115,21 @@ export function useClassSocket({ classId, userId, events }: ClassSocketOptions) 
     // Exam Events
     if (eventsRef.current?.onExamCreated) {
       unsubscribers.push(
-        classSocketClient.on("exam_created", (data) => {
+        classSocketClient.on("exam_created", (data: any) => {
           if (String(data.class_id) === classIdStr) eventsRef.current?.onExamCreated?.(data);
         }),
       );
     }
     if (eventsRef.current?.onExamUpdated) {
       unsubscribers.push(
-        classSocketClient.on("exam_updated", (data) => {
+        classSocketClient.on("exam_updated", (data: any) => {
           if (String(data.class_id) === classIdStr) eventsRef.current?.onExamUpdated?.(data);
         }),
       );
     }
     if (eventsRef.current?.onExamDeleted) {
       unsubscribers.push(
-        classSocketClient.on("exam_deleted", (data) => {
+        classSocketClient.on("exam_deleted", (data: any) => {
           if (String(data.class_id) === classIdStr) eventsRef.current?.onExamDeleted?.(data);
         }),
       );
@@ -138,21 +138,21 @@ export function useClassSocket({ classId, userId, events }: ClassSocketOptions) 
     // Notification Events
     if (eventsRef.current?.onNotificationCreated) {
       unsubscribers.push(
-        classSocketClient.on("notification_created", (data) => {
+        classSocketClient.on("notification_created", (data: any) => {
           if (String(data.scope_id) === classIdStr && data.scope === "class") eventsRef.current?.onNotificationCreated?.(data);
         }),
       );
     }
     if (eventsRef.current?.onNotificationUpdated) {
       unsubscribers.push(
-        classSocketClient.on("notification_updated", (data) => {
+        classSocketClient.on("notification_updated", (data: any) => {
           if (String(data.scope_id) === classIdStr && data.scope === "class") eventsRef.current?.onNotificationUpdated?.(data);
         }),
       );
     }
     if (eventsRef.current?.onNotificationDeleted) {
       unsubscribers.push(
-        classSocketClient.on("notification_deleted", (data) => {
+        classSocketClient.on("notification_deleted", (data: any) => {
           if (String(data.scope_id) === classIdStr && data.scope === "class") eventsRef.current?.onNotificationDeleted?.(data);
         }),
       );
@@ -160,7 +160,7 @@ export function useClassSocket({ classId, userId, events }: ClassSocketOptions) 
 
     if (eventsRef.current?.onError) {
       unsubscribers.push(
-        classSocketClient.on("class:error", (data) => {
+        classSocketClient.on("class:error", (data: any) => {
           eventsRef.current?.onError?.(data);
         }),
       );
@@ -168,7 +168,7 @@ export function useClassSocket({ classId, userId, events }: ClassSocketOptions) 
 
     if (eventsRef.current?.onAccessDenied) {
       unsubscribers.push(
-        classSocketClient.on("class:access_denied", (data) => {
+        classSocketClient.on("class:access_denied", (data: any) => {
           if (String(data.class_id) === classIdStr) eventsRef.current?.onAccessDenied?.(data);
         }),
       );

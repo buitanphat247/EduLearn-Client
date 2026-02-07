@@ -58,11 +58,11 @@ export function SocialProfileProvider({ children }: { children: React.ReactNode 
             setCurrentUser({
                 id: user.user_id || user.id || '',
                 username: user.username || '',
-                fullname: user.fullname,
+                fullname: user.fullname || '',
                 email: user.email,
-                phone: user.phone,
-                avatar: user.avatar,
-                role_name: user.role?.role_name,
+                phone: user.phone || null,
+                avatar: user.avatar || null,
+                role_id: (user as any).role_id,
             });
         } catch (e) {
             console.error("Error parsing user from local storage", e);

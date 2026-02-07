@@ -16,8 +16,7 @@ const parseInline = (text: string) => {
   // Code: `text`
   const codeRegex = /`(.*?)`/g;
 
-  let parts = [];
-  let lastIndex = 0;
+
 
   // We need a more robust tokenizer for mixed styling, but for now simple splitting is okay
   // or just use dangerouslySetInnerHTML if we trusted the source (we generally don't).
@@ -57,17 +56,17 @@ const parseInline = (text: string) => {
     }
   };
 
-  process(boldRegex, (m, content) => (
+  process(boldRegex, (_, content) => (
     <strong key={Math.random()} className="font-bold text-slate-900 dark:text-white">
       {content}
     </strong>
   ));
-  process(codeRegex, (m, content) => (
+  process(codeRegex, (_, content) => (
     <code key={Math.random()} className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-sm font-mono text-pink-600 dark:text-pink-400">
       {content}
     </code>
   ));
-  process(linkRegex, (m, label, url) => (
+  process(linkRegex, (_, label, url) => (
     <a key={Math.random()} href={url} className="text-blue-600 dark:text-blue-400 hover:underline">
       {label}
     </a>

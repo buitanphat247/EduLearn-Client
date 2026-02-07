@@ -46,7 +46,7 @@ async function handleRequest(request: NextRequest, method: string) {
   // 4. Check cache for GET requests
   if (method === "GET") {
     const url = new URL(request.url);
-    const cached = proxyCache.get(method, path, url.search, userId);
+    const cached = proxyCache.get(method, path || "", url.search, userId);
     if (cached) {
       return new Response(cached.data, {
         status: 200,

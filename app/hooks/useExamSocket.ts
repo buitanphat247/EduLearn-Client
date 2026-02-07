@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import io, { Socket } from "socket.io-client";
+import io, { type Socket } from "socket.io-client";
 
 /**
  * Socket.IO connection URL for exam real-time features
@@ -57,7 +57,7 @@ interface ViolationData {
  * ```
  */
 export const useExamSocket = ({ examId, attemptId, studentId, onConnect, onDisconnect }: UseExamSocketProps) => {
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<any | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {

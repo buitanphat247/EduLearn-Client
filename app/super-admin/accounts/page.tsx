@@ -28,7 +28,7 @@ interface AccountType {
 export default function SuperAdminAccounts() {
   const router = useRouter();
   const { modal, message } = App.useApp();
-  
+
   // Gộp modal states thành một object
   const [modalState, setModalState] = useState({
     search: false,
@@ -142,7 +142,7 @@ export default function SuperAdminAccounts() {
       const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
       await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
-      message.error(error?.message || "Không thể tải danh sách tài khoản");
+      message.error((error as any)?.message || "Không thể tải danh sách tài khoản");
       setAccounts([]);
     } finally {
       setLoading(false);
@@ -225,7 +225,7 @@ export default function SuperAdminAccounts() {
         loading: false,
       });
     } catch (error: unknown) {
-      message.error(error?.message || "Không thể tải thông tin người dùng");
+      message.error((error as any)?.message || "Không thể tải thông tin người dùng");
       // Close modal and reset on error
       setModalState((prev) => ({ ...prev, viewDetail: false }));
       setUserDetailState({
@@ -494,7 +494,7 @@ function SingleAccountForm({ form, onSuccess }: { form: ReturnType<typeof Form.u
       message.success("Tạo tài khoản thành công!");
       onSuccess();
     } catch (error: unknown) {
-      message.error(error?.message || "Không thể tạo tài khoản");
+      message.error((error as any)?.message || "Không thể tạo tài khoản");
     } finally {
       setSubmitting(false);
     }

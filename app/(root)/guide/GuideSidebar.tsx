@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { RightOutlined } from '@ant-design/icons';
+
 
 interface GuideSidebarProps {
   menu: any[];
@@ -24,14 +24,14 @@ export default function GuideSidebar({ menu, currentSlug, baseUrl = "/guide" }: 
               const isActive = currentSlug === item.slug;
               return (
                 <li key={item.slug} className="-ml-px">
-                  <Link 
+                  <Link
                     href={`${baseUrl}?doc=${item.slug}`}
                     prefetch={false}
                     onMouseEnter={() => router.prefetch(`${baseUrl}?doc=${item.slug}`)}
                     className={`
                       block py-1.5 pl-4 border-l-2 text-sm font-medium transition-all duration-200
-                      ${isActive 
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                      ${isActive
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                         : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600'
                       }
                     `}

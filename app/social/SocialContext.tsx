@@ -1,15 +1,15 @@
 "use client";
 
-import React, { createContext, useContext } from "react";
-import { SocialProfileProvider, useSocialProfile } from "./SocialProfileContext";
-import { FriendProvider, useFriend } from "./FriendContext";
-import { ChatProvider, useChat } from "./ChatContext";
+import React from "react";
+import { SocialProfileProvider, useSocialProfile } from "@/app/context/social/SocialProfileContext";
+import { FriendProvider, useFriend } from "@/app/context/social/FriendContext";
+import { ChatProvider, useChat } from "@/app/context/social/ChatContext";
 import { Contact, Conversation, Message, User } from "@/app/components/social/types";
 import { FriendRequestResponse } from "@/lib/api/friends";
 import { UserBlock } from "@/lib/api/chat-block";
 
-// Re-export types if needed
-export type { SocialContextType } from "./types"; // We don't have this file, but we will define the interface here inline to match original
+// Define interface SocialContextType inline
+
 
 interface SocialContextType {
   currentUser: User | null;
@@ -47,7 +47,7 @@ interface SocialContextType {
   setIsAddFriendOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const SocialContext = createContext<SocialContextType | undefined>(undefined);
+
 
 // Legacy Provider Wrapper
 export function SocialProvider({ children }: { children: React.ReactNode }) {

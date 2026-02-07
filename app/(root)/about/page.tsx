@@ -1,6 +1,6 @@
 "use client";
 
-import { 
+import {
   EyeOutlined,
   FlagOutlined,
   CheckCircleOutlined,
@@ -9,7 +9,6 @@ import {
 } from "@ant-design/icons";
 import ScrollAnimation from "@/app/components/common/ScrollAnimation";
 import Image from "next/image";
-import DarkConfigProvider from "@/app/components/common/DarkConfigProvider";
 // ✅ Extracted hardcoded arrays to constants file
 import { ABOUT_STATS, ABOUT_VALUES, TARGET_AUDIENCES } from "./constants";
 
@@ -22,7 +21,7 @@ export default function About() {
           {/* Abstract Background Shapes */}
           <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-500/10 dark:bg-blue-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 animate-pulse"></div>
           <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-500/10 dark:bg-purple-600/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4"></div>
-          
+
           <div className="container mx-auto px-4 md:px-10 relative z-10">
             <div className="flex flex-col-reverse md:flex-row items-center gap-8 md:gap-12">
               {/* Left Content */}
@@ -47,7 +46,7 @@ export default function About() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Right Image */}
               <div className="w-full md:w-1/2 lg:w-3/5 aspect-video md:aspect-4/3 lg:aspect-video rounded-xl overflow-hidden shadow-2xl shadow-slate-200/50 dark:shadow-black/50 bg-slate-200 dark:bg-slate-800 transition-all duration-300">
                 <Image
@@ -241,7 +240,7 @@ export default function About() {
         </section>
       </ScrollAnimation>
 
-    
+
     </main>
   );
 }
