@@ -8,6 +8,7 @@ import { SearchOutlined, PlusOutlined, MoreOutlined, FileOutlined, CalendarOutli
 import { IoBookOutline } from "react-icons/io5";
 import { getAssignmentsByClass, getAssignmentById, deleteAssignment, getAssignmentStudents, type AssignmentResponse, type AssignmentDetailResponse } from "@/lib/api/assignments";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { sanitizeForDisplay } from "@/lib/utils/sanitize";
 import type { ClassExercisesTabProps, Exercise } from "./types";
 
 const ClassExercisesTab = memo(function ClassExercisesTab({
@@ -682,7 +683,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
                   <div className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Mô tả</div>
                   <div
                     className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:!border-slate-600 prose prose-sm max-w-none text-gray-700 dark:text-gray-200 max-h-56 overflow-y-auto"
-                    dangerouslySetInnerHTML={{ __html: selectedAssignment.description }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(selectedAssignment.description) }}
                   />
                 </div>
               )}

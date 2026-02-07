@@ -29,6 +29,7 @@ import {
   type StudentSubmission,
 } from "@/lib/api/submissions";
 import { getUserIdFromCookie, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
+import { sanitizeForDisplay } from "@/lib/utils/sanitize";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/vi";
@@ -563,7 +564,7 @@ export default function SubmitExercisePage() {
                 {/* Description */}
                 <div
                   className="prose prose-sm max-w-none prose-blue text-gray-700 bg-gray-50/50 p-6 rounded-xl border border-gray-100"
-                  dangerouslySetInnerHTML={{ __html: assignment.description }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(assignment.description) }}
                 />
 
                 {/* Teacher Attachments */}

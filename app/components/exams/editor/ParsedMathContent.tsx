@@ -3,6 +3,7 @@
 import { memo, useMemo } from "react";
 import { MATH_DATA, MATH_PLACEHOLDER_REGEX } from "./constants";
 import { renderKaTeX, stripBoldTags } from "./utils";
+import { sanitizeForDisplay } from "@/lib/utils/sanitize";
 import "katex/dist/katex.min.css";
 
 interface ParsedMathContentProps {
@@ -54,7 +55,7 @@ export const ParsedMathContent = memo<ParsedMathContentProps>(({ text, mathData 
             parts.push(
               <span
                 key={uniqueKey}
-                dangerouslySetInnerHTML={{ __html: mathValue }}
+                dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(mathValue) }}
                 onClick={handleClick}
                 className="cursor-pointer bg-blue-200 hover:bg-blue-300 rounded px-1 py-0.5 transition-colors"
                 title="Click to edit"
@@ -63,7 +64,7 @@ export const ParsedMathContent = memo<ParsedMathContentProps>(({ text, mathData 
           } else {
             // Check if it contains LaTeX commands (starts with \ or contains math symbols)
             const hasLaTeXCommands = /\\[a-zA-Z]+|[\^_\\{}]/.test(mathValue);
-            
+
             if (!hasLaTeXCommands && mathValue.trim()) {
               // Plain text after stripping <b> tags - render directly
               parts.push(

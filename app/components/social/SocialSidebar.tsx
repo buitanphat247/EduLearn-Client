@@ -40,22 +40,22 @@ export default function SocialSidebar({
   onDeleteConversation,
 }: SocialSidebarProps) {
   return (
-    <aside className="w-[320px] flex flex-col bg-slate-900 border-r border-slate-800 shrink-0 h-full overflow-hidden">
+    <aside className="w-[320px] flex flex-col bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 shrink-0 h-full overflow-hidden transition-colors duration-300">
       {/* Header với Search và Icons - Only show for Messages */}
       {bottomTab === "messages" && (
-        <div className="px-3 py-4 border-b border-slate-800">
+        <div className="px-3 py-4 border-b border-gray-200 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <Input
-              prefix={<SearchOutlined className="text-slate-400" />}
+              prefix={<SearchOutlined className="text-gray-400 dark:text-slate-400" />}
               placeholder="Tìm kiếm"
               size="small"
-              className="flex-1 rounded-lg bg-slate-800 border-slate-700 text-slate-200 placeholder-slate-500 hover:border-slate-600 focus:border-blue-500 hover:bg-slate-800 focus:bg-slate-800 focus:shadow-none text-sm"
+              className="flex-1 rounded-lg bg-gray-100 dark:bg-slate-800 border-transparent dark:border-slate-700 text-gray-900 dark:text-slate-200 placeholder-gray-500 dark:placeholder-slate-500 hover:bg-gray-200 dark:hover:bg-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:border-blue-500 focus:shadow-none text-sm transition-all"
               variant="filled"
             />
             <Button
               type="text"
               size="small"
-              className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700/50 "
+              className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-white border border-gray-200 dark:border-slate-700/50 bg-white dark:bg-transparent transition-all"
               onClick={handleAddFriendClick}
               icon={<UserAddOutlined />}
             />
@@ -64,19 +64,19 @@ export default function SocialSidebar({
       )}
 
       {bottomTab === "contacts" && (
-        <div className="px-3 py-4 border-b border-slate-800">
+        <div className="px-3 py-4 border-b border-gray-200 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <Input
-              prefix={<SearchOutlined className="text-slate-400" />}
+              prefix={<SearchOutlined className="text-gray-400 dark:text-slate-400" />}
               size="small"
               placeholder="Tìm kiếm bạn bè"
-              className="flex-1 rounded-lg bg-slate-800 border-slate-700 text-slate-200 placeholder-slate-500 hover:border-slate-600 focus:border-blue-500 hover:bg-slate-800 focus:bg-slate-800 focus:shadow-none text-sm"
+              className="flex-1 rounded-lg bg-gray-100 dark:bg-slate-800 border-transparent dark:border-slate-700 text-gray-900 dark:text-slate-200 placeholder-gray-500 dark:placeholder-slate-500 hover:bg-gray-200 dark:hover:bg-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:border-blue-500 focus:shadow-none text-sm transition-all"
               variant="filled"
             />
             <Button
               type="text"
               size="small"
-              className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white p-0 border border-slate-700/50"
+              className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-white p-0 border border-gray-200 dark:border-slate-700/50 bg-white dark:bg-transparent transition-all"
               onClick={handleAddFriendClick}
               icon={<UserAddOutlined />}
             />
@@ -90,9 +90,8 @@ export default function SocialSidebar({
           // Contacts Sub-Menu Structure (Zalo Style)
           <div className="py-2 px-2 flex flex-col gap-1">
             <div
-              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${
-                contactSubTab === "friends" ? "bg-blue-600/10 text-blue-400" : "text-slate-300 hover:bg-slate-800"
-              }`}
+              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${contactSubTab === "friends" ? "bg-blue-50 dark:bg-blue-600/10 text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                }`}
               onClick={() => setContactSubTab("friends")}
             >
               <ContactsOutlined className="text-xl" />
@@ -100,9 +99,8 @@ export default function SocialSidebar({
             </div>
 
             <div
-              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${
-                contactSubTab === "groups" ? "bg-blue-600/10 text-blue-400" : "text-slate-300 hover:bg-slate-800"
-              }`}
+              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${contactSubTab === "groups" ? "bg-blue-50 dark:bg-blue-600/10 text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                }`}
               onClick={() => setContactSubTab("groups")}
             >
               <TeamOutlined className="text-xl" />
@@ -110,9 +108,8 @@ export default function SocialSidebar({
             </div>
 
             <div
-              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${
-                contactSubTab === "requests" ? "bg-blue-600/10 text-blue-400" : "text-slate-300 hover:bg-slate-800"
-              }`}
+              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${contactSubTab === "requests" ? "bg-blue-50 dark:bg-blue-600/10 text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                }`}
               onClick={() => setContactSubTab("requests")}
             >
               <UserAddOutlined className="text-xl" />
@@ -127,9 +124,8 @@ export default function SocialSidebar({
             </div>
 
             <div
-              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${
-                contactSubTab === "sent_requests" ? "bg-blue-600/10 text-blue-400" : "text-slate-300 hover:bg-slate-800"
-              }`}
+              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${contactSubTab === "sent_requests" ? "bg-blue-50 dark:bg-blue-600/10 text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                }`}
               onClick={() => setContactSubTab("sent_requests")}
             >
               <SendOutlined className="text-xl" />
@@ -137,9 +133,8 @@ export default function SocialSidebar({
             </div>
 
             <div
-              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${
-                contactSubTab === "blocked" ? "bg-blue-600/10 text-blue-400" : "text-slate-300 hover:bg-slate-800"
-              }`}
+              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${contactSubTab === "blocked" ? "bg-blue-50 dark:bg-blue-600/10 text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                }`}
               onClick={() => setContactSubTab("blocked")}
             >
               <StopOutlined className="text-xl" />
@@ -153,10 +148,10 @@ export default function SocialSidebar({
               <div className="flex flex-col gap-1 w-full animate-pulse">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-transparent">
-                    <div className="shrink-0 w-12 h-12 rounded-full bg-slate-800" />
+                    <div className="shrink-0 w-12 h-12 rounded-full bg-gray-200 dark:bg-slate-800 animate-pulse" />
                     <div className="flex flex-col flex-1 gap-2">
-                      <div className="h-4 bg-slate-800 rounded w-2/3" />
-                      <div className="h-3 bg-slate-800 rounded w-1/2" />
+                      <div className="h-4 bg-gray-200 dark:bg-slate-800 rounded w-2/3 animate-pulse" />
+                      <div className="h-3 bg-gray-200 dark:bg-slate-800 rounded w-1/2 animate-pulse" />
                     </div>
                   </div>
                 ))}
@@ -165,11 +160,10 @@ export default function SocialSidebar({
               conversations.map((conversation) => (
                 <div
                   key={conversation.id}
-                  className={`group flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${
-                    conversation.id === selectedConversation
-                      ? "bg-slate-800 shadow-md shadow-slate-900/50 ring-1 ring-slate-700/50"
-                      : "hover:bg-slate-800/50"
-                  }`}
+                  className={`group flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${conversation.id === selectedConversation
+                      ? "bg-blue-50 dark:bg-slate-800 shadow-sm dark:shadow-md shadow-blue-500/10 dark:shadow-slate-900/50 ring-1 ring-blue-500/20 dark:ring-slate-700/50"
+                      : "hover:bg-gray-100 dark:hover:bg-slate-800/50"
+                    }`}
                   onClick={() => setSelectedConversation(conversation.id)}
                 >
                   {/* Avatar/Icon */}
@@ -207,19 +201,19 @@ export default function SocialSidebar({
                   <div className="flex flex-col flex-1 min-w-0 relative">
                     <div className="flex justify-between items-center mb-0.5">
                       <p
-                        className={`text-[15px] font-semibold truncate ${conversation.id === selectedConversation ? "text-white" : "text-slate-200"}`}
+                        className={`text-[15px] font-semibold truncate ${conversation.id === selectedConversation ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-slate-200"}`}
                       >
                         {conversation.name}
                       </p>
                       {conversation.time && (
-                        <p className={`text-[11px] font-medium ${conversation.id === selectedConversation ? "text-blue-400" : "text-slate-500"}`}>
+                        <p className={`text-[11px] font-medium ${conversation.id === selectedConversation ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-slate-500"}`}>
                           {conversation.time}
                         </p>
                       )}
                     </div>
 
                     <div className="flex items-center h-5">
-                      <p className={`text-sm truncate pr-6 ${conversation.unread ? "font-semibold text-slate-300" : "text-slate-500"}`}>
+                      <p className={`text-sm truncate pr-6 ${conversation.unread ? "font-semibold text-gray-900 dark:text-slate-300" : "text-gray-500 dark:text-slate-500"}`}>
                         {conversation.isOwn ? "Bạn: " : ""}
                         {conversation.lastMessage}
                       </p>
@@ -235,7 +229,7 @@ export default function SocialSidebar({
                             type="text"
                             size="small"
                             icon={<DeleteOutlined />}
-                            className={`text-slate-400 hover:text-red-500 hover:bg-slate-700/50  flex items-center justify-center transition-all duration-200 opacity-0 invisible group-hover:visible group-hover:opacity-100`}
+                            className={`text-gray-400 dark:text-slate-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-slate-700/50 flex items-center justify-center transition-all duration-200 opacity-0 invisible group-hover:visible group-hover:opacity-100`}
                             onClick={(e) => {
                               e.stopPropagation();
                               showConfirmModal({

@@ -23,15 +23,15 @@ export default function NavigationRail({ onSettingsClick, onProfileClick, user }
   const isMessages = !isContacts && (pathname === "/social" || pathname?.startsWith("/social/messages"));
 
   return (
-    <nav className="w-[64px] bg-slate-900 border-r border-slate-800 flex flex-col items-center py-6 gap-5 shrink-0 z-20">
+    <nav className="w-[64px] bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col items-center py-6 gap-5 shrink-0 z-20 transition-colors duration-300">
       {/* User Logic */}
       <div>
         <div
           onClick={onProfileClick}
-          className="w-10 h-10 rounded-full cursor-pointer hover:bg-slate-800 transition-all border border-slate-700 flex items-center justify-center group"
+          className="w-10 h-10 rounded-full cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-all border border-gray-200 dark:border-slate-700 flex items-center justify-center group"
           title="Trang cá nhân"
         >
-          <FaUser className="text-lg text-slate-400 group-hover:text-blue-500 transition-colors" />
+          <FaUser className="text-lg text-gray-500 dark:text-slate-400 group-hover:text-blue-500 transition-colors" />
         </div>
       </div>
 
@@ -40,7 +40,7 @@ export default function NavigationRail({ onSettingsClick, onProfileClick, user }
         <button
           onClick={() => router.push("/social")}
           title="Tin nhắn"
-          className={`w-12 h-12 rounded-xl transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto ${isMessages ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+          className={`w-12 h-12 rounded-xl transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto ${isMessages ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-white bg-transparent"
             }`}
         >
           <MessageOutlined className="text-xl" />
@@ -49,7 +49,7 @@ export default function NavigationRail({ onSettingsClick, onProfileClick, user }
         <button
           onClick={() => router.push("/social/contacts")}
           title="Danh bạ"
-          className={`w-12 h-12 rounded-xl transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto ${isContacts ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+          className={`w-12 h-12 rounded-xl transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto ${isContacts ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-white bg-transparent"
             }`}
         >
           <ContactsOutlined className="text-xl" />
@@ -64,17 +64,17 @@ export default function NavigationRail({ onSettingsClick, onProfileClick, user }
         <button
           onClick={onSettingsClick}
           title="Cài đặt"
-          className="w-12 h-12 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto"
+          className="w-12 h-12 rounded-xl text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-white bg-transparent transition-all duration-200 border-none cursor-pointer flex items-center justify-center mx-auto"
         >
           <SettingOutlined className="text-xl" />
         </button>
 
-        <div className="w-8 h-[1px] bg-slate-700/50 mx-auto my-1"></div>
+        <div className="w-8 h-[1px] bg-gray-200 dark:bg-slate-700/50 mx-auto my-1"></div>
 
         <button
           onClick={() => router.push("/")}
           title="Trang chủ"
-          className="w-12 h-12 rounded-xl hover:bg-slate-800 hover:text-white text-slate-400 transition-all duration-200 border-none bg-transparent cursor-pointer flex items-center justify-center mx-auto"
+          className="w-12 h-12 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-white text-gray-500 dark:text-slate-400 transition-all duration-200 border-none bg-transparent cursor-pointer flex items-center justify-center mx-auto"
         >
           <HomeOutlined className="text-xl" />
         </button>

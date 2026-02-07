@@ -5,15 +5,15 @@ import NavigationRail from "@/app/components/social/NavigationRail";
 import SettingsModal from "@/app/components/social/SettingsModal";
 import ProfileModal from "@/app/components/social/ProfileModal";
 import AddFriendModal from "@/app/components/social/AddFriendModal";
-import DarkConfigProvider from "@/app/components/common/DarkConfigProvider";
+import SocialConfigProvider from "@/app/components/social/SocialConfigProvider";
 import { useSocial } from "./SocialContext";
 
 export default function SocialShell({ children }: { children: React.ReactNode }) {
   const { currentUser, contacts, groupCount, isSettingsOpen, setIsSettingsOpen, isProfileOpen, setIsProfileOpen, isAddFriendOpen, setIsAddFriendOpen } = useSocial();
 
   return (
-    <DarkConfigProvider>
-      <div className="flex h-full bg-[#0f172a] overflow-hidden fixed inset-0">
+    <SocialConfigProvider>
+      <div className="flex h-full bg-gray-50 dark:bg-[#0f172a] overflow-hidden fixed inset-0 transition-colors duration-300">
         {/* Left Sidebar */}
         <NavigationRail onSettingsClick={() => setIsSettingsOpen(true)} onProfileClick={() => setIsProfileOpen(true)} user={currentUser} />
 
@@ -31,6 +31,6 @@ export default function SocialShell({ children }: { children: React.ReactNode })
         />
         <AddFriendModal open={isAddFriendOpen} onClose={() => setIsAddFriendOpen(false)} />
       </div>
-    </DarkConfigProvider>
+    </SocialConfigProvider>
   );
 }

@@ -78,7 +78,7 @@ export default function SocialPage() {
 
     setIsSending(true);
     const messageToSend = content; // ✅ Save before clearing
-    
+
     // Optimistic Clear to prevent duplicate sends/Enter spam
     setMessage("");
 
@@ -116,7 +116,7 @@ export default function SocialPage() {
       <SocialSidebar
         bottomTab="messages"
         contactSubTab="friends"
-        setContactSubTab={() => {}}
+        setContactSubTab={() => { }}
         conversations={displayedConversations}
         selectedConversation={activeConversationId}
         setSelectedConversation={setActiveConversationId}
@@ -126,7 +126,7 @@ export default function SocialPage() {
         onDeleteConversation={deleteConversation}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 bg-slate-900 relative h-full overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-[#0f172a] relative h-full overflow-hidden transition-colors duration-300">
         <ChatArea
           activeConversation={activeConversation}
           messages={messages}

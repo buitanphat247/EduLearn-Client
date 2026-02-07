@@ -57,12 +57,12 @@ export default function ContactsContent({
   });
 
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-900 p-8">
+    <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-900 p-8 transition-colors duration-300">
       {/* Existing tabs... */}
       {contactSubTab === "sent_requests" && (
         // ... (sent_requests UI)
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
             <SendOutlined /> Lời mời đã gửi ({sentFriendRequests.length})
           </h2>
 
@@ -71,36 +71,36 @@ export default function ContactsContent({
               <span className="text-slate-400">Đang tải...</span>
             </div>
           ) : sentFriendRequests.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-slate-800/30 rounded-2xl border border-slate-800">
-              <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mb-4">
-                <SendOutlined className="text-4xl text-slate-500" />
+            <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-800/30 rounded-2xl border border-gray-200 dark:border-slate-800">
+              <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                <SendOutlined className="text-4xl text-gray-400 dark:text-slate-500" />
               </div>
-              <p className="text-slate-400 text-lg">Bạn chưa gửi lời mời kết bạn nào</p>
+              <p className="text-gray-500 dark:text-slate-400 text-lg">Bạn chưa gửi lời mời kết bạn nào</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
               {sentFriendRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="bg-slate-800 rounded-xl p-4 border border-slate-700 flex flex-col gap-4 hover:border-blue-500/50 hover:shadow-lg transition-all"
+                  className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 flex flex-col gap-4 hover:border-blue-500/50 hover:shadow-lg transition-all"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-linear-to-br from-indigo-500 to-cyan-600 flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-blue-500/20">
                       {request.addressee?.fullname?.charAt(0) || request.addressee?.username?.charAt(0) || "?"}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-semibold truncate text-[15px]">{request.addressee?.fullname || request.addressee?.username}</h3>
-                      <p className="text-xs text-slate-400">{request.addressee?.email || "Người dùng ứng dụng"}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{new Date(request.created_at).toLocaleDateString()}</p>
+                      <h3 className="text-gray-900 dark:text-white font-semibold truncate text-[15px]">{request.addressee?.fullname || request.addressee?.username}</h3>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">{request.addressee?.email || "Người dùng ứng dụng"}</p>
+                      <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{new Date(request.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <div className="p-3 bg-slate-900/50 rounded-lg border border-slate-700/50 min-h-[60px]">
-                    <p className="text-sm text-slate-300 line-clamp-2 italic">Đang chờ chấp nhận...</p>
+                  <div className="p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-200 dark:border-slate-700/50 min-h-[60px]">
+                    <p className="text-sm text-gray-600 dark:text-slate-300 line-clamp-2 italic">Đang chờ chấp nhận...</p>
                   </div>
                   <div className="grid grid-cols-1 gap-3 mt-auto">
                     <Button
                       size="small"
-                      className="bg-transparent hover:bg-red-500/10 text-red-400 border border-slate-600 font-medium rounded-lg hover:border-red-500 hover:text-red-500 transition-all h-8"
+                      className="bg-transparent hover:bg-red-500/10 text-red-500 dark:text-red-400 border border-gray-300 dark:border-slate-600 font-medium rounded-lg hover:border-red-500 hover:text-red-600 dark:hover:text-red-500 transition-all h-8"
                       onClick={() => handleRejectFriendRequest(request.id)}
                     >
                       Thu hồi lời mời
@@ -115,7 +115,7 @@ export default function ContactsContent({
 
       {contactSubTab === "requests" && (
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
             <UserAddOutlined /> Lời mời kết bạn ({receivedFriendRequests.length})
           </h2>
 
@@ -124,36 +124,36 @@ export default function ContactsContent({
               <span className="text-slate-400">Đang tải...</span>
             </div>
           ) : receivedFriendRequests.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-slate-800/30 rounded-2xl border border-slate-800">
-              <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mb-4">
-                <UserAddOutlined className="text-4xl text-slate-500" />
+            <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-800/30 rounded-2xl border border-gray-200 dark:border-slate-800">
+              <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                <UserAddOutlined className="text-4xl text-gray-400 dark:text-slate-500" />
               </div>
-              <p className="text-slate-400 text-lg">Không có lời mời kết bạn nào</p>
+              <p className="text-gray-500 dark:text-slate-400 text-lg">Không có lời mời kết bạn nào</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
               {receivedFriendRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="bg-slate-800 rounded-xl p-4 border border-slate-700 flex flex-col gap-4 hover:border-blue-500/50 hover:shadow-lg transition-all"
+                  className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 flex flex-col gap-4 hover:border-blue-500/50 hover:shadow-lg transition-all"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-blue-500/20">
                       {request.requester?.fullname?.charAt(0) || request.requester?.username?.charAt(0) || "?"}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-semibold truncate text-[15px]">{request.requester?.fullname || request.requester?.username}</h3>
-                      <p className="text-xs text-slate-400">{request.requester?.email || "Người dùng ứng dụng"}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{new Date(request.created_at).toLocaleDateString()}</p>
+                      <h3 className="text-gray-900 dark:text-white font-semibold truncate text-[15px]">{request.requester?.fullname || request.requester?.username}</h3>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">{request.requester?.email || "Người dùng ứng dụng"}</p>
+                      <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{new Date(request.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  <div className="p-3 bg-slate-900/50 rounded-lg border border-slate-700/50 min-h-[60px]">
-                    <p className="text-sm text-slate-300 line-clamp-2">"Xin chào, mình kết bạn với bạn nhé!"</p>
+                  <div className="p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-200 dark:border-slate-700/50 min-h-[60px]">
+                    <p className="text-sm text-gray-600 dark:text-slate-300 line-clamp-2">"Xin chào, mình kết bạn với bạn nhé!"</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3 mt-auto">
                     <Button
                       size="small"
-                      className="bg-transparent hover:bg-slate-800 text-slate-300 border border-slate-600 font-medium rounded-lg hover:border-slate-500 hover:text-white transition-all h-8"
+                      className="bg-transparent hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-600 dark:text-slate-300 border border-gray-300 dark:border-slate-600 font-medium rounded-lg hover:border-gray-400 dark:hover:border-slate-500 hover:text-gray-900 dark:hover:text-white transition-all h-8"
                       onClick={() => handleRejectFriendRequest(request.id)}
                     >
                       Từ chối
@@ -175,7 +175,7 @@ export default function ContactsContent({
 
       {contactSubTab === "friends" && (
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
             <ContactsOutlined /> Danh sách bạn bè ({filteredContacts.length})
           </h2>
           {/* Search bar inside Friends view */}
@@ -184,22 +184,21 @@ export default function ContactsContent({
               size="small"
               prefix={<SearchOutlined className="text-slate-400" />}
               placeholder="Tìm bạn bè..."
-              className="bg-slate-800 border-slate-700 text-white rounded-xl"
+              className="bg-gray-100 dark:bg-slate-800 border-transparent dark:border-slate-700 text-gray-900 dark:text-white rounded-xl placeholder-gray-500 dark:placeholder-slate-500"
               variant="filled"
               value={friendSearchQuery}
               onChange={(e) => setFriendSearchQuery(e.target.value)}
             />
           </div>
 
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
             {filteredContacts.length > 0 ? (
               filteredContacts
                 .map((contact, index) => (
                   <div
                     key={contact.id}
-                    className={`flex items-center gap-4 p-4 hover:bg-slate-700/50 transition-colors cursor-pointer ${
-                      index !== 0 ? "border-t border-slate-700" : ""
-                    }`}
+                    className={`flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer ${index !== 0 ? "border-t border-gray-100 dark:border-slate-700" : ""
+                      }`}
                   >
                     <div className="relative">
                       <div className="w-12 h-12 rounded-full bg-linear-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold text-lg">
@@ -211,7 +210,7 @@ export default function ContactsContent({
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-white font-medium text-base mb-0">{contact.name}</h3>
+                        <h3 className="text-gray-900 dark:text-white font-medium text-base mb-0">{contact.name}</h3>
                         {blockedUserIds.has(contact.id) && (
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 uppercase tracking-wider">
                             Đã chặn
@@ -223,35 +222,36 @@ export default function ContactsContent({
                           </span>
                         )}
                       </div>
-                      {contact.mutualFriends && <p className="text-slate-400 text-sm mb-0">{contact.mutualFriends} bạn chung</p>}
+                      {contact.mutualFriends && <p className="text-gray-500 dark:text-slate-400 text-sm mb-0">{contact.mutualFriends} bạn chung</p>}
                     </div>
                     <div className="flex gap-2">
                       <Button
                         icon={<MessageOutlined />}
                         size="small"
                         type="text"
-                        className="text-slate-400 hover:text-white hover:bg-slate-600"
+                        className="text-gray-400 dark:text-slate-400 hover:text-blue-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-600"
                         onClick={() => handleStartChat(contact.id)}
                       />
                       {blockedUserIds.has(contact.id) ? (
-                         <Button
+                        <Button
                           icon={<UnlockOutlined />}
                           size="small"
                           type="text"
                           className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
                           title="Gỡ chặn"
                           onClick={() => {
+                            const isDarkMode = document.documentElement.classList.contains("dark");
                             Swal.fire({
                               title: "Bỏ chặn người dùng?",
                               text: `Bạn sẽ có thể nhận tin nhắn từ ${contact.name}.`,
                               icon: "question",
                               showCancelButton: true,
                               confirmButtonColor: "#3b82f6",
-                              cancelButtonColor: "#64748b",
+                              cancelButtonColor: isDarkMode ? "#64748b" : "#94a3b8",
                               confirmButtonText: "Đồng ý",
                               cancelButtonText: "Hủy",
-                              background: "#1e293b",
-                              color: "#f1f5f9",
+                              background: isDarkMode ? "#1e293b" : "#fff",
+                              color: isDarkMode ? "#f1f5f9" : "#111827",
                             }).then((result) => {
                               if (result.isConfirmed) {
                                 handleUnblockUser(contact.id);
@@ -264,20 +264,21 @@ export default function ContactsContent({
                           icon={<StopOutlined />}
                           size="small"
                           type="text"
-                          className="text-slate-400 hover:text-red-500 hover:bg-red-500/10"
+                          className="text-gray-400 dark:text-slate-400 hover:text-red-500 hover:bg-red-100 dark:hover:bg-red-500/10"
                           title="Chặn"
                           onClick={() => {
+                            const isDarkMode = document.documentElement.classList.contains("dark");
                             Swal.fire({
                               title: "Chặn người dùng này?",
                               text: `Bạn sẽ không thể nhận tin nhắn từ ${contact.name}.`,
                               icon: "warning",
                               showCancelButton: true,
                               confirmButtonColor: "#ef4444",
-                              cancelButtonColor: "#64748b",
+                              cancelButtonColor: isDarkMode ? "#64748b" : "#94a3b8",
                               confirmButtonText: "Chặn ngay",
                               cancelButtonText: "Hủy",
-                              background: "#1e293b",
-                              color: "#f1f5f9",
+                              background: isDarkMode ? "#1e293b" : "#fff",
+                              color: isDarkMode ? "#f1f5f9" : "#111827",
                             }).then((result) => {
                               if (result.isConfirmed) {
                                 handleBlockUser(contact.id);
@@ -290,7 +291,7 @@ export default function ContactsContent({
                         icon={<DeleteOutlined />}
                         size="small"
                         type="text"
-                        className="text-slate-400 hover:text-red-500 hover:bg-red-500/10"
+                        className="text-gray-400 dark:text-slate-400 hover:text-red-500 hover:bg-red-100 dark:hover:bg-red-500/10"
                         onClick={() => {
                           showConfirmModal({
                             title: "Hủy kết bạn?",
@@ -304,7 +305,7 @@ export default function ContactsContent({
                   </div>
                 ))
             ) : (
-              <div className="py-12 flex flex-col items-center justify-center text-slate-400">
+              <div className="py-12 flex flex-col items-center justify-center text-gray-400 dark:text-slate-400">
                 <TeamOutlined className="text-4xl mb-4 opacity-50" />
                 <p>Chưa có bạn bè nào</p>
               </div>
@@ -315,51 +316,51 @@ export default function ContactsContent({
 
       {contactSubTab === "groups" && (
         <div className="max-w-4xl mx-auto flex flex-col items-center justify-center py-20">
-          <div className="w-24 h-24 rounded-full bg-slate-800 flex items-center justify-center mb-6">
-            <TeamOutlined className="text-5xl text-slate-500" />
+          <div className="w-24 h-24 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center mb-6">
+            <TeamOutlined className="text-5xl text-gray-400 dark:text-slate-500" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Danh sách nhóm</h2>
-          <p className="text-slate-400 text-center max-w-md">Tính năng này đang được phát triển. Bạn sẽ sớm có thể tạo và tham gia các nhóm chat.</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Danh sách nhóm</h2>
+          <p className="text-gray-500 dark:text-slate-400 text-center max-w-md">Tính năng này đang được phát triển. Bạn sẽ sớm có thể tạo và tham gia các nhóm chat.</p>
         </div>
       )}
 
       {contactSubTab === "blocked" && (
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
             <StopOutlined /> Danh sách chặn ({blockedUsers.length})
           </h2>
-          
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
             {blockedUsers.length > 0 ? (
               blockedUsers.map((block, index) => (
                 <div
                   key={block.id}
-                  className={`flex items-center gap-4 p-4 hover:bg-slate-700/50 transition-colors ${
-                    index !== 0 ? "border-t border-slate-700" : ""
-                  }`}
+                  className={`flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${index !== 0 ? "border-t border-gray-100 dark:border-slate-700" : ""
+                    }`}
                 >
-                  <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 font-bold text-lg">
+                  <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center text-gray-500 dark:text-slate-400 font-bold text-lg">
                     {block.blocked?.fullname?.charAt(0) || block.blocked?.username?.charAt(0) || "?"}
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-white font-medium text-base">{block.blocked?.fullname || block.blocked?.username}</h3>
-                    <p className="text-slate-400 text-sm">Đã chặn vào {new Date(block.created_at).toLocaleDateString()}</p>
+                    <h3 className="text-gray-900 dark:text-white font-medium text-base">{block.blocked?.fullname || block.blocked?.username}</h3>
+                    <p className="text-gray-500 dark:text-slate-400 text-sm">Đã chặn vào {new Date(block.created_at).toLocaleDateString()}</p>
                   </div>
                   <Button
                     size="small"
-                    className="bg-transparent hover:bg-blue-600/10 text-blue-400 border border-slate-600 font-medium rounded-lg hover:border-blue-500 hover:text-blue-500 transition-all"
+                    className="bg-transparent hover:bg-blue-600/10 text-blue-500 dark:text-blue-400 border border-gray-300 dark:border-slate-600 font-medium rounded-lg hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-500 transition-all"
                     onClick={() => {
+                      const isDarkMode = document.documentElement.classList.contains("dark");
                       Swal.fire({
                         title: "Bỏ chặn người dùng?",
                         text: `Bạn sẽ có thể nhận tin nhắn từ ${block.blocked?.fullname || block.blocked?.username}.`,
                         icon: "question",
                         showCancelButton: true,
                         confirmButtonColor: "#3b82f6",
-                        cancelButtonColor: "#64748b",
+                        cancelButtonColor: isDarkMode ? "#64748b" : "#94a3b8",
                         confirmButtonText: "Đồng ý",
                         cancelButtonText: "Hủy",
-                        background: "#1e293b",
-                        color: "#f1f5f9",
+                        background: isDarkMode ? "#1e293b" : "#fff",
+                        color: isDarkMode ? "#f1f5f9" : "#111827",
                       }).then((result) => {
                         if (result.isConfirmed) {
                           handleUnblockUser(String(block.blocked_id));
@@ -372,7 +373,7 @@ export default function ContactsContent({
                 </div>
               ))
             ) : (
-              <div className="py-12 flex flex-col items-center justify-center text-slate-400">
+              <div className="py-12 flex flex-col items-center justify-center text-gray-400 dark:text-slate-400">
                 <StopOutlined className="text-4xl mb-4 opacity-50" />
                 <p>Bạn chưa chặn ai</p>
               </div>

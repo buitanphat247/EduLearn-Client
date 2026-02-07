@@ -396,7 +396,7 @@ apiClient.interceptors.response.use(
         }
 
         // Start refresh
-        // Start refresh
+        isRefreshing = true;
 
         try {
           // Call refresh API

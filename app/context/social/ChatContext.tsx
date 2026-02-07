@@ -203,8 +203,26 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const userId = getUserIdFromCookie();
         if (!userId || !activeConversationId) return;
 
+        const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
+        const trimmedContent = content.trim();
+
+        // Generate temp ID for optimistic update
+        const tempMessageId = `temp_msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // Optimistic message update - add message immediately
+        const optimisticMessage: Message = {
+            id: tempMessageId,
+            sender: "You",
+            senderAvatar: undefined,
+            content: trimmedContent,
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            isOwn: true,
+            fileAttachment: undefined,
+        };
+
+        setMessages((prev) => [...prev, optimisticMessage]);
+
         try {
-            const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
             let roomIdNum: number;
             let currentRoomId = activeConversationId;
 
@@ -247,18 +265,28 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
             if (isNaN(roomIdNum)) throw new Error("Invalid Room ID");
 
-            await apiSendMessage({
+            const response = await apiSendMessage({
                 sender_id: userIdNumber,
                 room_id: roomIdNum,
-                content: content.trim(),
+                content: trimmedContent,
             });
+
+            // Update temp message with real ID from server to prevent socket duplication
+            const realMessageId = String(response.message_id);
+            setMessages((prev) =>
+                prev.map((msg) =>
+                    msg.id === tempMessageId
+                        ? { ...msg, id: realMessageId, time: new Date(response.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }
+                        : msg
+                )
+            );
 
             setConversations((prev) => {
                 const newArr = [...prev];
                 const idx = newArr.findIndex((c) => String(c.id) === String(currentRoomId));
                 if (idx !== -1) {
                     const updated = { ...newArr[idx] };
-                    updated.lastMessage = `Bạn: ${content.trim()}`;
+                    updated.lastMessage = `Bạn: ${trimmedContent}`;
                     updated.time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
                     updated.unread = 0;
                     updated.isEmpty = false;
@@ -272,6 +300,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
         } catch (error: any) {
             console.error("Error sending message:", error);
+            // Rollback: Remove the optimistic message on error
+            setMessages((prev) => prev.filter((m) => m.id !== tempMessageId));
             antMessage.error(error.message || "Gửi tin nhắn thất bại");
         }
     }, [activeConversationId]);
@@ -360,9 +390,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         chatSocketClient.connect();
 
         const unsubscribeConnection = chatSocketClient.onConnectionChange((isConnected) => {
-            if (isConnected && activeConversationIdRef.current) {
-                const roomIdNum = parseInt(activeConversationIdRef.current, 10);
-                if (!isNaN(roomIdNum)) joinChatRoom(roomIdNum);
+            if (isConnected) {
+                // Sync on reconnect: rejoin room and fetch latest data
+                if (activeConversationIdRef.current) {
+                    const roomIdNum = parseInt(activeConversationIdRef.current, 10);
+                    if (!isNaN(roomIdNum)) joinChatRoom(roomIdNum);
+                }
+                // Fetch latest conversations to sync any missed updates
+                fetchConversationsRef.current();
             }
         });
 

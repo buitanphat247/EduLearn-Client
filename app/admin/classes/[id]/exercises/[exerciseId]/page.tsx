@@ -96,7 +96,13 @@ export default function ExerciseDetailPage() {
       setAssignment(assignmentData);
       if (classData) setClassInfo(classData);
 
-      // 2. Fetch Submitted Count (for stats) - count 'submitted', 'resubmitted', 'late', and 'graded'
+      // Data for ownership check
+      const isOwner = currentUser?.user_id && (
+        Number(assignmentData.created_by) === Number(currentUser.user_id) ||
+        Number(classData?.created_by) === Number(currentUser.user_id)
+      );
+
+      // 2. Fetch Submitted Count ...
       // because graded assignments are also submitted
       const [submittedResult, resubmittedResult, lateResult, gradedResult] = await Promise.all([
         getAssignmentStudents({
@@ -148,6 +154,12 @@ export default function ExerciseDetailPage() {
       setTableLoading(false);
     }
   }, [assignment, exerciseId, currentPage, pageSize, debouncedSearchQuery, filterStatus]);
+
+  const currentUser = getCurrentUser();
+  const isOwner = currentUser?.user_id && (
+    Number(assignment?.created_by) === Number(currentUser.user_id) ||
+    Number(classInfo?.created_by) === Number(currentUser.user_id)
+  );
 
   // Initial Load
   useEffect(() => {
@@ -345,7 +357,7 @@ export default function ExerciseDetailPage() {
         const canGrade = record.status === "submitted" || record.status === "graded" || record.status === "late" || record.status === "resubmitted";
         const isUngrading = ungradingStudentId === record.id;
 
-        if (!canGrade) return null;
+        if (!canGrade || !isOwner) return null;
 
         return (
           <div className="flex items-center gap-2">

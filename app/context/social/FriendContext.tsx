@@ -111,6 +111,19 @@ export function FriendProvider({ children }: { children: React.ReactNode }) {
         if (!userId) return;
         try {
             await apiBlockUser(Number(userId), Number(friendId));
+
+            // Optimistic update
+            setBlockedUserIds((prev) => {
+                const next = new Set(prev);
+                next.add(String(friendId));
+                return next;
+            });
+            // Also update blockedUsers list if possible (mocking structure or fetching)
+            // Ideally we re-fetch or construct a partial object. Re-fetching is safer for the list.
+            getBlockedUsers(Number(userId)).then((blocks) => {
+                setBlockedUsers(blocks.filter((b) => String(b.blocker_id) === String(userId)));
+            });
+
             antMessage.success("Đã chặn người dùng");
         } catch (error) {
             console.error("Error blocking user:", error);
@@ -123,6 +136,15 @@ export function FriendProvider({ children }: { children: React.ReactNode }) {
         if (!userId) return;
         try {
             await apiUnblockUser(Number(userId), Number(friendId));
+
+            // Optimistic update
+            setBlockedUserIds((prev) => {
+                const next = new Set(prev);
+                next.delete(String(friendId));
+                return next;
+            });
+            setBlockedUsers((prev) => prev.filter(b => String(b.blocked_id) !== String(friendId)));
+
             antMessage.success("Đã bỏ chặn người dùng");
         } catch (error) {
             console.error("Error unblocking user:", error);

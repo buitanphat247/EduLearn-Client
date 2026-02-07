@@ -152,7 +152,7 @@ export default function ContactsPage() {
         onDeleteConversation={async (id) => { }}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 bg-slate-900 relative h-full overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-slate-900 relative h-full overflow-hidden transition-colors duration-300">
         <ContactsContent
           contactSubTab={contactSubTab}
           receivedFriendRequests={receivedFriendRequests}

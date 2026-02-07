@@ -9,6 +9,7 @@ import { getVocabulariesByFolder, type VocabularyResponse } from "@/lib/api/voca
 import { IoArrowBackOutline } from "react-icons/io5";
 import VocabularyFlashcardSkeleton from "@/app/components/features/vocabulary/VocabularyFlashcardSkeleton";
 import { useTheme } from "@/app/context/ThemeContext";
+import { sanitizeForDisplay } from "@/lib/utils/sanitize";
 
 type Difficulty = "easy" | "medium" | "hard";
 
@@ -312,8 +313,8 @@ export default function VocabularyFlashcard() {
                         {/* Mini Example Preview */}
                         {parsedExample && (
                           <div className="max-w-lg mx-auto bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl text-sm border border-slate-100 dark:border-slate-700/50 transition-colors">
-                            <p className="text-slate-700 dark:text-slate-300 italic mb-1" dangerouslySetInnerHTML={{ __html: parsedExample.content }} />
-                            <p className="text-slate-500" dangerouslySetInnerHTML={{ __html: parsedExample.translation }} />
+                            <p className="text-slate-700 dark:text-slate-300 italic mb-1" dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(parsedExample.content) }} />
+                            <p className="text-slate-500" dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(parsedExample.translation) }} />
                           </div>
                         )}
                       </div>
