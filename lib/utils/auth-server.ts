@@ -25,29 +25,29 @@ export async function getServerAuthState(): Promise<AuthState> {
     // Đọc cookie mới với tên đã đổi (_u và _at)
     const userCookie = cookieStore.get("_u");
     const tokenCookie = cookieStore.get("_at");
-    
+
     if (userCookie?.value && tokenCookie?.value) {
       try {
         // Giải mã cookie user
         const decryptedUser = decryptCookie(userCookie.value);
         const userData = JSON.parse(decryptedUser);
-        
+
         // Verify token cookie tồn tại (không cần giải mã token ở đây)
         // Token sẽ được verify khi gọi API
-        
+
         return {
           authenticated: true,
           userData: userData,
         };
       } catch (error) {
-        console.error("Error decrypting/parsing user cookie:", error);
+        console.warn("Failed to decrypt user cookie (session invalid or key changed):", error instanceof Error ? error.message : "Unknown error");
         return {
           authenticated: false,
           userData: null,
         };
       }
     }
-    
+
     return {
       authenticated: false,
       userData: null,
@@ -60,4 +60,3 @@ export async function getServerAuthState(): Promise<AuthState> {
     };
   }
 }
-

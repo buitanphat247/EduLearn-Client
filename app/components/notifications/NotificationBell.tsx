@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Badge, Drawer, Empty, Button, message, Modal, Tag, Avatar, List, Typography, Spin } from "antd";
-import { BellOutlined, CheckOutlined, CalendarOutlined } from "@ant-design/icons";
+import { Badge, Drawer, Empty, Button, message, Avatar, List, Typography, Spin, Tag } from "antd";
+import { BellOutlined, CheckOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { getNotificationsByUserId, markNotificationAsRead, getNotificationRecipientsByUserId, type NotificationResponse, type NotificationRecipientResponse } from "@/lib/api/notifications";
 import { notificationSocketClient } from "@/lib/socket/notification-client";
+import NotificationDetailModal from "@/app/components/notifications/NotificationDetailModal";
 import "./NotificationBell.css";
 
 const { Text } = Typography;
@@ -207,26 +208,6 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
         }
     }, []);
 
-    const formatModalDate = useCallback((dateString: string) => {
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleString('vi-VN', {
-                hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
-            });
-        } catch {
-            return dateString;
-        }
-    }, []);
-
-    const getScopeInfo = (scope: string) => {
-        const scopeMap: Record<string, { color: string; text: string }> = {
-            all: { color: "geekblue", text: "Hệ thống" },
-            user: { color: "cyan", text: "Cá nhân" },
-            class: { color: "purple", text: "Lớp học" },
-        };
-        return scopeMap[scope] || { color: "blue", text: scope };
-    };
-
     if (!mounted || !userId) {
         return (
             <div className={`notification-bell-wrapper ${className} w-10 h-10 flex items-center justify-center`}>
@@ -281,7 +262,7 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
                 closeIcon={null} // Cleaner look, rely on click-outside or custom close if needed, but standard drawer has close icon by default if not null. Let's keep default close icon but maybe style it. Actually standard close icon is fine. Let's remove this line to keep standard cross close button.
                 footer={
                     <div className="text-center">
-                        <Button type="text" onClick={handleViewAll} block className="text-blue-600 font-medium hover:bg-blue-50">
+                        <Button type="primary" onClick={handleViewAll} block className=" text-blue-600 font-medium hover:bg-blue-50">
                             Xem tất cả thông báo
                         </Button>
                     </div>
@@ -303,11 +284,16 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
                         <List
                             itemLayout="horizontal"
                             dataSource={notifications}
-                            renderItem={(item) => (
+                            renderItem={(item, index) => (
                                 <div
                                     className={`
                                         px-5 py-4 cursor-pointer transition-all border-b border-gray-100 dark:border-slate-800/50 last:border-0 relative group
-                                        ${item.is_read ? 'bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800' : 'bg-blue-50/40 dark:bg-blue-900/10 hover:bg-blue-50/80 dark:hover:bg-blue-900/20'}
+                                        ${!item.is_read
+                                            ? 'bg-blue-50/60 dark:bg-blue-900/20 hover:bg-blue-100/60 dark:hover:bg-blue-900/30'
+                                            : index % 2 === 0
+                                                ? 'bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800'
+                                                : 'bg-gray-50/80 dark:bg-slate-800/40 hover:bg-gray-100 dark:hover:bg-slate-800/80'
+                                        }
                                     `}
                                     onClick={() => handleNotificationClick(item)}
                                 >
@@ -348,74 +334,11 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
                 </div>
             </Drawer>
 
-            <Modal
-                title={null}
+            <NotificationDetailModal
                 open={modalOpen}
                 onCancel={handleModalClose}
-                footer={null}
-                width={600}
-                destroyOnHidden={true}
-                className="notification-detail-modal"
-                centered
-                zIndex={1001}
-            >
-                {selectedNotification && (
-                    <div className="px-2 py-2">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl flex-shrink-0 ${getScopeInfo(selectedNotification.scope).color.includes('orange') ? 'bg-orange-100 text-orange-600' :
-                                    getScopeInfo(selectedNotification.scope).color.includes('purple') ? 'bg-purple-100 text-purple-600' :
-                                        getScopeInfo(selectedNotification.scope).color.includes('geekblue') || getScopeInfo(selectedNotification.scope).color.includes('blue') ? 'bg-blue-100 text-blue-600' :
-                                            'bg-cyan-100 text-cyan-600'
-                                }`}>
-                                <BellOutlined />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white m-0 leading-tight mb-2">
-                                    {selectedNotification.title}
-                                </h2>
-                                <div className="flex items-center gap-3 text-sm text-gray-500">
-                                    <span className="flex items-center gap-1"><CalendarOutlined /> {formatModalDate(selectedNotification.created_at)}</span>
-                                    <span>•</span>
-                                    <Tag color={getScopeInfo(selectedNotification.scope).color} className="m-0 border-none px-2 text-xs">
-                                        {getScopeInfo(selectedNotification.scope).text}
-                                    </Tag>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-gray-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-gray-100 dark:border-slate-700/50 mb-6">
-                            <Typography.Paragraph className="text-base text-gray-800 dark:text-gray-200 m-0 leading-loose whitespace-pre-wrap font-normal">
-                                {selectedNotification.message}
-                            </Typography.Paragraph>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-6 text-sm">
-                            {selectedNotification.scope_id && (
-                                <div className="flex flex-col p-3 bg-gray-50 dark:bg-slate-800 rounded-lg">
-                                    <span className="text-gray-500 mb-1 text-xs uppercase tracking-wide font-semibold">{selectedNotification.scope === "user" ? "Mã người dùng" : "Mã lớp"}</span>
-                                    <span className="font-mono text-gray-900 dark:text-white font-medium">{selectedNotification.scope_id}</span>
-                                </div>
-                            )}
-
-                            {selectedNotification.creator && (
-                                <div className="flex flex-col p-3 bg-gray-50 dark:bg-slate-800 rounded-lg">
-                                    <span className="text-gray-500 mb-1 text-xs uppercase tracking-wide font-semibold">Người gửi</span>
-                                    <span className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                                        <Avatar size="small" className="bg-blue-600">{selectedNotification.creator.username?.[0]?.toUpperCase()}</Avatar>
-                                        {selectedNotification.creator.fullname || selectedNotification.creator.username}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="mt-8 flex justify-end">
-                            <Button type="primary" onClick={handleModalClose} className="bg-blue-600 h-10 px-8 rounded-xl font-medium shadow-blue-200 shadow-lg hover:shadow-xl transition-all">
-                                Đóng
-                            </Button>
-                        </div>
-                    </div>
-                )}
-            </Modal>
+                notification={selectedNotification}
+            />
         </>
     );
 }
