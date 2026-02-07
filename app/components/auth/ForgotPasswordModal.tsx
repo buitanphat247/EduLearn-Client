@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Modal, Form, Input, Button, Steps, message, Typography } from "antd";
-import { UserOutlined, LockOutlined, MailOutlined, SafetyOutlined } from "@ant-design/icons";
+import { Modal, Form, Input, Button, Typography, App } from "antd";
+import { MailOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import apiClient from "@/app/config/api";
 
 const { Text } = Typography;
 
@@ -12,15 +13,16 @@ interface ForgotPasswordModalProps {
 }
 
 export default function ForgotPasswordModal({ open, onCancel }: ForgotPasswordModalProps) {
-    const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
     const [email, setEmail] = useState("");
     const [form] = Form.useForm();
+    const { message } = App.useApp();
 
     // Reset state when modal closes
     const handleCancel = () => {
         form.resetFields();
-        setCurrentStep(0);
+        setIsSuccess(false);
         setEmail("");
         setLoading(false);
         onCancel();
@@ -28,58 +30,24 @@ export default function ForgotPasswordModal({ open, onCancel }: ForgotPasswordMo
 
     const handleEmailSubmit = async (values: { email: string }) => {
         setLoading(true);
-        // Fake API call
-        setTimeout(() => {
-            setLoading(false);
+        try {
+            await apiClient.post("/auth/forgot-password", { email: values.email });
             setEmail(values.email);
-            setCurrentStep(1);
-            message.success("Mã xác nhận đã được gửi đến email của bạn!");
-        }, 1500);
-    };
-
-    const handleVerifyCode = async (values: { code: string }) => {
-        setLoading(true);
-        // Fake API call
-        setTimeout(() => {
+            setIsSuccess(true);
+        } catch (error: any) {
+            // Still show success to prevent email enumeration
+            setEmail(values.email);
+            setIsSuccess(true);
+        } finally {
             setLoading(false);
-            if (values.code === "123456") { // Mock check (optional, or just pass purely)
-                // Actually for mock purposes let's just accept any code or specific mock code
-            }
-            setCurrentStep(2);
-            message.success("Xác thực thành công!");
-        }, 1500);
+        }
     };
-
-    const handleResetPassword = async (values: { password: string }) => {
-        setLoading(true);
-        // Fake API call
-        setTimeout(() => {
-            setLoading(false);
-            message.success("Đổi mật khẩu thành công! Vui lòng đăng nhập lại.");
-            handleCancel();
-        }, 1500);
-    };
-
-    const steps = [
-        {
-            title: "Email",
-            icon: <UserOutlined />,
-        },
-        {
-            title: "Xác thực",
-            icon: <SafetyOutlined />,
-        },
-        {
-            title: "Mật khẩu mới",
-            icon: <LockOutlined />,
-        },
-    ];
 
     return (
         <Modal
             title={
-                <div className="text-center font-bold text-lg mb-6">
-                    Khôi phục mật khẩu
+                <div className="text-center font-bold text-lg mb-2">
+                    {isSuccess ? "Kiểm tra email của bạn" : "Quên mật khẩu?"}
                 </div>
             }
             open={open}
@@ -87,17 +55,48 @@ export default function ForgotPasswordModal({ open, onCancel }: ForgotPasswordMo
             footer={null}
             destroyOnClose
             centered
-            maskClosable={false}
+            maskClosable={!loading}
             closable={!loading}
+            width={420}
         >
-            <div className="mb-8">
-                <Steps current={currentStep} items={steps} size="small" />
-            </div>
+            <div className="py-4">
+                {/* Success State */}
+                {isSuccess ? (
+                    <div className="text-center animate-fade-in">
+                        <div className="w-20 h-20 mx-auto mb-6 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                            <CheckCircleOutlined className="text-4xl text-green-500" />
+                        </div>
 
-            <div className="mt-4">
-                {/* Step 1: Email Input */}
-                {currentStep === 0 && (
+                        <div className="text-gray-600 dark:text-gray-300 mb-4">
+                            Nếu email <span className="font-semibold text-blue-600 dark:text-blue-400">{email}</span> tồn tại trong hệ thống, bạn sẽ nhận được link đặt lại mật khẩu.
+                        </div>
+
+                        <div
+                            className="p-4 rounded-lg mb-6"
+                            style={{
+                                backgroundColor: 'rgba(251, 191, 36, 0.15)',
+                                border: '1px solid rgba(251, 191, 36, 0.4)'
+                            }}
+                        >
+                            <p className="text-sm m-0" style={{ color: '#fbbf24' }}>
+                                ⏰ Link sẽ hết hạn sau <strong>15 phút</strong>. Hãy kiểm tra cả thư mục Spam nếu không thấy email.
+                            </p>
+                        </div>
+
+                        <Button
+                            type="primary"
+                            onClick={handleCancel}
+                            block
+                            size="large"
+                            className="rounded-lg h-11 font-medium"
+                        >
+                            Đã hiểu
+                        </Button>
+                    </div>
+                ) : (
+                    /* Email Input Form */
                     <Form
+                        form={form}
                         name="forgot-password-email"
                         onFinish={handleEmailSubmit}
                         layout="vertical"
@@ -105,7 +104,7 @@ export default function ForgotPasswordModal({ open, onCancel }: ForgotPasswordMo
                         initialValues={{ email: "" }}
                     >
                         <div className="text-center mb-6 text-gray-500 dark:text-gray-400">
-                            Nhập email của bạn để nhận mã xác thực khôi phục mật khẩu.
+                            Nhập email của bạn. Chúng tôi sẽ gửi link để đặt lại mật khẩu.
                         </div>
 
                         <Form.Item
@@ -117,112 +116,35 @@ export default function ForgotPasswordModal({ open, onCancel }: ForgotPasswordMo
                         >
                             <Input
                                 prefix={<MailOutlined className="text-gray-400" />}
-                                placeholder="Email của bạn"
+                                placeholder="Nhập email của bạn"
                                 size="large"
                                 className="rounded-lg"
                             />
                         </Form.Item>
 
-                        <Form.Item>
-                            <Button type="primary" htmlType="submit" loading={loading} block size="large" className="rounded-lg h-10 font-medium">
-                                Gửi mã xác nhận
-                            </Button>
-                        </Form.Item>
-                    </Form>
-                )}
-
-                {/* Step 2: Code Verification */}
-                {currentStep === 1 && (
-                    <Form
-                        name="forgot-password-code"
-                        onFinish={handleVerifyCode}
-                        layout="vertical"
-                        autoComplete="off"
-                    >
-                        <div className="text-center mb-6">
-                            <div className="text-gray-500 dark:text-gray-400 mb-2">
-                                Mã xác nhận đã được gửi đến:
-                            </div>
-                            <div className="font-bold text-blue-600 text-lg">{email}</div>
-                        </div>
-
-                        <Form.Item
-                            name="code"
-                            rules={[
-                                { required: true, message: "Vui lòng nhập mã xác nhận!" },
-                                { len: 6, message: "Mã xác nhận phải có 6 ký tự!" }
-                            ]}
-                        >
-                            <Input.OTP size="large" length={6} className="justify-center" />
-                        </Form.Item>
-
-                        <Form.Item>
-                            <Button type="primary" htmlType="submit" loading={loading} block size="large" className="rounded-lg h-10 font-medium mt-4">
-                                Xác nhận
+                        <Form.Item className="mb-0">
+                            <Button
+                                type="primary"
+                                htmlType="submit"
+                                loading={loading}
+                                block
+                                size="large"
+                                className="rounded-lg h-11 font-medium"
+                            >
+                                Gửi link đặt lại mật khẩu
                             </Button>
                         </Form.Item>
 
                         <div className="text-center mt-4">
-                            <Button type="link" onClick={() => setCurrentStep(0)} disabled={loading} className="text-gray-500">
-                                Gửi lại mã?
+                            <Button
+                                type="link"
+                                onClick={handleCancel}
+                                disabled={loading}
+                                className="text-gray-500"
+                            >
+                                Quay lại đăng nhập
                             </Button>
                         </div>
-                    </Form>
-                )}
-
-                {/* Step 3: New Password */}
-                {currentStep === 2 && (
-                    <Form
-                        name="forgot-password-reset"
-                        onFinish={handleResetPassword}
-                        layout="vertical"
-                        autoComplete="off"
-                    >
-                        <Form.Item
-                            name="password"
-                            label="Mật khẩu mới"
-                            rules={[
-                                { required: true, message: "Vui lòng nhập mật khẩu mới!" },
-                                { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự!" }
-                            ]}
-                        >
-                            <Input.Password
-                                prefix={<LockOutlined className="text-gray-400" />}
-                                placeholder="Mật khẩu mới"
-                                size="large"
-                                className="rounded-lg"
-                            />
-                        </Form.Item>
-
-                        <Form.Item
-                            name="confirmPassword"
-                            label="Xác nhận mật khẩu"
-                            dependencies={['password']}
-                            rules={[
-                                { required: true, message: "Vui lòng xác nhận mật khẩu!" },
-                                ({ getFieldValue }) => ({
-                                    validator(_, value) {
-                                        if (!value || getFieldValue('password') === value) {
-                                            return Promise.resolve();
-                                        }
-                                        return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
-                                    },
-                                }),
-                            ]}
-                        >
-                            <Input.Password
-                                prefix={<LockOutlined className="text-gray-400" />}
-                                placeholder="Xác nhận mật khẩu"
-                                size="large"
-                                className="rounded-lg"
-                            />
-                        </Form.Item>
-
-                        <Form.Item>
-                            <Button type="primary" htmlType="submit" loading={loading} block size="large" className="rounded-lg h-10 font-medium mt-2">
-                                Đổi mật khẩu
-                            </Button>
-                        </Form.Item>
                     </Form>
                 )}
             </div>
