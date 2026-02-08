@@ -3,16 +3,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611/api";
-
-    return [
-      // Note: /api-proxy/assignment-attachments/*, /api-proxy/writing-chat-bot/*, and /api-proxy/friends/* routes
-      // are handled by API route handlers (to connect to Flask/backend). Only rewrite other /api-proxy routes.
-      {
-        source: "/api-proxy/:path((?!assignment-attachments|writing-chat-bot).*)",
-        destination: `${apiUrl}/:path*`,
-      },
-    ];
+    return [];
   },
 
   // Browser Cache Headers - Cache static assets for 1 year

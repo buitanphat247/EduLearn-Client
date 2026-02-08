@@ -127,7 +127,15 @@ export default function AuthPage() {
         isSubmittingRef.current = false;
       }
     } catch (error: any) {
-      const errorMessage = error?.message || error?.response?.data?.message || "Đăng nhập thất bại. Vui lòng thử lại!";
+      const errorData = error?.response?.data;
+      let errorMessage = errorData?.message || error?.message || "Đăng nhập thất bại. Vui lòng thử lại!";
+
+      // Handle Account Lockout specifically
+      if (errorData?.code === 'ACCOUNT_LOCKED') {
+        errorMessage = errorData.message;
+        // Optional: Disable form or show timer
+      }
+
       message.error(errorMessage);
       setAttemptCount(prev => prev + 1);
       setSignInLoading(false);

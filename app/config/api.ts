@@ -19,9 +19,6 @@ const isDev = process.env.NODE_ENV === "development";
  * - Validates URL format before returning
  */
 const getBaseURL = (): string => {
-  if (typeof window !== "undefined") return "/api-proxy";
-
-  // ✅ Use environment variable with validation
   const envURL = process.env.NEXT_PUBLIC_API_URL;
   if (envURL?.trim()) {
     try {
@@ -35,7 +32,7 @@ const getBaseURL = (): string => {
   }
 
   // ✅ Default fallback (should be overridden by env var in production)
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611/api";
+  return isDev ? "http://localhost:1611/api" : process.env.NEXT_PUBLIC_API_URL || "https://api.edulearning.io.vn/api";
 };
 
 /**
@@ -401,7 +398,7 @@ apiClient.interceptors.response.use(
         try {
           // Call refresh API
           const response = await axios.post(
-            "/api-proxy/auth/refresh",
+            `${getBaseURL()}/auth/refresh`,
             {},
             {
               headers: { "Content-Type": "application/json" },

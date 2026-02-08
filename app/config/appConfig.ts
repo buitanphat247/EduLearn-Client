@@ -9,13 +9,11 @@
  */
 export const API_CONFIG = {
   /** Base URL for API requests (from environment or default) */
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1611/api',
-  /** API proxy path for client-side requests */
-  PROXY_PATH: '/api-proxy',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || "https://api.edulearning.io.vn/api",
   /** Request timeout in milliseconds */
   TIMEOUT_MS: Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS) || 30000,
   /** Enable request caching */
-  ENABLE_CACHE: process.env.NEXT_PUBLIC_ENABLE_API_CACHE !== 'false',
+  ENABLE_CACHE: process.env.NEXT_PUBLIC_ENABLE_API_CACHE !== "false",
 } as const;
 
 /**
@@ -63,49 +61,49 @@ export function validateConfig(): void {
 
   // Validate API config
   if (API_CONFIG.TIMEOUT_MS <= 0) {
-    errors.push('API_TIMEOUT_MS must be greater than 0');
+    errors.push("API_TIMEOUT_MS must be greater than 0");
   }
 
   // Validate cache config
   if (CACHE_CONFIG.TTL <= 0) {
-    errors.push('CACHE_TTL must be greater than 0');
+    errors.push("CACHE_TTL must be greater than 0");
   }
   if (CACHE_CONFIG.MAX_SIZE <= 0) {
-    errors.push('CACHE_MAX_SIZE must be greater than 0');
+    errors.push("CACHE_MAX_SIZE must be greater than 0");
   }
   if (CACHE_CONFIG.CLEANUP_THRESHOLD >= CACHE_CONFIG.MAX_SIZE) {
-    errors.push('CACHE_CLEANUP_THRESHOLD must be less than CACHE_MAX_SIZE');
+    errors.push("CACHE_CLEANUP_THRESHOLD must be less than CACHE_MAX_SIZE");
   }
 
   // Validate auth config
   if (AUTH_CONFIG.CACHE_TTL <= 0) {
-    errors.push('AUTH_CACHE_TTL must be greater than 0');
+    errors.push("AUTH_CACHE_TTL must be greater than 0");
   }
   if (AUTH_CONFIG.MAX_QUEUE_SIZE <= 0) {
-    errors.push('AUTH_MAX_QUEUE_SIZE must be greater than 0');
+    errors.push("AUTH_MAX_QUEUE_SIZE must be greater than 0");
   }
   if (AUTH_CONFIG.QUEUE_TIMEOUT <= 0) {
-    errors.push('AUTH_QUEUE_TIMEOUT must be greater than 0');
+    errors.push("AUTH_QUEUE_TIMEOUT must be greater than 0");
   }
 
   // Validate cookie config
   if (COOKIE_CONFIG.CACHE_DURATION <= 0) {
-    errors.push('COOKIE_CACHE_DURATION must be greater than 0');
+    errors.push("COOKIE_CACHE_DURATION must be greater than 0");
   }
   if (COOKIE_CONFIG.MAX_CACHE_SIZE <= 0) {
-    errors.push('COOKIE_MAX_CACHE_SIZE must be greater than 0');
+    errors.push("COOKIE_MAX_CACHE_SIZE must be greater than 0");
   }
 
   if (errors.length > 0) {
-    throw new Error(`Configuration validation failed:\n${errors.join('\n')}`);
+    throw new Error(`Configuration validation failed:\n${errors.join("\n")}`);
   }
 }
 
 // Validate config on module load (only in development)
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === "development") {
   try {
     validateConfig();
   } catch (error) {
-    console.warn('[Config] Configuration validation warning:', error);
+    console.warn("[Config] Configuration validation warning:", error);
   }
 }
