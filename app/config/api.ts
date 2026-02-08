@@ -177,8 +177,16 @@ export const clearTokens = (): void => {
     sessionStorage.removeItem("edulearn_user_id");
     sessionStorage.removeItem("edulearn_user_data");
   } catch {}
+  // Clear cookies with minimal options
   document.cookie = "_at=; path=/; max-age=0";
   document.cookie = "_u=; path=/; max-age=0";
+  document.cookie = "_rt=; path=/; max-age=0";
+
+  // Clear cookies with domain (for production)
+  const domain = ".edulearning.io.vn";
+  document.cookie = `_at=; path=/; domain=${domain}; max-age=0`;
+  document.cookie = `_u=; path=/; domain=${domain}; max-age=0`;
+  document.cookie = `_rt=; path=/; domain=${domain}; max-age=0`;
   clearAuthCache();
   clearCsrfTokenCache(); // Clear CSRF token cache on logout
 };
