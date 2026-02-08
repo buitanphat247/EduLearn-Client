@@ -96,7 +96,7 @@ export default function AuthPage() {
         setAttemptCount(0);
         // ✅ Use router.push instead of window.location.href for better control
         setTimeout(() => {
-          router.push("/profile");
+          router.push("/");
         }, REDIRECT_DELAY_MS);
       } else {
         message.error(response.message || "Đăng nhập thất bại. Vui lòng thử lại!");
