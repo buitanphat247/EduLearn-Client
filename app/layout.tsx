@@ -9,6 +9,7 @@ import PrefetchRoutes from "./components/common/PrefetchRoutes";
 import ErrorBoundary from "./error-boundary";
 import { noTransitionsScript } from "./scripts/no-transitions";
 import { Analytics } from "@vercel/analytics/next";
+import DevToolsBlocker from "./components/security/DevToolsBlocker";
 
 // Optimize font loading - chỉ load weights cần thiết
 const roboto = Roboto({
@@ -82,6 +83,7 @@ export default async function RootLayout({
           </ErrorBoundary>
         </AntdRegistry>
         <Analytics />
+        <DevToolsBlocker />
       </body>
     </html>
   );
