@@ -23,11 +23,7 @@ interface LogEntry {
 /**
  * Create a structured log entry
  */
-function createLogEntry(
-  level: LogLevel,
-  message: string,
-  context?: LogContext
-): LogEntry {
+function createLogEntry(level: LogLevel, message: string, context?: LogContext): LogEntry {
   return {
     level,
     message,
@@ -49,54 +45,47 @@ class Logger {
       const entry = createLogEntry("debug", message, context);
       console.debug("[Logger] Debug:", entry);
     }
-    // In production, can send to monitoring service
-    // Example: monitoringService.log(entry);
   }
 
   /**
    * Log info message
    */
   info(message: string, context?: LogContext): void {
-    const entry = createLogEntry("info", message, context);
     if (process.env.NODE_ENV === "development") {
+      const entry = createLogEntry("info", message, context);
       console.log("[Logger] Info:", entry);
     }
-    // In production, send to monitoring service
-    // Example: monitoringService.log(entry);
   }
 
   /**
    * Log warning message
    */
   warn(message: string, context?: LogContext): void {
-    const entry = createLogEntry("warn", message, context);
-    console.warn("[Logger] Warning:", entry);
-    // In production, send to monitoring service
-    // Example: monitoringService.log(entry);
+    if (process.env.NODE_ENV === "development") {
+      const entry = createLogEntry("warn", message, context);
+      console.warn("[Logger] Warning:", entry);
+    }
   }
 
   /**
    * Log error message
    */
   error(message: string, error?: Error | unknown, context?: LogContext): void {
-    const errorContext: LogContext = {
-      ...context,
-      error: error instanceof Error
-        ? {
-            name: error.name,
-            message: error.message,
-            stack: error.stack,
-          }
-        : String(error),
-    };
+    if (process.env.NODE_ENV === "development") {
+      const errorContext: LogContext = {
+        ...context,
+        error:
+          error instanceof Error
+            ? {
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
+              }
+            : String(error),
+      };
 
-    const entry = createLogEntry("error", message, errorContext);
-    console.error("[Logger] Error:", entry);
-
-    // In production, send to error tracking service (Sentry, LogRocket, etc.)
-    if (process.env.NODE_ENV === "production") {
-      // TODO: Integrate with error tracking service
-      // Example: Sentry.captureException(error, { extra: errorContext });
+      const entry = createLogEntry("error", message, errorContext);
+      console.error("[Logger] Error:", entry);
     }
   }
 }

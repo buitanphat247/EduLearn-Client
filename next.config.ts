@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     return [];
   },
 
+  productionBrowserSourceMaps: false,
+
   // Browser Cache Headers - Cache static assets for 1 year
   async headers() {
     return [
