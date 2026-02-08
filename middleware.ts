@@ -43,10 +43,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Nếu đang ở trang auth và có user session, redirect về home
-  // TRỪ KHI có param session_expired=true (để tránh loop khi logout bị lỗi)
-  const isSessionExpired = request.nextUrl.searchParams.get("session_expired") === "true";
-
-  if (pathname.startsWith(authRoute) && hasUserCookie && !isSessionExpired) {
+  if (pathname.startsWith(authRoute) && hasUserCookie) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);

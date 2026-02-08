@@ -24,31 +24,6 @@ const roboto = Roboto({
 export const metadata: Metadata = {
   title: "Thư viện số - Nền tảng học tập trực tuyến",
   description: "Thư viện số - Nền tảng học tập và tài liệu trực tuyến",
-  openGraph: {
-    title: "Thư viện số - Nền tảng học tập trực tuyến",
-    description: "Thư viện số - Nền tảng học tập và tài liệu trực tuyến",
-    url: "https://www.edulearning.io.vn",
-    siteName: "Thư viện số",
-    images: [
-      {
-        url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTBawNJEeS_KtGtD7G13En5HtC9UW9eboiyIQ&s",
-        width: 800,
-        height: 600,
-        alt: "Thư viện số Preview",
-      },
-    ],
-    locale: "vi_VN",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Thư viện số - Nền tảng học tập trực tuyến",
-    description: "Thư viện số - Nền tảng học tập và tài liệu trực tuyến",
-    images: ["https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTBawNJEeS_KtGtD7G13En5HtC9UW9eboiyIQ&s"],
-  },
-  icons: {
-    icon: "/images/logo/2.png",
-  },
   other: {
     "font-awesome": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css",
   },

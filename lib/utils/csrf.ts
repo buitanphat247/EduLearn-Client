@@ -17,16 +17,8 @@ const CSRF_TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
  * Get base URL for API requests
  */
 const getBaseURL = (): string => {
-  const envURL = process.env.NEXT_PUBLIC_API_URL;
-  if (envURL?.trim()) {
-    try {
-      new URL(envURL);
-      return envURL;
-    } catch {
-      // invalid url, ignore
-    }
-  }
-  return isDev ? "http://localhost:1611/api" : process.env.NEXT_PUBLIC_API_URL || "https://api.edulearning.io.vn/api";
+  if (typeof window !== "undefined") return "/api-proxy";
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611/api";
 };
 
 /**

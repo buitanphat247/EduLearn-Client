@@ -409,22 +409,18 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
 
           {/* Navigation Links */}
           <div className="hidden md:flex items-center space-x-8">
-            <NavLink to="/" label="Trang chủ" />
+            {NAV_LINKS.map((link) => (
+              <NavLink key={link.to} to={link.to} label={link.label} />
+            ))}
 
-            {user && (
-              <>
-                <NavLink to="/news" label="Tin tức" />
-                <NavLink to="/events" label="Sự kiện" />
-                <DropdownNavButton
-                  label="Tính năng"
-                  isActive={isFeatureActive}
-                  isOpen={isFeatureDropdownOpen}
-                  onOpenChange={setIsFeatureDropdownOpen}
-                  items={FEATURE_ITEMS}
-                  onClick={handleFeatureClick}
-                />
-              </>
-            )}
+            <DropdownNavButton
+              label="Tính năng"
+              isActive={isFeatureActive}
+              isOpen={isFeatureDropdownOpen}
+              onOpenChange={setIsFeatureDropdownOpen}
+              items={FEATURE_ITEMS}
+              onClick={handleFeatureClick}
+            />
 
             <DropdownNavButton
               label="Về chúng tôi"

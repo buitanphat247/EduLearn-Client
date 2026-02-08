@@ -319,6 +319,7 @@ apiClient.interceptors.response.use(
     // Handle 403 Forbidden (CSRF token invalid or missing) or 500 with specific message
     const isCsrfError = status === 403 || (status === 500 && (errorMessage === "invalid csrf token" || errorMessage === "missing csrf token"));
 
+    /* CSRF Retry Logic - Disabled
     if (isCsrfError && !originalRequest._csrfRetry) {
       // Clear CSRF token cache and retry with new token
       clearCsrfTokenCache();
@@ -335,6 +336,7 @@ apiClient.interceptors.response.use(
         return Promise.reject({ ...error, message: "CSRF token validation failed", code: "CSRF_ERROR" });
       }
     }
+    */
 
     // Check for 401 error
     if (status !== 401) {
