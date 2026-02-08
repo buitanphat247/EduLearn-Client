@@ -8,6 +8,7 @@ import { AntdRegistry } from "@ant-design/nextjs-registry";
 import PrefetchRoutes from "./components/common/PrefetchRoutes";
 import ErrorBoundary from "./error-boundary";
 import { noTransitionsScript } from "./scripts/no-transitions";
+import { Analytics } from "@vercel/analytics/next";
 
 // Optimize font loading - chỉ load weights cần thiết
 const roboto = Roboto({
@@ -80,6 +81,7 @@ export default async function RootLayout({
             </Providers>
           </ErrorBoundary>
         </AntdRegistry>
+        <Analytics />
       </body>
     </html>
   );
