@@ -24,30 +24,8 @@ export default function AuthPage() {
 
   const [shouldAnimate, setShouldAnimate] = useState(false); // Control animation state
 
-  // ✅ Fix race condition - Add isMounted check và cleanup
-  useEffect(() => {
-    let isMounted = true;
-
-    const checkAuth = async () => {
-      // Wait a bit to ensure cookies are set
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      if (!isMounted) return;
-
-      const user = getCurrentUser();
-      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-
-      if (user && token) {
-        router.push("/profile");
-      }
-    };
-
-    checkAuth();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [router]);
+  // Client-side redirect removed to prevent double-flash/loops.
+  // Middleware handles redirection for logged-in users.
 
   // Reset animation state when form changes (after animation completes)
   useEffect(() => {
