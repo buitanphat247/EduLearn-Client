@@ -177,16 +177,8 @@ export const clearTokens = (): void => {
     sessionStorage.removeItem("edulearn_user_id");
     sessionStorage.removeItem("edulearn_user_data");
   } catch {}
-  // Clear cookies with minimal options
   document.cookie = "_at=; path=/; max-age=0";
   document.cookie = "_u=; path=/; max-age=0";
-  document.cookie = "_rt=; path=/; max-age=0";
-
-  // Clear cookies with domain (for production)
-  const domain = ".edulearning.io.vn";
-  document.cookie = `_at=; path=/; domain=${domain}; max-age=0`;
-  document.cookie = `_u=; path=/; domain=${domain}; max-age=0`;
-  document.cookie = `_rt=; path=/; domain=${domain}; max-age=0`;
   clearAuthCache();
   clearCsrfTokenCache(); // Clear CSRF token cache on logout
 };
@@ -266,18 +258,13 @@ apiClient.interceptors.request.use(
     }
 
     // Add CSRF token for state-changing requests
+    /* 
     if (requiresCsrfToken(config.method || "GET") && !isCsrfRetry) {
       try {
         // Skip CSRF for csrf-token endpoint itself and refresh token endpoint
         // Refresh token endpoint is excluded from CSRF validation on backend
         // and has its own authentication (refresh token in cookie)
-        if (
-          !config.url?.includes("/auth/csrf-token") &&
-          !config.url?.includes("/auth/refresh") &&
-          !config.url?.includes("/auth/signin") &&
-          !config.url?.includes("/auth/signup") &&
-          !config.url?.includes("/auth/signout")
-        ) {
+        if (!config.url?.includes("/auth/csrf-token") && !config.url?.includes("/auth/refresh")) {
           const csrfToken = await getCsrfToken();
           if (csrfToken && csrfToken.trim()) {
             // Ensure header is set correctly
@@ -294,6 +281,7 @@ apiClient.interceptors.request.use(
         // Backend will reject with 403 if CSRF is required
       }
     }
+    */
 
     return config;
   },
@@ -365,7 +353,7 @@ apiClient.interceptors.response.use(
       clearTokens();
       processQueue(error, null);
       isRefreshing = false;
-      if (typeof window !== "undefined") window.location.href = "/auth?session_expired=true";
+      if (typeof window !== "undefined") window.location.href = "/auth";
       return Promise.reject({ ...error, code: errorCode, message: errorMessage });
     }
 
@@ -447,14 +435,14 @@ apiClient.interceptors.response.use(
           clearTokens();
           processQueue(refreshError as AxiosError, null);
           isRefreshing = false;
-          if (typeof window !== "undefined") window.location.href = "/auth?session_expired=true";
+          if (typeof window !== "undefined") window.location.href = "/auth";
           return Promise.reject(refreshError);
         }
       } else {
         // Already retried - check if critical
         if (criticalErrors.includes(errorCode) || errorCode === "ACCESS_TOKEN_EXPIRED") {
           clearTokens();
-          if (typeof window !== "undefined") window.location.href = "/auth?session_expired=true";
+          if (typeof window !== "undefined") window.location.href = "/auth";
         }
         return Promise.reject(error);
       }
