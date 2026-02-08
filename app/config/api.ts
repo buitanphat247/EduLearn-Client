@@ -271,7 +271,13 @@ apiClient.interceptors.request.use(
         // Skip CSRF for csrf-token endpoint itself and refresh token endpoint
         // Refresh token endpoint is excluded from CSRF validation on backend
         // and has its own authentication (refresh token in cookie)
-        if (!config.url?.includes("/auth/csrf-token") && !config.url?.includes("/auth/refresh")) {
+        if (
+          !config.url?.includes("/auth/csrf-token") &&
+          !config.url?.includes("/auth/refresh") &&
+          !config.url?.includes("/auth/signin") &&
+          !config.url?.includes("/auth/signup") &&
+          !config.url?.includes("/auth/signout")
+        ) {
           const csrfToken = await getCsrfToken();
           if (csrfToken && csrfToken.trim()) {
             // Ensure header is set correctly

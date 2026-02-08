@@ -17,8 +17,16 @@ const CSRF_TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
  * Get base URL for API requests
  */
 const getBaseURL = (): string => {
-  if (typeof window !== "undefined") return "/api-proxy";
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611/api";
+  const envURL = process.env.NEXT_PUBLIC_API_URL;
+  if (envURL?.trim()) {
+    try {
+      new URL(envURL);
+      return envURL;
+    } catch {
+      // invalid url, ignore
+    }
+  }
+  return isDev ? "http://localhost:1611/api" : process.env.NEXT_PUBLIC_API_URL || "https://api.edulearning.io.vn/api";
 };
 
 /**
@@ -54,10 +62,10 @@ export const fetchCsrfToken = async (): Promise<string> => {
 
 /**
  * Get CSRF token (from cache or fetch new from API)
- * 
+ *
  * IMPORTANT: Cookie _csrf contains SECRET, not TOKEN!
  * We MUST call API endpoint to get the generated TOKEN.
- * 
+ *
  * @returns {Promise<string>} CSRF token (generated TOKEN, not SECRET)
  */
 export const getCsrfToken = async (): Promise<string> => {
@@ -67,7 +75,7 @@ export const getCsrfToken = async (): Promise<string> => {
   // Cache contains the actual TOKEN (from API), not SECRET from cookie
   if (csrfTokenCache && now - csrfTokenTimestamp < CSRF_TOKEN_CACHE_TTL) {
     if (isDev) {
-      console.log('[CSRF] Using cached token');
+      console.log("[CSRF] Using cached token");
     }
     return csrfTokenCache;
   }
@@ -79,20 +87,20 @@ export const getCsrfToken = async (): Promise<string> => {
   // - Return TOKEN in response body
   try {
     const token = await fetchCsrfToken();
-    
+
     // Validate token is not empty
     if (!token || !token.trim()) {
-      throw new Error('CSRF token is empty');
+      throw new Error("CSRF token is empty");
     }
-    
+
     // Cache the TOKEN (not SECRET)
     csrfTokenCache = token;
     csrfTokenTimestamp = now;
-    
+
     if (isDev) {
-      console.log('[CSRF] Fetched new token from API');
+      console.log("[CSRF] Fetched new token from API");
     }
-    
+
     return token;
   } catch (error) {
     // If fetch fails and we have cached token, use it (might still be valid)
