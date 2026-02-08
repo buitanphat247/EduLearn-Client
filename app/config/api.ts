@@ -359,7 +359,7 @@ apiClient.interceptors.response.use(
       clearTokens();
       processQueue(error, null);
       isRefreshing = false;
-      if (typeof window !== "undefined") window.location.href = "/auth";
+      if (typeof window !== "undefined") window.location.href = "/auth?session_expired=true";
       return Promise.reject({ ...error, code: errorCode, message: errorMessage });
     }
 
@@ -441,14 +441,14 @@ apiClient.interceptors.response.use(
           clearTokens();
           processQueue(refreshError as AxiosError, null);
           isRefreshing = false;
-          if (typeof window !== "undefined") window.location.href = "/auth";
+          if (typeof window !== "undefined") window.location.href = "/auth?session_expired=true";
           return Promise.reject(refreshError);
         }
       } else {
         // Already retried - check if critical
         if (criticalErrors.includes(errorCode) || errorCode === "ACCESS_TOKEN_EXPIRED") {
           clearTokens();
-          if (typeof window !== "undefined") window.location.href = "/auth";
+          if (typeof window !== "undefined") window.location.href = "/auth?session_expired=true";
         }
         return Promise.reject(error);
       }
