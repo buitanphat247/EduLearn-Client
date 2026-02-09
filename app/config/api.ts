@@ -32,6 +32,7 @@ const getBaseURL = (): string => {
   }
 
   // ✅ Default fallback (should be overridden by env var in production)
+  // FIXED: Explicitly point to the correct backend API URL with /api suffix
   return isDev ? "http://localhost:1611/api" : process.env.NEXT_PUBLIC_API_URL || "https://api.edulearning.io.vn/api";
 };
 
