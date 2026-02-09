@@ -16,7 +16,7 @@ import { getUserInfo, changePassword, updateUser, type UserInfoResponse } from "
 import { uploadFile } from "@/lib/api/file-upload";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId";
 import SettingsSkeleton from "@/app/components/settings/SettingsSkeleton";
 import { getNewPasswordValidationRules } from "@/lib/utils/validation";
 import { useTheme } from "@/app/context/ThemeContext";
@@ -30,6 +30,7 @@ interface SettingsFormData {
 
 export default function UserSettings() {
   const { message: messageApi } = App.useApp();
+  const { userId, loading: userIdLoading } = useUserId(); // Use hook
   const [profileForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const [loading, setLoading] = useState(true);
@@ -44,14 +45,16 @@ export default function UserSettings() {
 
   // Fetch user info
   useEffect(() => {
-    const fetchUserInfo = async () => {
-      const userId = getUserIdFromCookie();
-      if (!userId) {
+    if (userIdLoading || !userId) {
+      if (!userIdLoading && !userId) {
+        // Chỉ hiện lỗi nếu đã load xong mà ko có user
         messageApi.error("Không tìm thấy thông tin người dùng");
         setLoading(false);
-        return;
       }
+      return;
+    }
 
+    const fetchUserInfo = async () => {
       try {
         setLoading(true);
         const user = await getUserInfo(userId);
@@ -70,7 +73,7 @@ export default function UserSettings() {
     };
 
     fetchUserInfo();
-  }, [profileForm, messageApi]);
+  }, [userId, userIdLoading, profileForm, messageApi]);
 
   const handleAvatarClick = () => {
     if (uploading) return;
@@ -95,7 +98,6 @@ export default function UserSettings() {
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    const userId = getUserIdFromCookie();
     if (!file || !userId) return;
 
     if (!file.type.startsWith("image/")) {

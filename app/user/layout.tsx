@@ -23,6 +23,7 @@ async function getInitialUserData() {
         // ✅ Giải mã cookie
         const decryptedUser = decryptCookie(userCookie.value);
         const userData = JSON.parse(decryptedUser);
+        console.log("DEBUG SSR Cookie Data:", JSON.stringify(userData, null, 2)); // <--- Debug Log
 
         // ✅ Validate decrypted data to prevent XSS
         if (typeof userData !== 'object' || userData === null) {
@@ -30,21 +31,34 @@ async function getInitialUserData() {
           return null;
         }
 
-        // ✅ Sanitize và validate fields
-        const username = typeof userData.username === 'string' ? userData.username : null;
-        const role_name = typeof userData.role_name === 'string'
-          ? userData.role_name
-          : (typeof userData.role?.role_name === 'string' ? userData.role.role_name : null);
-        const avatar = typeof userData.avatar === 'string' ? userData.avatar : null;
+        // Helper to find data recursively or check paths
+        let finalData: any = userData;
+
+        // Unwrap nested 'data' if exists
+        if (finalData.data && (finalData.data.user_id || finalData.data.data)) {
+          finalData = finalData.data;
+        }
+        // Unwrap second level 'data' if exists
+        if (finalData.data && (finalData.data.user_id || finalData.data.username)) {
+          finalData = finalData.data;
+        }
+
+        const user_id = finalData.user_id || finalData.id || null;
+        const username = finalData.username || null;
+        const rawRole = finalData.role || finalData.role_name;
+        const role_name = typeof rawRole === 'string' ? rawRole : (rawRole?.role_name || null);
+        const avatar = finalData.avatar || null;
+
+        console.log("DEBUG SSR Extracted:", { user_id, username });
 
         return {
+          user_id,
           username,
           role_name,
           avatar,
         };
       } catch (error) {
-        // ✅ Log error but don't expose sensitive information
-        console.error("Error decrypting/parsing user cookie:", error instanceof Error ? error.message : 'Unknown error');
+        console.error("Error decrypting/parsing user cookie:", error);
         return null;
       }
     }

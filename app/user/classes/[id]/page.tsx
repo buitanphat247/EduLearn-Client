@@ -13,6 +13,7 @@ import CustomCard from "@/app/components/common/CustomCard";
 import { getClassById, getClassStudentsByClass, type ClassStudentRecord } from "@/lib/api/classes";
 import { CLASS_STATUS_MAP, formatStudentId } from "@/lib/utils/classUtils";
 import { getUserIdFromCookie, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId"; // Added import
 import type { StudentItem } from "@/interface/students";
 import type { ColumnsType } from "antd/es/table";
 import { classSocketClient } from "@/lib/socket/class-client";
@@ -54,6 +55,7 @@ export default function UserClassDetail() {
   }, [message]);
 
   // State
+  const { userId: contextUserId, loading: userLoading } = useUserId(); // Use hook
   const [classData, setClassData] = useState<ClassDataState>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("students");
@@ -67,7 +69,7 @@ export default function UserClassDetail() {
   const [notificationPage, setNotificationPage] = useState(1);
   const [examSearchQuery, setExamSearchQuery] = useState("");
   const [examPage, setExamPage] = useState(1);
-  
+
   // Refresh functions refs
   const exerciseRefreshRef = useRef<(() => void) | null>(null);
   const notificationRefreshRef = useRef<(() => void) | null>(null);
@@ -129,19 +131,9 @@ export default function UserClassDetail() {
     if (!currentClassId) return "";
 
     try {
-      let userId: string | number | null = getUserIdFromCookie();
+      if (!contextUserId) throw new Error("Không tìm thấy thông tin người dùng (Context).");
 
-      if (!userId) {
-        try {
-          userId = await getUserIdFromCookieAsync();
-        } catch (e) {
-          console.error("Async user fetch failed:", e);
-        }
-      }
-
-      if (!userId) throw new Error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
-
-      const numericUserId = typeof userId === "string" ? Number(userId) : userId;
+      const numericUserId = typeof contextUserId === "string" ? Number(contextUserId) : contextUserId;
       if (isNaN(numericUserId)) throw new Error("User ID không hợp lệ");
 
       const data = await getClassById(currentClassId, numericUserId);
@@ -163,7 +155,7 @@ export default function UserClassDetail() {
       if (showLoading) setClassData(null);
       throw error;
     }
-  }, []);
+  }, [contextUserId]); // Depend on contextUserId
 
   // Fetch students
   const fetchClassStudents = useCallback(async (className?: string, showLoading: boolean = false) => {
@@ -195,10 +187,9 @@ export default function UserClassDetail() {
   // Fetch class detail
   const fetchClassDetail = useCallback(async () => {
     const currentClassId = classIdRef.current;
-    if (!currentClassId) return;
+    if (!currentClassId || !contextUserId) return; // Wait for userId
 
     setLoading(true);
-
 
     try {
       const className = await fetchClassInfo(true);
@@ -218,12 +209,14 @@ export default function UserClassDetail() {
     } finally {
       setLoading(false);
     }
-  }, [fetchClassInfo, fetchClassStudents, router]);
+  }, [fetchClassInfo, fetchClassStudents, router, contextUserId]);
 
   // Initial fetch
   useEffect(() => {
-    if (classId) fetchClassDetail();
-  }, [classId, fetchClassDetail]);
+    if (classId && contextUserId && !userLoading) {
+      fetchClassDetail();
+    }
+  }, [classId, contextUserId, userLoading, fetchClassDetail]);
 
   // Socket refs
   const socketInitializedRef = useRef(false);
@@ -689,9 +682,9 @@ export default function UserClassDetail() {
           <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>
             Quay lại
           </Button>
-          <Button 
-            icon={<ReloadOutlined />} 
-            onClick={handleFastRefresh} 
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={handleFastRefresh}
             loading={refreshing}
           >
             Làm mới

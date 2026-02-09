@@ -8,7 +8,7 @@ import CreateNotificationModal from "@/app/components/super-admin/CreateNotifica
 import EditNotificationModal from "@/app/components/super-admin/EditNotificationModal";
 import NotificationDetailModal from "@/app/components/super-admin/NotificationDetailModal";
 import { getNotificationsByCreatedBy, deleteNotification, type NotificationResponse } from "@/lib/api/notifications";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId";
 
 interface NotificationType {
   key: string;
@@ -22,6 +22,7 @@ interface NotificationType {
 
 export default function SuperAdminNotifications() {
   const { modal, message } = App.useApp();
+  const { userId, loading: userLoading } = useUserId(); // Use hook
   const [allNotifications, setAllNotifications] = useState<NotificationType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,7 +54,7 @@ export default function SuperAdminNotifications() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-      setPagination((prev) => ({ ...prev, current: 1 })); // Reset to page 1 when search changes
+      setPagination((prev) => ({ ...prev, current: 1 }));
     }, 400);
 
     return () => clearTimeout(timer);
@@ -61,9 +62,11 @@ export default function SuperAdminNotifications() {
 
   // Fetch notifications
   const fetchNotifications = useCallback(async (page: number = 1, limit: number = 10, search?: string) => {
-    const userId = getUserIdFromCookie();
     if (!userId) {
-      message.error("Không tìm thấy thông tin người dùng (cookie)");
+      // Wait for user id
+      if (!userLoading) {
+        message.error("Không tìm thấy thông tin người dùng");
+      }
       return;
     }
 
@@ -110,12 +113,14 @@ export default function SuperAdminNotifications() {
     } finally {
       setLoading(false);
     }
-  }, [message]);
+  }, [message, userId, userLoading, formatDate]);
 
   // Fetch notifications on mount and when dependencies change
   useEffect(() => {
-    fetchNotifications(pagination.current, pagination.pageSize, debouncedSearchQuery);
-  }, [fetchNotifications, pagination.current, pagination.pageSize, debouncedSearchQuery]);
+    if (userId && !userLoading) {
+      fetchNotifications(pagination.current, pagination.pageSize, debouncedSearchQuery);
+    }
+  }, [fetchNotifications, pagination.current, pagination.pageSize, debouncedSearchQuery, userId, userLoading]);
 
   const handleTableChange = useCallback((page: number, pageSize: number) => {
     setPagination((prev) => ({ ...prev, current: page, pageSize }));
@@ -205,7 +210,6 @@ export default function SuperAdminNotifications() {
             okType: "danger",
             cancelText: "Hủy",
             async onOk() {
-              const userId = getUserIdFromCookie();
               if (!userId) {
                 message.error("Không tìm thấy thông tin người dùng để thực hiện xóa");
                 return;
@@ -300,10 +304,10 @@ export default function SuperAdminNotifications() {
         notification={
           editingNotification
             ? {
-                id: editingNotification.id,
-                title: editingNotification.title,
-                message: editingNotification.message,
-              }
+              id: editingNotification.id,
+              title: editingNotification.title,
+              message: editingNotification.message,
+            }
             : null
         }
         onCancel={() => {
@@ -334,23 +338,23 @@ export default function SuperAdminNotifications() {
       />
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <Spin spinning={loading}>
-        <Table
-          columns={columns}
-          dataSource={allNotifications}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            showSizeChanger: false,
-            showTotal: (total) => `Tổng ${total} thông báo`,
-            size: "small",
-            onChange: handleTableChange,
-          }}
-          className="news-table"
-          rowClassName="group hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 cursor-pointer border-b border-gray-100"
-        />
-      </Spin>
+        <Spin spinning={loading}>
+          <Table
+            columns={columns}
+            dataSource={allNotifications}
+            pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              showSizeChanger: false,
+              showTotal: (total) => `Tổng ${total} thông báo`,
+              size: "small",
+              onChange: handleTableChange,
+            }}
+            className="news-table"
+            rowClassName="group hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 cursor-pointer border-b border-gray-100"
+          />
+        </Spin>
       </div>
     </div>
   );

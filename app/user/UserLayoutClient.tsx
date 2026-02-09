@@ -5,10 +5,11 @@ import UserSidebar from "../components/layout/UserSidebar";
 import { usePathname } from "next/navigation";
 import { Modal, Spin, message, Avatar } from "antd";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import NotificationBell from "@/app/components/notifications/NotificationBell";
+import { ServerAuthedUserProvider } from "../context/ServerAuthedUserProvider";
 
 const pageTitles: Record<string, string> = {
   "/user": "Trang chủ",
@@ -18,6 +19,7 @@ const pageTitles: Record<string, string> = {
 };
 
 interface InitialUserData {
+  user_id?: number | string | null;
   username: string | null;
   role_name: string | null;
   avatar: string | null;
@@ -25,6 +27,7 @@ interface InitialUserData {
 
 function UserHeader({ initialUserData }: { initialUserData: InitialUserData | null }) {
   const pathname = usePathname();
+  const { userId, loading: userIdLoading } = useUserId();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
@@ -42,11 +45,10 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
     return undefined;
   }, [pathname]);
 
-  // ✅ Memoize fetch function with cleanup
+  // ✅ Memoize fetch function with cleanup - uses userId from hook
   const fetchUserInfo = useCallback(async (showError = false, signal?: AbortSignal) => {
-    const userId = getUserIdFromCookie();
     if (!userId) {
-      if (showError && !signal?.aborted) {
+      if (showError && !signal?.aborted && !userIdLoading) {
         message.error("Không tìm thấy thông tin người dùng");
       }
       return;
@@ -72,16 +74,17 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
         setLoadingProfile(false);
       }
     }
-  }, [message]);
+  }, [userId, userIdLoading]);
 
-  // ✅ Fetch user info on mount (silent) with cleanup
+  // ✅ Fetch user info when userId becomes available
   useEffect(() => {
+    if (!userId || userIdLoading) return;
     const abortController = new AbortController();
     fetchUserInfo(false, abortController.signal);
     return () => {
       abortController.abort();
     };
-  }, [fetchUserInfo]);
+  }, [userId, userIdLoading, fetchUserInfo]);
 
   // ✅ Fetch user info when modal opens (with loading state) with cleanup
   useEffect(() => {
@@ -224,25 +227,41 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
 export default function UserLayoutClient({ children, initialUserData }: { children: React.ReactNode; initialUserData: InitialUserData | null }) {
   const pathname = usePathname();
 
+  // Create provider user object
+  const serverUser = useMemo(() => {
+    if (!initialUserData) return null;
+    return {
+      userId: initialUserData.user_id || null,
+      username: initialUserData.username,
+      roleName: initialUserData.role_name,
+      avatar: initialUserData.avatar
+    };
+  }, [initialUserData]);
+
   // Check if we are in an exam session: /user/classes/[id]/exams/[examId]
   // We want to hide all sidebar/header for actual exam doing page
   const isExamSession = pathname.includes("/exams/") && pathname.split("/").length >= 6;
 
   if (isExamSession) {
+    // Also wrap exam session in provider just in case
     return (
-      <div className="h-screen w-screen bg-gray-50 dark:bg-gray-950 overflow-hidden overflow-y-auto">
-        {children}
-      </div>
+      <ServerAuthedUserProvider user={serverUser}>
+        <div className="h-screen w-screen bg-gray-50 dark:bg-gray-950 overflow-hidden overflow-y-auto">
+          {children}
+        </div>
+      </ServerAuthedUserProvider>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-950 overflow-hidden transition-colors duration-300">
-      <UserSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <UserHeader initialUserData={initialUserData} />
-        <main className={`flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300`}>{children}</main>
+    <ServerAuthedUserProvider user={serverUser}>
+      <div className="flex h-screen bg-gray-100 dark:bg-gray-950 overflow-hidden transition-colors duration-300">
+        <UserSidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <UserHeader initialUserData={initialUserData} />
+          <main className={`flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300`}>{children}</main>
+        </div>
       </div>
-    </div>
+    </ServerAuthedUserProvider>
   );
 }

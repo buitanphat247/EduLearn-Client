@@ -8,12 +8,13 @@ import SocialSidebar from "@/app/components/social/SocialSidebar";
 import ContactsContent from "@/app/components/social/ContactsContent";
 import { Contact } from "@/app/components/social/types";
 import { useSocial } from "../SocialContext";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId";
 import { sendFriendRequest } from "@/lib/socket";
 import { acceptFriendRequest as acceptFriendRequestSocket, rejectFriendRequest as rejectFriendRequestSocket, removeFriend } from "@/lib/socket";
 
 export default function ContactsPage() {
   const router = useRouter();
+  const { userId, loading: userLoading } = useUserId(); // Use hook
   const {
     contacts,
     receivedFriendRequests,
@@ -31,9 +32,8 @@ export default function ContactsPage() {
   const [contactSubTab, setContactSubTab] = useState<"friends" | "groups" | "requests" | "sent_requests" | "blocked">("friends");
 
   // Derived state
-  const currentUserId = getUserIdFromCookie();
   const currentUserIdNumber =
-    typeof currentUserId === "string" ? parseInt(currentUserId, 10) : typeof currentUserId === "number" ? currentUserId : null;
+    typeof userId === "string" ? parseInt(userId, 10) : typeof userId === "number" ? userId : null;
 
   const sentFriendRequests = friendRequests.filter((request) => String(request.requester_id) === String(currentUserIdNumber));
 
@@ -46,7 +46,6 @@ export default function ContactsPage() {
   };
 
   const handleAcceptFriendRequest = async (friendRequestId: number) => {
-    const userId = getUserIdFromCookie();
     if (!userId) {
       antMessage.error("Vui lòng đăng nhập");
       return;
@@ -81,7 +80,6 @@ export default function ContactsPage() {
   };
 
   const handleRejectFriendRequest = async (friendRequestId: number) => {
-    const userId = getUserIdFromCookie();
     if (!userId) {
       antMessage.error("Vui lòng đăng nhập");
       return;
@@ -97,12 +95,15 @@ export default function ContactsPage() {
       await rejectFriendRequestSocket({
         user_id: userIdNumber,
         friend_id: friendRequestId,
+        requester_id: friendRequestId, // Important: pass correctly
       });
+
+      // Fix: use setFriendRequests to remove item
+      setFriendRequests((prev) => prev.filter((req) => req.id !== friendRequestId));
 
       const isRevoke = String(friendRequest.requester_id) === String(userIdNumber);
       antMessage.success(isRevoke ? "Đã thu hồi lời mời kết bạn" : "Đã từ chối lời mời kết bạn");
 
-      setFriendRequests((prev) => prev.filter((req) => req.id !== friendRequestId));
     } catch (error: any) {
       console.error("Error rejecting friend request:", error);
       antMessage.error(error.message || "Không thể thực hiện hành động này");
@@ -110,7 +111,6 @@ export default function ContactsPage() {
   };
 
   const handleRemoveFriend = async (friendId: string) => {
-    const userId = getUserIdFromCookie();
     if (!userId) {
       antMessage.error("Vui lòng đăng nhập");
       return;

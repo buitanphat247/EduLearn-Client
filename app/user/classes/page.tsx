@@ -9,6 +9,7 @@ import { getCurrentUser } from "@/lib/api/users";
 import type { ColumnsType } from "antd/es/table";
 import { classSocketClient } from "@/lib/socket/class-client";
 import { getUserIdFromCookie, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId";
 
 type ClassStatusFilter = "all" | "online" | "banned";
 
@@ -25,6 +26,7 @@ interface ClassTableItem {
 export default function UserClasses() {
   const router = useRouter();
   const { message } = App.useApp();
+  const { userId, loading: userLoading } = useUserId(); // Use hook
   const [classes, setClasses] = useState<ClassTableItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -75,6 +77,7 @@ export default function UserClasses() {
 
   // Map API response to table format - stable callback
   const mapClassData = useCallback((record: ClassStudentRecord): ClassTableItem => {
+    // ... (unchanged)
     const classData = record.class;
     if (!classData) {
       throw new Error("Class data is missing");
@@ -93,33 +96,10 @@ export default function UserClasses() {
 
   // Fetch classes - stable callback
   const fetchClasses = useCallback(async () => {
+    if (!userId) return; // Wait for userId
+
     try {
       setLoading(true);
-
-      let userId: string | number | null | undefined = getCurrentUser()?.user_id;
-
-      // Fallback 1: Try sync cookie/session if localStorage is missing
-      if (!userId) {
-        userId = getUserIdFromCookie();
-      }
-
-      // Fallback 2: Try async cookie decrypt if still missing
-      if (!userId) {
-        try {
-          userId = await getUserIdFromCookieAsync();
-        } catch (e) {
-          console.error("Failed to decrypt user cookie:", e);
-        }
-      }
-
-      if (!userId) {
-        message.warning("Đang tải thông tin người dùng...");
-        // Cho phép thử lại 1 lần nữa sau 1s nếu cần, hoặc dừng lại
-        // Ở đây ta set loading false và return thông báo
-        message.error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
-        setLoading(false);
-        return;
-      }
 
       const result = await getClassStudentsByUser({
         userId: userId,
@@ -138,12 +118,17 @@ export default function UserClasses() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, debouncedSearchQuery, message, mapClassData]);
+  }, [pagination.current, pagination.pageSize, debouncedSearchQuery, message, mapClassData, userId]);
 
   // Fetch classes on mount and when dependencies change
   useEffect(() => {
-    fetchClasses();
-  }, [fetchClasses]);
+    if (userId && !userLoading) {
+      fetchClasses();
+    } else if (!userId && !userLoading) {
+      // Handle no user if needed, e.g. redirect or show error
+      setLoading(false);
+    }
+  }, [userId, userLoading, fetchClasses]);
 
   // Refs to prevent duplicate socket connections on rerender
   const classIdsRef = useRef<string[]>([]);
@@ -170,10 +155,10 @@ export default function UserClasses() {
         setClasses((prev) => prev.map((c) =>
           Number(c.classId) === Number(data.class_id)
             ? {
-                ...c,
-                studentStatus: "banned" as const,
-                students: data.student_count !== undefined ? data.student_count : c.students,
-              }
+              ...c,
+              studentStatus: "banned" as const,
+              students: data.student_count !== undefined ? data.student_count : c.students,
+            }
             : c
         ));
         // Use setTimeout to avoid blocking state updates
@@ -192,10 +177,10 @@ export default function UserClasses() {
         setClasses((prev) => prev.map((c) =>
           Number(c.classId) === Number(data.class_id)
             ? {
-                ...c,
-                studentStatus: "online" as const,
-                students: data.student_count !== undefined ? data.student_count : c.students,
-              }
+              ...c,
+              studentStatus: "online" as const,
+              students: data.student_count !== undefined ? data.student_count : c.students,
+            }
             : c
         ));
         // Use setTimeout to avoid blocking state updates
@@ -499,11 +484,11 @@ export default function UserClasses() {
             </Button>
           </Tooltip>
         ) : (
-          <Button 
-            icon={<EyeOutlined />} 
-            size="small" 
-            type="primary" 
-            ghost 
+          <Button
+            icon={<EyeOutlined />}
+            size="small"
+            type="primary"
+            ghost
             onClick={() => routerRef.current.push(`/user/classes/${record.classId}`)}
           >
             Xem

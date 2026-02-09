@@ -14,6 +14,13 @@ export const cacheImage = async (url: string): Promise<void> => {
   // Don't cache if already cached
   if (localStorage.getItem(CACHE_PREFIX + url)) return;
 
+  // Prevent CORS errors: Only cache local/relative or same-origin URLs
+  // If url is external (http/https) and not same origin, skip.
+  if (url.startsWith("http")) {
+    const origin = window.location.origin;
+    if (!url.startsWith(origin)) return;
+  }
+
   try {
     const response = await fetch(url);
     const blob = await response.blob();

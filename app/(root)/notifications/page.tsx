@@ -12,7 +12,7 @@ import {
     type NotificationResponse,
     type NotificationRecipientResponse
 } from "@/lib/api/notifications";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId";
 import { useRouter } from "next/navigation";
 import { getClassesByUser, getClassById } from "@/lib/api/classes";
 import { useTheme } from "@/app/context/ThemeContext";
@@ -31,12 +31,12 @@ const { Text, Paragraph } = Typography;
 export default function NotificationsPage() {
     const router = useRouter();
     useTheme();
+    const { userId, loading: userIdLoading } = useUserId();
 
     const [loading, setLoading] = useState(true);
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
-    const [userId, setUserId] = useState<number | string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
     const [classMap, setClassMap] = useState<Record<string, string>>({});
@@ -46,28 +46,24 @@ export default function NotificationsPage() {
     const [activeTab, setActiveTab] = useState("all");
     const pageSize = 12;
 
-    // Get currentUser ID
+    // Fetch classes when userId becomes available
     useEffect(() => {
-        const uid = getUserIdFromCookie();
-        if (uid) {
-            setUserId(uid);
-            const fetchClasses = async () => {
-                try {
-                    const result = await getClassesByUser({ userId: uid, limit: 100 });
-                    const mapping: Record<string, string> = {};
-                    result.classes.forEach((c: any) => {
-                        mapping[String(c.class_id)] = c.name;
-                    });
-                    setClassMap(mapping);
-                } catch (e) {
-                    console.error("Error fetching classes for mapping:", e);
-                }
-            };
-            fetchClasses();
-        } else {
-            router.push("/auth");
-        }
-    }, [router]);
+        if (!userId || userIdLoading) return;
+
+        const fetchClasses = async () => {
+            try {
+                const result = await getClassesByUser({ userId, limit: 100 });
+                const mapping: Record<string, string> = {};
+                result.classes.forEach((c: any) => {
+                    mapping[String(c.class_id)] = c.name;
+                });
+                setClassMap(mapping);
+            } catch (e) {
+                console.error("Error fetching classes for mapping:", e);
+            }
+        };
+        fetchClasses();
+    }, [userId, userIdLoading]);
 
     const fetchNotifications = useCallback(async () => {
         if (!userId) return;

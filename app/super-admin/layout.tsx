@@ -16,10 +16,23 @@ async function getInitialUserData() {
         // Giải mã cookie
         const decryptedUser = decryptCookie(userCookie.value);
         const userData = JSON.parse(decryptedUser);
+        // Helper to find data recursively or check paths
+        let finalData: any = userData;
+
+        // Unwrap nested 'data' if exists
+        if (finalData.data && (finalData.data.user_id || finalData.data.data)) {
+          finalData = finalData.data;
+        }
+        // Unwrap second level 'data' if exists
+        if (finalData.data && (finalData.data.user_id || finalData.data.username)) {
+          finalData = finalData.data;
+        }
+
         return {
-          username: userData.username || null,
-          role_name: userData.role_name || userData.role?.role_name || null,
-          avatar: userData.avatar || null,
+          user_id: finalData.user_id || finalData.id || null,
+          username: finalData.username || null,
+          role_name: typeof (finalData.role || finalData.role_name) === 'string' ? (finalData.role || finalData.role_name) : (finalData.role?.role_name || null),
+          avatar: finalData.avatar || null,
         };
       } catch (error) {
         console.error("Error decrypting/parsing user cookie:", error);

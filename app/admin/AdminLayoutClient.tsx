@@ -9,6 +9,7 @@ import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import { useUserId } from "@/app/hooks/useUserId";
 import NotificationBell from "@/app/components/notifications/NotificationBell";
+import { ServerAuthedUserProvider } from "../context/ServerAuthedUserProvider";
 
 const pageTitles: Record<string, string> = {
   "/admin": "Trang chủ",
@@ -19,6 +20,7 @@ const pageTitles: Record<string, string> = {
 };
 
 interface InitialUserData {
+  user_id?: number | string | null;
   username: string | null;
   role_name: string | null;
   avatar: string | null;
@@ -84,10 +86,11 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
   const fetchUserInfoRef = useRef(fetchUserInfo);
   fetchUserInfoRef.current = fetchUserInfo;
 
-  // Fetch user info on mount (silent)
+  // Fetch user info when userId becomes available
   useEffect(() => {
+    if (!userId) return;
     fetchUserInfoRef.current(false);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (!isProfileModalOpen || userInfo) return;
@@ -222,13 +225,26 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
 }
 
 export default function AdminLayoutClient({ children, initialUserData }: { children: React.ReactNode; initialUserData: InitialUserData | null }) {
+  // Create provider user object
+  const serverUser = useMemo(() => {
+    if (!initialUserData) return null;
+    return {
+      userId: initialUserData.user_id || null,
+      username: initialUserData.username,
+      roleName: initialUserData.role_name,
+      avatar: initialUserData.avatar
+    };
+  }, [initialUserData]);
+
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-950 overflow-hidden transition-colors duration-300">
-      <AdminSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <AdminHeader initialUserData={initialUserData} />
-        <main className={`flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300`}>{children}</main>
+    <ServerAuthedUserProvider user={serverUser}>
+      <div className="flex h-screen bg-gray-100 dark:bg-gray-950 overflow-hidden transition-colors duration-300">
+        <AdminSidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <AdminHeader initialUserData={initialUserData} />
+          <main className={`flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300`}>{children}</main>
+        </div>
       </div>
-    </div>
+    </ServerAuthedUserProvider>
   );
 }

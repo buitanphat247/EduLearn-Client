@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -38,6 +38,9 @@ export default async function RootLayout({
   const theme = cookieStore.get("theme");
   const isDark = theme?.value === "dark";
 
+  const headersList = await headers();
+  const nonce = headersList.get("x-nonce") || "";
+
   return (
     <html lang="vi" className={isDark ? "dark" : ""} suppressHydrationWarning>
       <head>
@@ -57,14 +60,13 @@ export default async function RootLayout({
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-          integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
-          crossOrigin="anonymous"
           referrerPolicy="no-referrer"
         />
         {/* ✅ Use Next.js Script component instead of dangerouslySetInnerHTML to prevent XSS */}
         <Script
           id="no-transitions-script"
           strategy="beforeInteractive"
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: noTransitionsScript,
           }}

@@ -5,8 +5,9 @@ import SuperAdminSidebar from "../components/layout/SuperAdminSidebar";
 import { usePathname } from "next/navigation";
 import { Modal, Spin, message, Breadcrumb } from "antd";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { useUserId } from "@/app/hooks/useUserId";
 import Link from "next/link";
+import { ServerAuthedUserProvider } from "../context/ServerAuthedUserProvider";
 
 const pageTitles: Record<string, string> = {
   "/super-admin": "Dashboard",
@@ -20,6 +21,7 @@ const pageTitles: Record<string, string> = {
 };
 
 interface InitialUserData {
+  user_id?: number | string | null;
   username: string | null;
   role_name: string | null;
   avatar: string | null;
@@ -27,6 +29,7 @@ interface InitialUserData {
 
 function SuperAdminHeader({ initialUserData }: { initialUserData: InitialUserData | null }) {
   const pathname = usePathname();
+  const { userId, loading: userIdLoading } = useUserId();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
@@ -51,9 +54,8 @@ function SuperAdminHeader({ initialUserData }: { initialUserData: InitialUserDat
   }, [pathname]);
 
   const fetchUserInfo = useCallback(async (showError = false) => {
-    const userId = getUserIdFromCookie();
     if (!userId) {
-      if (showError) message.error("Không tìm thấy thông tin người dùng");
+      if (showError && !userIdLoading) message.error("Không tìm thấy thông tin người dùng");
       return;
     }
 
@@ -69,11 +71,13 @@ function SuperAdminHeader({ initialUserData }: { initialUserData: InitialUserDat
     } finally {
       if (showError) setLoadingProfile(false);
     }
-  }, []);
+  }, [userId, userIdLoading]);
 
+  // Fetch when userId becomes available
   useEffect(() => {
+    if (!userId || userIdLoading) return;
     fetchUserInfo(false);
-  }, [fetchUserInfo]);
+  }, [userId, userIdLoading, fetchUserInfo]);
 
   useEffect(() => {
     if (!isProfileModalOpen || userInfo) return;
@@ -174,15 +178,28 @@ export default function SuperAdminLayoutClient({
   const pathname = usePathname();
   const isDocumentCrawlPage = pathname === "/super-admin/documents-crawl";
 
+  // Create provider user object
+  const serverUser = useMemo(() => {
+    if (!initialUserData) return null;
+    return {
+      userId: initialUserData.user_id || null,
+      username: initialUserData.username,
+      roleName: initialUserData.role_name,
+      avatar: initialUserData.avatar
+    };
+  }, [initialUserData]);
+
   return (
-    <div className="super-admin flex h-screen bg-gray-100 dark:bg-zinc-900 overflow-hidden transition-colors duration-300">
-      <SuperAdminSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <SuperAdminHeader initialUserData={initialUserData} />
-        <main className={`flex-1 overflow-y-auto bg-gray-50 dark:bg-black p-6 ${isDocumentCrawlPage ? "pb-0" : ""} transition-colors duration-300`}>
-          {children}
-        </main>
+    <ServerAuthedUserProvider user={serverUser}>
+      <div className="super-admin flex h-screen bg-gray-100 dark:bg-zinc-900 overflow-hidden transition-colors duration-300">
+        <SuperAdminSidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <SuperAdminHeader initialUserData={initialUserData} />
+          <main className={`flex-1 overflow-y-auto bg-gray-50 dark:bg-black p-6 ${isDocumentCrawlPage ? "pb-0" : ""} transition-colors duration-300`}>
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </ServerAuthedUserProvider>
   );
 }

@@ -32,27 +32,71 @@ export function middleware(request: NextRequest) {
   const protectedRoutes = ["/admin", "/user", "/profile", "/super-admin"];
   const authRoute = "/auth";
 
-  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
+  // CSP Nonce Generation
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+
+  // CSP Header Construction
+  // script-src: 'unsafe-eval' is often needed in dev for hot reloading. In prod, we try to be strict.
+  // However, removing 'unsafe-inline' requires 'nonce-...' or 'strict-dynamic'.
+  // style-src: kept 'unsafe-inline' for AntD and other dynamic styles for now.
+  const isDev = process.env.NODE_ENV !== "production";
+  const cspHeader = `
+    default-src 'self';
+    script-src 'self' ${isDev ? "'unsafe-eval'" : ""} 'nonce-${nonce}' https://fonts.googleapis.com https://cdn.tailwindcss.com https://unpkg.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com https://cdnjs.cloudflare.com;
+    font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:;
+    img-src 'self' data: blob: https: http:;
+    connect-src 'self' https: wss: ws: http://localhost:* ws://localhost:*;
+    frame-ancestors 'self';
+    base-uri 'self';
+    form-action 'self';
+    media-src 'self' blob: https:;
+    worker-src 'self' blob:;
+    object-src 'none';
+  `
+    .replace(/\s{2,}/g, " ")
+    .trim();
 
   // Chỉ kiểm tra cookie _u (user session) có tồn tại hay không
   // Nếu không có _u, user chưa đăng nhập hoặc session đã hết hạn (7 ngày)
+  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
+
+  // Handle redirects
   if (isProtectedRoute && !hasUserCookie) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth";
-    return NextResponse.redirect(url);
+    const response = NextResponse.redirect(url);
+    // Set CSP on redirect too (good practice)
+    response.headers.set("Content-Security-Policy", cspHeader);
+    return response;
   }
 
   // Nếu đang ở trang auth và có user session, redirect về home
   if (pathname.startsWith(authRoute) && hasUserCookie) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
-    return NextResponse.redirect(url);
+    const response = NextResponse.redirect(url);
+    response.headers.set("Content-Security-Policy", cspHeader);
+    return response;
   }
 
   // Role-based access control sẽ được xử lý ở client-side hoặc server components
   // vì middleware chạy ở Edge Runtime không thể giải mã cookie
 
-  return NextResponse.next();
+  // Allow request to proceed
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", cspHeader);
+
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+
+  response.headers.set("Content-Security-Policy", cspHeader);
+
+  return response;
 }
 
 export const config = {
