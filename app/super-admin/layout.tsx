@@ -1,4 +1,7 @@
 import { cookies } from "next/headers";
+
+export const dynamic = "force-dynamic";
+
 import SuperAdminLayoutClient from "./SuperAdminLayoutClient";
 import { decryptCookie } from "@/lib/utils/server-cookie-decrypt";
 

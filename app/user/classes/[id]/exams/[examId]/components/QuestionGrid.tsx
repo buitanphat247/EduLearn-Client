@@ -9,10 +9,12 @@ interface QuestionGridProps {
   questions: RagQuestion[];
   userAnswers: Record<string, string>;
   flaggedQuestions: Set<string>;
+  activeQuestionId?: string | null;
   currentPage: number;
   totalPages: number;
   questionsPerPage: number;
   onPageChange: (page: number) => void;
+  onSelectQuestion?: (questionId: string) => void;
   onSubmit: () => void;
   violations: Violation[];
   isSubmitted?: boolean;
@@ -22,16 +24,18 @@ export default function QuestionGrid({
   questions,
   userAnswers,
   flaggedQuestions,
+  activeQuestionId,
   currentPage,
   totalPages,
   questionsPerPage,
   onPageChange,
+  onSelectQuestion,
   onSubmit,
   violations,
   isSubmitted = false,
 }: QuestionGridProps) {
   return (
-    <aside className="hidden lg:block w-[20%] shrink-0 space-y-3">
+    <aside className="hidden lg:block w-[26%] shrink-0 space-y-4">
       {/* Question Grid */}
       <div className="bg-white rounded-md border border-gray-200 p-3">
         <div className="mb-3">
@@ -41,10 +45,12 @@ export default function QuestionGrid({
           </p>
         </div>
 
-        <div className="grid grid-cols-8 gap-2">
+        <div className="grid grid-cols-6 gap-3">
           {questions.map((q, idx) => {
             const isAnswered = !!userAnswers[q.id];
-            const isCurrentPage = Math.floor(idx / questionsPerPage) === currentPage;
+            const questionPage = Math.floor(idx / questionsPerPage);
+            const isOnCurrentPage = questionPage === currentPage;
+            const isActive = activeQuestionId ? activeQuestionId === q.id : isOnCurrentPage;
             const isFlagged = flaggedQuestions.has(q.id);
 
             return (
@@ -53,9 +59,12 @@ export default function QuestionGrid({
                 title={isFlagged ? "Đã gắn cờ" : isAnswered ? "Đã trả lời" : "Chưa trả lời"}
               >
                 <button
-                  onClick={() => onPageChange(Math.floor(idx / questionsPerPage))}
-                  className={`relative w-8 h-8 rounded-md flex items-center justify-center text-[11px] font-bold transition-all shadow-sm ${
-                    isCurrentPage ? "ring-2 ring-indigo-500 ring-offset-2 z-10" : ""
+                  onClick={() => {
+                    onPageChange(questionPage);
+                    if (onSelectQuestion) onSelectQuestion(q.id);
+                  }}
+                  className={`relative w-10 h-10 rounded-lg flex items-center justify-center text-[12px] font-bold transition-all shadow-sm ${
+                    isActive ? "ring-2 ring-indigo-500 ring-offset-2 z-10" : ""
                   } ${
                     isAnswered
                       ? "bg-blue-600 text-white border border-blue-700 hover:bg-blue-700"

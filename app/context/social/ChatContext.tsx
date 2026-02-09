@@ -1,38 +1,43 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { usePathname } from "next/navigation";
+import React, { createContext, useContext, useMemo, useCallback, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { message as antMessage } from "antd";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
-import {
-    getChatRooms,
-    ChatRoomType,
-    createChatRoom,
-    deleteConversation as deleteConversationApi,
-} from "@/lib/api/chat-room";
-import {
-    getMessages,
-    sendMessage as apiSendMessage,
-    markAsRead,
-} from "@/lib/api/chat-message";
+import { createChatRoom, ChatRoomType } from "@/lib/api/chat-room";
 import { Conversation, Message } from "@/app/components/social/types";
+import { joinChatRoom } from "@/lib/socket";
+
+// Stores
+import { useChatStore } from "@/lib/stores";
+
+// React Query hooks
 import {
-    chatSocketClient,
-    joinChatRoom,
-    leaveChatRoom,
-    onMessageReceived,
-    onMessageRead,
-} from "@/lib/socket";
-import { useSocialProfile } from "./SocialProfileContext";
+    useConversationsQuery,
+    useMessagesQuery,
+    useSendMessageMutation,
+    useMarkAsReadMutation,
+    useDeleteConversationMutation,
+    conversationKeys,
+    messageKeys,
+} from "@/lib/queries";
+
+// Socket integration
+import { useChatSocketIntegration } from "@/lib/hooks/useChatSocketIntegration";
 
 interface ChatContextType {
+    // Data from React Query
     conversations: Conversation[];
-    activeConversationId: string | null;
     messages: Message[];
-    loadingMessages: boolean;
-    loadingConversations: boolean;
     groupCount: number;
     lastReadMessageIds: Record<string, string | number>;
+
+    // UI State from Zustand
+    activeConversationId: string | null;
+    loadingMessages: boolean;
+    loadingConversations: boolean;
+
+    // Actions
     fetchConversations: () => Promise<void>;
     loadMessages: (roomId: string) => Promise<void>;
     sendMessage: (content: string, file?: File) => Promise<void>;
@@ -45,191 +50,71 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-    const pathname = usePathname();
-    const pathnameRef = useRef(pathname);
-    useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
+    const queryClient = useQueryClient();
 
-    const { currentUser } = useSocialProfile();
-    const currentUserRef = useRef(currentUser);
-    useEffect(() => { currentUserRef.current = currentUser; }, [currentUser]);
+    // Zustand store for UI state
+    const {
+        activeConversationId,
+        setActiveConversationId: storeSetActiveConversationId,
+        isLoadingMessages,
+        isLoadingConversations,
+        setLoadingMessages,
+        setLoadingConversations,
+    } = useChatStore();
 
-    const [conversations, setConversations] = useState<Conversation[]>([]);
-    const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [loadingMessages, setLoadingMessages] = useState(false);
-    const [loadingConversations, setLoadingConversations] = useState(true);
-    const [groupCount, setGroupCount] = useState(0);
-    const [lastReadMessageIds, setLastReadMessageIds] = useState<Record<string, string | number>>({});
+    // React Query for server state
+    const conversationsQuery = useConversationsQuery();
+    const messagesQuery = useMessagesQuery(activeConversationId);
 
-    const activeConversationIdRef = useRef(activeConversationId);
-    const skipAutoLoadMessagesRef = useRef(false);
-    const processedMessageIdsRef = useRef(new Set<string>());
-    const fetchConversationsRef = useRef<() => Promise<void>>(() => Promise.resolve());
+    // Mutations
+    const sendMessageMutation = useSendMessageMutation();
+    const markAsReadMutation = useMarkAsReadMutation();
+    const deleteConversationMutation = useDeleteConversationMutation();
 
-    const CONVERSATIONS_LIMIT = 100;
-    const MESSAGES_LIMIT = 50;
-    const MAX_PROCESSED_IDS = 1000;
+    // Socket integration
+    useChatSocketIntegration();
+
+    // Extract data from queries
+    const conversations = conversationsQuery.data?.conversations ?? [];
+    const groupCount = conversationsQuery.data?.groupCount ?? 0;
+    const lastReadMessageIds = conversationsQuery.data?.lastReadMessageIds ?? {};
+    const messages = messagesQuery.data ?? [];
+
+    // Sync loading states
+    useEffect(() => {
+        setLoadingConversations(conversationsQuery.isLoading);
+    }, [conversationsQuery.isLoading, setLoadingConversations]);
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            if (processedMessageIdsRef.current.size > MAX_PROCESSED_IDS) {
-                const ids = Array.from(processedMessageIdsRef.current);
-                processedMessageIdsRef.current = new Set(ids.slice(-500));
-            }
-        }, 60000);
-        return () => clearInterval(interval);
-    }, []);
+        setLoadingMessages(messagesQuery.isLoading);
+    }, [messagesQuery.isLoading, setLoadingMessages]);
 
+    // Actions
     const fetchConversations = useCallback(async () => {
-        const userId = getUserIdFromCookie();
-        if (!userId) return;
-
-        try {
-            const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
-            if (isNaN(userIdNumber)) return;
-
-            const result = await getChatRooms({ userId: userIdNumber, limit: CONVERSATIONS_LIMIT });
-
-            const newLastReadMap: Record<string, string | number> = {};
-
-            const mappedConversations: Conversation[] = result.data.map((room) => {
-                const isOwnLastMessage = String(room.last_message?.sender_id) === String(userIdNumber);
-                const lastContent = room.last_message?.content;
-
-                if (room.room_type === ChatRoomType.DIRECT) {
-                    const partnerMember = (room.members || []).find(
-                        (m: any) => String(m.user_id) !== String(userIdNumber)
-                    );
-                    if (partnerMember && partnerMember.last_read_message_id) {
-                        newLastReadMap[String(room.room_id)] = partnerMember.last_read_message_id;
-                    }
-                }
-
-                return {
-                    id: String(room.room_id),
-                    name: room.name || (room?.members || []).find((m: any) => String(m.user_id) !== String(userIdNumber))?.user?.fullname || "Cuộc trò chuyện",
-                    avatar: room.room_type === ChatRoomType.DIRECT
-                        ? (room?.members || []).find((m: any) => String(m.user_id) !== String(userIdNumber))?.user?.avatar
-                        : undefined,
-                    lastMessage: lastContent ? (isOwnLastMessage ? `Bạn: ${lastContent}` : lastContent) : "Bắt đầu cuộc trò chuyện",
-                    time: room.last_message?.created_at ? new Date(room.last_message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "",
-                    unread: room.unread_count || 0,
-                    isGroup: room.room_type === ChatRoomType.GROUP,
-                    memberIds: (room.members || []).map((m: any) => m.user_id),
-                    isEmpty: !room.last_message,
-                };
-            });
-
-            setConversations((prev) => {
-                const activeInPrev = prev.find((c) => String(c.id) === String(activeConversationIdRef.current));
-                const activeInMapped = mappedConversations.find((c) => String(c.id) === String(activeConversationIdRef.current));
-                if (activeInPrev && !activeInMapped) {
-                    return [activeInPrev, ...mappedConversations];
-                }
-                return mappedConversations;
-            });
-
-            const groups = result.data.filter((room) => room.room_type === ChatRoomType.GROUP);
-            setGroupCount(groups.length);
-            setLastReadMessageIds((prev) => ({ ...prev, ...newLastReadMap }));
-        } catch (error) {
-            console.error("Error fetching conversations:", error);
-        } finally {
-            setLoadingConversations(false);
-        }
-    }, []);
-
-    // Sync ref
-    useEffect(() => {
-        fetchConversationsRef.current = fetchConversations;
-    }, [fetchConversations]);
+        await conversationsQuery.refetch();
+    }, [conversationsQuery]);
 
     const loadMessages = useCallback(async (roomId: string) => {
-        const userId = getUserIdFromCookie();
-        if (!userId) return;
-
-        const currentRoomIdRef = roomId;
-        setLoadingMessages(true);
-        setMessages([]);
-
-        try {
-            const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
-            const roomIdNumber = parseInt(String(roomId), 10);
-            if (isNaN(roomIdNumber)) {
-                setMessages([]);
-                setLoadingMessages(false);
-                return;
-            }
-
-            await markAsRead(userIdNumber, roomIdNumber);
-
-            const result = await getMessages({
-                userId: userIdNumber,
-                roomId: roomIdNumber,
-                limit: MESSAGES_LIMIT,
-            });
-
-            if (currentRoomIdRef === roomId) {
-                const mappedMessages: Message[] = result.data.map((msg: any) => ({
-                    id: String(msg.message_id),
-                    sender: msg.sender?.fullname || msg.sender?.username || "Unknown",
-                    senderAvatar: msg.sender?.avatar,
-                    content: (msg.content || "").trim(),
-                    time: new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                    isOwn: String(msg.sender_id) === String(userIdNumber),
-                    fileAttachment: msg.fileAttachment,
-                }));
-
-                setMessages(mappedMessages);
-
-                setConversations((prev) =>
-                    prev.map((c) => String(c.id) === String(roomId) ? { ...c, unread: 0 } : c)
-                );
-
-                fetchConversationsRef.current();
-            }
-        } catch (error: any) {
-            if (error.name !== 'AbortError') {
-                console.error("Error loading messages:", error);
-            }
-        } finally {
-            if (currentRoomIdRef === roomId) {
-                setLoadingMessages(false);
-            }
-        }
-    }, []);
+        // Set active conversation, which triggers useMessagesQuery
+        storeSetActiveConversationId(roomId);
+    }, [storeSetActiveConversationId]);
 
     const sendMessage = useCallback(async (content: string, file?: File) => {
-        const userId = getUserIdFromCookie();
-        if (!userId || !activeConversationId) return;
+        if (!activeConversationId) return;
 
-        const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
-        const trimmedContent = content.trim();
+        let roomId = activeConversationId;
 
-        // Generate temp ID for optimistic update
-        const tempMessageId = `temp_msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // Handle temp conversation (new chat)
+        if (roomId.startsWith("temp_")) {
+            const friendIdStr = roomId.split("_")[1];
+            const friendId = parseInt(friendIdStr, 10);
 
-        // Optimistic message update - add message immediately
-        const optimisticMessage: Message = {
-            id: tempMessageId,
-            sender: "You",
-            senderAvatar: undefined,
-            content: trimmedContent,
-            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            isOwn: true,
-            fileAttachment: undefined,
-        };
+            const userId = getUserIdFromCookie();
+            const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
 
-        setMessages((prev) => [...prev, optimisticMessage]);
+            if (!userIdNumber) return;
 
-        try {
-            let roomIdNum: number;
-            let currentRoomId = activeConversationId;
-
-            if (currentRoomId.startsWith("temp_")) {
-                const friendIdStr = currentRoomId.split("_")[1];
-                const friendId = parseInt(friendIdStr, 10);
-
+            try {
                 const room = await createChatRoom({
                     userId: userIdNumber,
                     room_type: ChatRoomType.DIRECT,
@@ -238,273 +123,107 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
                 const createdRoomId = room?.room_id || (room as any)?.id || (room as any)?.data?.room_id || (room as any)?.data?.id;
 
-                if (!createdRoomId) {
-                    throw new Error("Chat creation failed");
-                }
+                if (!createdRoomId) throw new Error("Chat creation failed");
 
-                roomIdNum = createdRoomId;
-                joinChatRoom(roomIdNum);
-
-                const realIdStr = String(roomIdNum);
-                skipAutoLoadMessagesRef.current = true;
-                setActiveConversationId(realIdStr);
-
-                setConversations((prev) => {
-                    const tempIndex = prev.findIndex((c) => c.id === currentRoomId);
-                    if (tempIndex !== -1) {
-                        const newArr = [...prev];
-                        newArr[tempIndex] = { ...newArr[tempIndex], id: realIdStr };
-                        return newArr;
-                    }
-                    return prev;
-                });
-                currentRoomId = realIdStr;
-            } else {
-                roomIdNum = Number(currentRoomId);
+                roomId = String(createdRoomId);
+                joinChatRoom(Number(roomId));
+                storeSetActiveConversationId(roomId);
+            } catch (error) {
+                antMessage.error("Không thể tạo cuộc trò chuyện");
+                return;
             }
+        }
 
-            if (isNaN(roomIdNum)) throw new Error("Invalid Room ID");
-
-            const response = await apiSendMessage({
-                sender_id: userIdNumber,
-                room_id: roomIdNum,
-                content: trimmedContent,
-            });
-
-            // Update temp message with real ID from server to prevent socket duplication
-            const realMessageId = String(response.message_id);
-            setMessages((prev) =>
-                prev.map((msg) =>
-                    msg.id === tempMessageId
-                        ? { ...msg, id: realMessageId, time: new Date(response.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }
-                        : msg
-                )
-            );
-
-            setConversations((prev) => {
-                const newArr = [...prev];
-                const idx = newArr.findIndex((c) => String(c.id) === String(currentRoomId));
-                if (idx !== -1) {
-                    const updated = { ...newArr[idx] };
-                    updated.lastMessage = `Bạn: ${trimmedContent}`;
-                    updated.time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                    updated.unread = 0;
-                    updated.isEmpty = false;
-                    newArr.splice(idx, 1);
-                    return [updated, ...newArr];
-                }
-                return prev;
-            });
-
-            fetchConversationsRef.current();
-
+        try {
+            await sendMessageMutation.mutateAsync({ roomId, content });
         } catch (error: any) {
-            console.error("Error sending message:", error);
-            // Rollback: Remove the optimistic message on error
-            setMessages((prev) => prev.filter((m) => m.id !== tempMessageId));
             antMessage.error(error.message || "Gửi tin nhắn thất bại");
         }
-    }, [activeConversationId]);
+    }, [activeConversationId, sendMessageMutation, storeSetActiveConversationId]);
 
-    const startChat = useCallback(async (friendId: string) => {
-        const userId = getUserIdFromCookie();
-        if (!userId) return null;
+    const startChat = useCallback(async (friendId: string): Promise<string | null> => {
+        const friendIdStr = String(friendId);
 
-        try {
-            const friendIdStr = String(friendId);
-            const existingRoom = conversations.find(
-                (c) => !c.isGroup && c.memberIds?.length === 2 && c.memberIds.some((id) => String(id) === friendIdStr)
-            );
+        // Check existing conversation
+        const existingRoom = conversations.find(
+            (c) => !c.isGroup && c.memberIds?.length === 2 && c.memberIds.some((id) => String(id) === friendIdStr)
+        );
 
-            if (existingRoom) {
-                setActiveConversationId(String(existingRoom.id));
-                return existingRoom.id;
-            }
-
-            const tempId = `temp_${friendId}`;
-            setActiveConversationId(tempId);
-            return tempId;
-
-        } catch (error) {
-            console.error("Error starting chat", error);
+        if (existingRoom) {
+            storeSetActiveConversationId(String(existingRoom.id));
+            return existingRoom.id;
         }
-        return null;
-    }, [conversations]);
 
-    const markConversationAsRead = async (roomId: string) => {
-        const userId = getUserIdFromCookie();
-        const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
-        const roomIdNumber = parseInt(roomId, 10);
+        // Create temp conversation
+        const tempId = `temp_${friendId}`;
+        storeSetActiveConversationId(tempId);
+        return tempId;
+    }, [conversations, storeSetActiveConversationId]);
 
-        if (!userIdNumber || isNaN(roomIdNumber)) return;
-
-        setConversations((prev) => prev.map((c) => String(c.id) === String(roomId) ? { ...c, unread: 0 } : c));
-        await markAsRead(userIdNumber, roomIdNumber);
-    };
-
-    const deleteConversationHandler = async (roomId: string) => {
-        try {
-            const userId = getUserIdFromCookie();
-            const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
-            if (!userIdNumber) return;
-
-            setConversations((prev) => prev.filter((c) => c.id !== roomId));
-            if (activeConversationIdRef.current === roomId) {
-                setActiveConversationId(null);
-            }
-            await deleteConversationApi(userIdNumber as number, roomId); // Force number cast valid logic
-        } catch (error) {
-            console.error("Delete conversation failed", error);
-            fetchConversations();
-        }
-    };
-
-    // Socket Listeners
-    useEffect(() => {
-        activeConversationIdRef.current = activeConversationId;
-        const roomId = activeConversationId;
-        if (roomId && !roomId.startsWith("temp_")) {
-            const roomIdNum = parseInt(roomId, 10);
-            if (!isNaN(roomIdNum)) {
-                joinChatRoom(roomIdNum);
-                if (!skipAutoLoadMessagesRef.current) {
-                    setMessages([]);
-                    loadMessages(roomId);
-                } else {
-                    skipAutoLoadMessagesRef.current = false;
-                }
-            }
+    const setActiveConversationId = useCallback((idOrUpdater: React.SetStateAction<string | null>) => {
+        if (typeof idOrUpdater === "function") {
+            const currentId = useChatStore.getState().activeConversationId;
+            const newId = idOrUpdater(currentId);
+            storeSetActiveConversationId(newId);
         } else {
-            setMessages([]);
+            storeSetActiveConversationId(idOrUpdater);
         }
+    }, [storeSetActiveConversationId]);
 
-        return () => {
-            if (roomId && !roomId.startsWith("temp_")) {
-                const roomIdNum = parseInt(roomId, 10);
-                if (!isNaN(roomIdNum)) leaveChatRoom(roomIdNum);
+    const markConversationAsRead = useCallback(async (roomId: string) => {
+        await markAsReadMutation.mutateAsync({ roomId });
+    }, [markAsReadMutation]);
+
+    const deleteConversation = useCallback(async (roomId: string) => {
+        try {
+            await deleteConversationMutation.mutateAsync({ roomId });
+
+            if (activeConversationId === roomId) {
+                storeSetActiveConversationId(null);
             }
-        };
-    }, [activeConversationId, loadMessages]);
-
-    useEffect(() => {
-        chatSocketClient.connect();
-
-        const unsubscribeConnection = chatSocketClient.onConnectionChange((isConnected) => {
-            if (isConnected) {
-                // Sync on reconnect: rejoin room and fetch latest data
-                if (activeConversationIdRef.current) {
-                    const roomIdNum = parseInt(activeConversationIdRef.current, 10);
-                    if (!isNaN(roomIdNum)) joinChatRoom(roomIdNum);
-                }
-                // Fetch latest conversations to sync any missed updates
-                fetchConversationsRef.current();
-            }
-        });
-
-        const unsubscribeMessage = onMessageReceived((payload) => {
-            const msg = payload.data || payload;
-            const msgId = String(msg.message_id || "");
-            if (msgId && processedMessageIdsRef.current.has(msgId)) return;
-            if (msgId) processedMessageIdsRef.current.add(msgId);
-
-            const currentActiveId = activeConversationIdRef.current;
-            const userId = getUserIdFromCookie();
-            const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
-
-            setConversations((prev) => {
-                const existingIndex = prev.findIndex((c) => c.id === String(msg.room_id));
-                let newConv = existingIndex !== -1 ? { ...prev[existingIndex] } : null;
-
-                if (!newConv) {
-                    fetchConversationsRef.current();
-                    return prev;
-                }
-
-                const isOwn = String(msg.sender_id) === String(userIdNumber);
-                newConv.lastMessage = isOwn ? `Bạn: ${msg.content}` : msg.content;
-                newConv.time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                if (!isOwn) newConv.unread = (newConv.unread || 0) + 1;
-
-                const others = prev.filter((_, i) => i !== existingIndex);
-                return [newConv, ...others];
-            });
-
-            if (String(msg.room_id) === String(currentActiveId)) {
-                const newMessage: Message = {
-                    id: String(msg.message_id || Date.now()),
-                    sender: msg.sender?.fullname || msg.sender?.username || "Unknown",
-                    senderAvatar: msg.sender?.avatar,
-                    content: (msg.content || "").trim(),
-                    time: new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                    isOwn: String(msg.sender_id) === String(userIdNumber),
-                    fileAttachment: msg.fileAttachment,
-                };
-
-                setMessages((prev) => {
-                    if (prev.some((m) => m.id === newMessage.id)) return prev;
-                    if (newMessage.isOwn) { // Optimistic dedupe
-                        const tempMatchIndex = prev.findIndex((m) => m.id.startsWith("temp_msg_") && m.content.trim() === newMessage.content.trim() && m.isOwn);
-                        if (tempMatchIndex !== -1) {
-                            const newArr = [...prev];
-                            newArr[tempMatchIndex] = newMessage;
-                            return newArr;
-                        }
-                    }
-                    return [...prev, newMessage];
-                });
-            }
-        });
-
-        const unsubscribeRead = onMessageRead((payload) => {
-            const data = (payload as any).data || payload;
-            const { room_id, user_id, message_id } = data;
-            const userId = getUserIdFromCookie();
-            const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
-
-            if (String(user_id) !== String(userIdNumber)) {
-                setLastReadMessageIds((prev) => ({ ...prev, [String(room_id)]: message_id }));
-            }
-        });
-
-        return () => {
-            unsubscribeConnection();
-            unsubscribeMessage();
-            unsubscribeRead();
-        };
-    }, []); // Global socket init
-
-    // Initial Fetch
-    useEffect(() => {
-        fetchConversations();
-    }, [fetchConversations]);
+        } catch (error) {
+            // Query will be invalidated on error, refetching fresh data
+            console.error("Delete conversation failed", error);
+        }
+    }, [deleteConversationMutation, activeConversationId, storeSetActiveConversationId]);
 
     const value = useMemo(() => ({
+        // Data
         conversations,
-        activeConversationId,
         messages,
-        loadingMessages,
-        loadingConversations,
         groupCount,
         lastReadMessageIds,
+
+        // UI State
+        activeConversationId,
+        loadingMessages: isLoadingMessages || messagesQuery.isLoading,
+        loadingConversations: isLoadingConversations || conversationsQuery.isLoading,
+
+        // Actions
         fetchConversations,
         loadMessages,
         sendMessage,
         startChat,
         setActiveConversationId,
         markConversationAsRead,
-        deleteConversation: deleteConversationHandler,
+        deleteConversation,
     }), [
         conversations,
-        activeConversationId,
         messages,
-        loadingMessages,
-        loadingConversations,
         groupCount,
         lastReadMessageIds,
+        activeConversationId,
+        isLoadingMessages,
+        isLoadingConversations,
+        messagesQuery.isLoading,
+        conversationsQuery.isLoading,
         fetchConversations,
         loadMessages,
         sendMessage,
-        startChat
+        startChat,
+        setActiveConversationId,
+        markConversationAsRead,
+        deleteConversation,
     ]);
 
     return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

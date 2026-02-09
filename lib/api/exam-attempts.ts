@@ -1,7 +1,7 @@
-import axios from "axios";
+import apiClient from "@/app/config/api";
 
-// AI Python Tool URL
-const AI_API_URL = process.env.NEXT_PUBLIC_FLASK_API_URL || "http://localhost:5000";
+// ✅ Use NestJS proxy for exam attempts with JWT authentication
+// Lưu ý: apiClient baseURL đã là `${API_ORIGIN}/api`, nên các endpoint ở đây CHỈ cần `/exams/...`
 
 export interface AttemptLog {
   attempt_id: string;
@@ -17,38 +17,37 @@ export const startExamAttempt = async (
   ragTestId: string,
   classId: number | string,
   studentId: number | string,
-  mode: "practice" | "official" = "practice"
+  mode: "practice" | "official" = "practice",
 ): Promise<AttemptLog> => {
   try {
-    const response = await axios.post(`${AI_API_URL}/api/exams/attempt/start`, {
+    // apiClient base is /api -> gọi tới /api/exams/attempt/start đúng với Swagger
+    const response = await apiClient.post("/exams/attempt/start", {
       rag_test_id: ragTestId,
       class_id: Number(classId),
       student_id: Number(studentId),
       mode,
     });
-    return response.data;
+    // Backend (Nest) luôn wrap: { status, message, data, ... }
+    return response.data.data as AttemptLog;
   } catch (error: any) {
-    if (axios.isAxiosError(error) && error.response) {
-      // Return backend error message
-      throw new Error(error.response.data?.error || "Lỗi khởi tạo bài thi");
-    }
-    console.error("Error starting exam attempt:", error);
-    throw new Error("Lỗi kết nối đến hệ thống thi");
+    // Return backend error message
+    throw new Error(error?.response?.data?.error || error?.message || "Lỗi khởi tạo bài thi");
   }
 };
 
 export const submitExamAttempt = async (
   attemptId: string,
   studentId: number | string,
-  answers: Record<string, string>
+  answers: Record<string, string>,
 ): Promise<{ score: number; max_score: number } | null> => {
   try {
-    const response = await axios.post(`${AI_API_URL}/api/exams/attempt/submit`, {
+    const response = await apiClient.post("/exams/attempt/submit", {
       attempt_id: attemptId,
       student_id: Number(studentId),
       answers,
     });
-    return response.data;
+    // Unwrap lớp data bên ngoài
+    return response.data.data;
   } catch (error) {
     console.error("Error submitting exam:", error);
     return null;
@@ -57,7 +56,7 @@ export const submitExamAttempt = async (
 
 export const logSecurityEvent = async (attemptId: string, eventType: string, details?: string): Promise<boolean> => {
   try {
-    await axios.post(`${AI_API_URL}/api/exams/security/log`, {
+    await apiClient.post("/exams/security/log", {
       attempt_id: attemptId,
       event_type: eventType,
       details,
@@ -92,8 +91,8 @@ export interface StudentAttempt {
 
 export const getTestAttempts = async (testId: string): Promise<StudentAttempt[]> => {
   try {
-    const response = await axios.get(`${AI_API_URL}/api/exams/test/${testId}/attempts`);
-    return response.data;
+    const response = await apiClient.get(`/exams/test/${testId}/attempts`);
+    return response.data.data;
   } catch (error) {
     console.error("Error fetching test attempts:", error);
     return [];

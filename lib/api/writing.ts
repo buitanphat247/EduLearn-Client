@@ -6,7 +6,7 @@ export interface WritingTopic {
 }
 
 export interface WritingTopicsResponse {
-  status: number; // HTTP status code (200 for success)
+  status: number | boolean;
   category: string;
   data: Record<string, WritingTopic[]>;
   message?: string;
@@ -22,17 +22,13 @@ export async function getWritingTopics(category?: "general" | "ielts" | "work"):
     const response = await apiClient.get<WritingTopicsResponse>("/writing-chat-bot/topics", {
       params,
     });
-    // Normalize response - handle both status code 200 and data structure
-    const data = response.data;
-    if (data && data.status === 200 && data.data) {
-      return {
-        status: data.status,
-        category: data.category || category || "",
-        data: data.data,
-        message: data.message,
-      };
+
+    // Normalize status: true -> 200 for UI compatibility
+    if (response.data && response.data.status === true) {
+      response.data.status = 200;
     }
-    return data;
+
+    return response.data;
   } catch (error: any) {
     throw new Error(error?.response?.data?.message || error?.message || "Không thể tải danh sách chủ đề");
   }
@@ -68,7 +64,13 @@ export interface WritingGenerateResponse {
  */
 export async function generateWritingContent(config: WritingGenerateConfig): Promise<WritingGenerateResponse> {
   try {
-    const response = await apiClient.post<WritingGenerateResponse>("/writing-chat-bot/generate", config);
+    const response = await apiClient.post<WritingGenerateResponse & { status?: any }>("/writing-chat-bot/generate", config);
+
+    // Normalize status if present in the wrapped response
+    if (response.data && (response.data as any).status === true) {
+      (response.data as any).status = 200;
+    }
+
     return response.data;
   } catch (error: any) {
     throw new Error(error?.response?.data?.message || error?.message || "Không thể tạo nội dung luyện viết");
@@ -93,7 +95,7 @@ export interface WritingHistoryItem {
 }
 
 export interface WritingHistoryResponse {
-  status: number;
+  status: number | boolean;
   message: string;
   data: {
     histories: WritingHistoryItem[];
@@ -124,6 +126,12 @@ export async function getWritingHistory(params: {
         order_desc: params.order_desc !== undefined ? params.order_desc : true,
       },
     });
+
+    // Normalize status: true -> 200
+    if (response.data && response.data.status === true) {
+      response.data.status = 200;
+    }
+
     return response.data;
   } catch (error: any) {
     throw new Error(error?.response?.data?.message || error?.message || "Không thể tải lịch sử luyện tập");
@@ -131,7 +139,7 @@ export async function getWritingHistory(params: {
 }
 
 export interface WritingHistoryByIdResponse {
-  status: number;
+  status: number | boolean;
   message: string;
   data: {
     id: number;
@@ -149,6 +157,12 @@ export interface WritingHistoryByIdResponse {
 export async function getWritingHistoryById(historyId: number): Promise<WritingHistoryByIdResponse> {
   try {
     const response = await apiClient.get<WritingHistoryByIdResponse>(`/writing-chat-bot/history/${historyId}`);
+
+    // Normalize status: true -> 200
+    if (response.data && response.data.status === true) {
+      response.data.status = 200;
+    }
+
     return response.data;
   } catch (error: any) {
     throw new Error(error?.response?.data?.message || error?.message || "Không thể tải thông tin lịch sử luyện tập");
@@ -156,7 +170,7 @@ export async function getWritingHistoryById(historyId: number): Promise<WritingH
 }
 
 export interface UpdateWritingHistoryIndexResponse {
-  status: number;
+  status: number | boolean;
   message: string;
   data: {
     current_index: number;
@@ -169,17 +183,17 @@ export interface UpdateWritingHistoryIndexResponse {
  */
 export async function updateWritingHistoryIndex(historyId: number, currentIndex: number): Promise<UpdateWritingHistoryIndexResponse> {
   try {
-    const response = await apiClient.put<UpdateWritingHistoryIndexResponse>(
-      `/writing-chat-bot/history/${historyId}/index`,
-      {
-        current_index: currentIndex,
-      }
-    );
+    const response = await apiClient.put<UpdateWritingHistoryIndexResponse>(`/writing-chat-bot/history/${historyId}/index`, {
+      current_index: currentIndex,
+    });
+
+    // Normalize status: true -> 200
+    if (response.data && response.data.status === true) {
+      response.data.status = 200;
+    }
+
     return response.data;
   } catch (error: any) {
-    throw new Error(
-      error?.response?.data?.message || error?.message || "Không thể cập nhật tiến độ bài luyện tập"
-    );
+    throw new Error(error?.response?.data?.message || error?.message || "Không thể cập nhật tiến độ bài luyện tập");
   }
 }
-

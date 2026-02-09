@@ -1,4 +1,7 @@
 import { cookies } from "next/headers";
+
+export const dynamic = "force-dynamic";
+
 import AdminLayoutClient from "./AdminLayoutClient";
 import { decryptCookie } from "@/lib/utils/server-cookie-decrypt";
 import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
@@ -17,7 +20,7 @@ async function getInitialUserData() {
       // Giải mã cookie
       const decryptedUser = decryptCookie(userCookie.value);
       const userData = JSON.parse(decryptedUser);
-      
+
       // Validate required fields
       if (!userData || typeof userData !== 'object') {
         console.error("Invalid user data structure");

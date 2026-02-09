@@ -1,9 +1,10 @@
 "use client";
 
+
 import { useState, useEffect } from "react";
 import { Form, Input, InputNumber, Button, Badge, Typography, message } from "antd";
 import { RobotOutlined, SettingOutlined } from "@ant-design/icons";
-import axios from "axios";
+import apiClient from "@/app/config/api";
 import { useParams, useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/api/users";
 import { classSocketClient } from "@/lib/socket/class-client";
@@ -41,7 +42,7 @@ export default function AIGenerationSection({ uploadedFile, onLoadingChange }: A
       hour: "2-digit",
       minute: "2-digit",
     });
-    return `AI Exam - ${dateStr} ${timeStr}`;
+    return `AI Exam - ${dateStr} ${timeStr} `;
   };
 
   const onFinish = async (values: any) => {
@@ -87,10 +88,11 @@ export default function AIGenerationSection({ uploadedFile, onLoadingChange }: A
       // KHÔNG gửi - để API dùng default values
       // is_published = false (mặc định từ API)
 
-      // URL của Python AI Tool - Sử dụng endpoint đúng theo API docs
-      const AI_API_URL = (process.env.NEXT_PUBLIC_FLASK_API_URL || "http://localhost:5000") + "/ai-exam/create_test";
+      // URL của Python AI Tool - Đã chuyển qua Proxy NestJS
+      // const AI_API_URL = (process.env.NEXT_PUBLIC_FLASK_API_URL || "http://localhost:5000") + "/ai-exam/create_test";
 
-      const response = await axios.post(AI_API_URL, formData, {
+      // Sử dụng apiClient để tự động đính kèm Token và gọi qua NestJS Proxy
+      const response = await apiClient.post("/ai/exam/create", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -104,7 +106,7 @@ export default function AIGenerationSection({ uploadedFile, onLoadingChange }: A
         classSocketClient.emit("exam_created", { class_id: classId, test_id: testId });
 
         // Chuyển hướng đến trang editor để chỉnh sửa nội dung AI vừa sinh
-        router.push(`/admin/classes/${classId}/examinate/ai_editor?testId=${testId}`);
+        router.push(`/ admin / classes / ${classId} /examinate/ai_editor ? testId = ${testId} `);
       }
     } catch (error: any) {
       console.error(error);

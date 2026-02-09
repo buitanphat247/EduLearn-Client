@@ -162,7 +162,8 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
       await signOut();
       localStorage.clear();
       if (savedTheme) localStorage.setItem("theme", savedTheme);
-      router.replace("/auth");
+      // ✅ Use push instead of replace for smoother navigation
+      router.push("/auth");
     }
   }, [router, theme]);
 

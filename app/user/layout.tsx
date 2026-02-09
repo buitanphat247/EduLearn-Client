@@ -1,4 +1,7 @@
 import { cookies } from "next/headers";
+
+export const dynamic = "force-dynamic";
+
 import UserLayoutClient from "./UserLayoutClient";
 import { decryptCookie } from "@/lib/utils/server-cookie-decrypt";
 import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
@@ -11,7 +14,7 @@ async function getInitialUserData() {
       console.error("Cookie store is undefined");
       return null;
     }
-    
+
     // Đọc cookie mới với tên đã đổi (_u)
     const userCookie = cookieStore.get("_u");
 
@@ -20,7 +23,7 @@ async function getInitialUserData() {
         // ✅ Giải mã cookie
         const decryptedUser = decryptCookie(userCookie.value);
         const userData = JSON.parse(decryptedUser);
-        
+
         // ✅ Validate decrypted data to prevent XSS
         if (typeof userData !== 'object' || userData === null) {
           console.error("Invalid user data format from cookie");
@@ -29,8 +32,8 @@ async function getInitialUserData() {
 
         // ✅ Sanitize và validate fields
         const username = typeof userData.username === 'string' ? userData.username : null;
-        const role_name = typeof userData.role_name === 'string' 
-          ? userData.role_name 
+        const role_name = typeof userData.role_name === 'string'
+          ? userData.role_name
           : (typeof userData.role?.role_name === 'string' ? userData.role.role_name : null);
         const avatar = typeof userData.avatar === 'string' ? userData.avatar : null;
 

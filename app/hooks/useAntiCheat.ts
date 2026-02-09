@@ -208,11 +208,14 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
         // @ts-ignore
         await document.documentElement.requestFullscreen({ navigationUI: "hide" });
       }
-      if ("keyboard" in navigator && "lock" in (navigator as any).keyboard) {
+      // ✅ FIX: Kiểm tra navigator.keyboard tồn tại và không phải null trước
+      const keyboard = (navigator as any).keyboard;
+      if (keyboard && typeof keyboard.lock === "function") {
         try {
-          await (navigator as any).keyboard.lock(["Escape"]);
+          await keyboard.lock(["Escape"]);
         } catch (e) {
-          console.error(e);
+          // Keyboard lock không được hỗ trợ hoặc bị từ chối - bỏ qua
+          console.warn("Keyboard lock not supported or denied:", e);
         }
       }
       toggleBlockingOverlaySecure(false);
@@ -227,8 +230,10 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
 
   const exitFullScreen = useCallback(async () => {
     try {
-      if ("keyboard" in navigator && "unlock" in (navigator as any).keyboard) {
-        (navigator as any).keyboard.unlock();
+      // ✅ FIX: Kiểm tra navigator.keyboard tồn tại và không phải null trước
+      const keyboard = (navigator as any).keyboard;
+      if (keyboard && typeof keyboard.unlock === "function") {
+        keyboard.unlock();
       }
       if (document.fullscreenElement) {
         await document.exitFullscreen();
@@ -322,17 +327,17 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
       // 2. Record formal violation EVERY incident (User wants 5 total = lock)
       recordViolation(type, `Cảnh báo vi phạm lần ${currentCount}`);
 
-      // 3. Show overlay immediately
+      // 3. Show overlay immediately (plain text, không dùng HTML inline để tránh lỗi hiển thị)
       let displayMsg = "";
       if (currentCount < 5) {
-        displayMsg = `Vui lòng QUAY LẠI bài thi ngay!<br/>
-                      <span style="font-size:18px; color:#ff4d4f; margin-top:20px; display:block; font-weight:bold;">
-                        CẢNH BÁO VI PHẠM LẦN: ${currentCount}/5
-                      </span>
-                      <p style="font-size:14px; color:#888; margin-top:10px;">(Hệ thống sẽ TỰ ĐỘNG KHÓA bài thi nếu bạn vi phạm đủ 5 lần)</p>`;
+        displayMsg =
+          `Vui lòng QUAY LẠI bài thi ngay!\n\n` +
+          `CẢNH BÁO VI PHẠM LẦN: ${currentCount}/5\n` +
+          `(Hệ thống sẽ TỰ ĐỘNG KHÓA bài thi nếu bạn vi phạm đủ 5 lần)`;
       } else {
-        displayMsg = `<span style="color:#ff4d4f; font-weight:bold;">BẠN ĐÃ VI PHẠM QUY CHẾ THI ĐỦ 5 LẦN.</span><br/>
-                      Bài thi đã bị BỊ KHÓA vĩnh viễn và hệ thống đã tự động nộp bài làm của bạn.`;
+        displayMsg =
+          `BẠN ĐÃ VI PHẠM QUY CHẾ THI ĐỦ 5 LẦN.\n` +
+          `Bài thi đã bị KHÓA vĩnh viễn và hệ thống đã tự động nộp bài làm của bạn.`;
       }
       toggleBlockingOverlaySecure(true, displayMsg);
     },
@@ -448,6 +453,62 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [enable, handleOutIncident, paused]);
+
+  // 5. Mouse Leave Detection - Giám sát con trỏ rời khỏi viewport
+  useEffect(() => {
+    if (!enable || paused) return;
+
+    let mouseOutTimeout: NodeJS.Timeout | null = null;
+    const MOUSE_OUT_DELAY_MS = 300; // Delay để tránh false positive
+
+    const handleMouseOut = (e: MouseEvent) => {
+      if (paused) return;
+
+      // Kiểm tra xem chuột có rời khỏi window không
+      // Khi chuột rời window, toElement/relatedTarget là null và
+      // clientX/clientY nằm ngoài viewport
+      const isLeavingWindow = e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight;
+
+      if (isLeavingWindow && e.relatedTarget === null) {
+        // Clear timeout trước đó nếu có
+        if (mouseOutTimeout) {
+          clearTimeout(mouseOutTimeout);
+        }
+
+        mouseOutTimeout = setTimeout(() => {
+          if (!paused) {
+            console.log("[Anti-Cheat] Mouse left viewport at:", { x: e.clientX, y: e.clientY });
+            recordViolationRef.current("mouse_leave", "Con trỏ chuột rời khỏi vùng làm bài");
+            message.warning({
+              content: "⚠️ Phát hiện con trỏ chuột rời khỏi vùng thi!",
+              duration: 3,
+              key: "mouse-leave-warning",
+            });
+          }
+        }, MOUSE_OUT_DELAY_MS);
+      }
+    };
+
+    const handleMouseEnter = () => {
+      // Hủy timeout nếu chuột quay lại
+      if (mouseOutTimeout) {
+        clearTimeout(mouseOutTimeout);
+        mouseOutTimeout = null;
+      }
+    };
+
+    // Sử dụng mouseout trên document và mouseover để cancel
+    document.addEventListener("mouseout", handleMouseOut);
+    document.addEventListener("mouseover", handleMouseEnter);
+
+    return () => {
+      if (mouseOutTimeout) {
+        clearTimeout(mouseOutTimeout);
+      }
+      document.removeEventListener("mouseout", handleMouseOut);
+      document.removeEventListener("mouseover", handleMouseEnter);
+    };
+  }, [enable, paused, message]);
 
   // FINAL CLEANUP: Ensure overlay is removed when component unmounts
   useEffect(() => {

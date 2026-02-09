@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useMemo } from "react";
 import { User } from "@/app/components/social/types";
+import { useSocialProfileStore } from "@/lib/stores/socialProfileStore";
 
 interface SocialProfileContextType {
     currentUser: User | null;
@@ -9,68 +10,14 @@ interface SocialProfileContextType {
     setIsSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
     isProfileOpen: boolean;
     setIsProfileOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    isAddFriendOpen: boolean; // Keep it here as it triggers from global UI usually
+    isAddFriendOpen: boolean;
     setIsAddFriendOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const SocialProfileContext = createContext<SocialProfileContextType | undefined>(undefined);
 
-// Helper for type guard
-interface UserData {
-    user_id?: number | string;
-    id?: number | string;
-    username?: string;
-    fullname?: string;
-    email?: string;
-    phone?: string;
-    avatar?: string;
-    role?: { role_name?: string };
-}
-
-function isValidUserData(data: any): data is UserData {
-    return (
-        data &&
-        typeof data === 'object' &&
-        (typeof data.user_id === 'number' || typeof data.user_id === 'string' ||
-            typeof data.id === 'number' || typeof data.id === 'string')
-    );
-}
-
 export function SocialProfileProvider({ children }: { children: React.ReactNode }) {
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isProfileOpen, setIsProfileOpen] = useState(false);
-    const [isAddFriendOpen, setIsAddFriendOpen] = useState(false);
-
-    useEffect(() => {
-        try {
-            const userStr = localStorage.getItem("user");
-            if (!userStr) return;
-
-            const user = JSON.parse(userStr);
-
-            if (!isValidUserData(user)) {
-                console.error("Invalid user data structure");
-                localStorage.removeItem("user");
-                return;
-            }
-
-            setCurrentUser({
-                id: user.user_id || user.id || '',
-                username: user.username || '',
-                fullname: user.fullname || '',
-                email: user.email,
-                phone: user.phone || null,
-                avatar: user.avatar || null,
-                role_id: (user as any).role_id,
-            });
-        } catch (e) {
-            console.error("Error parsing user from local storage", e);
-            localStorage.removeItem("user");
-        }
-    }, []);
-
-    const value = React.useMemo(() => ({
+    const {
         currentUser,
         isSettingsOpen,
         setIsSettingsOpen,
@@ -78,13 +25,68 @@ export function SocialProfileProvider({ children }: { children: React.ReactNode 
         setIsProfileOpen,
         isAddFriendOpen,
         setIsAddFriendOpen,
-    }), [currentUser, isSettingsOpen, isProfileOpen, isAddFriendOpen]);
+        hydrate,
+    } = useSocialProfileStore();
 
-    return (
-        <SocialProfileContext.Provider value={value}>
-            {children}
-        </SocialProfileContext.Provider>
+    // Hydrate from localStorage on mount
+    useEffect(() => {
+        hydrate();
+    }, [hydrate]);
+
+    // Create compatible setters for dispatch pattern
+    const setSettingsOpen = useMemo(
+        () =>
+            ((value: boolean | ((prev: boolean) => boolean)) => {
+                if (typeof value === "function") {
+                    const newValue = value(useSocialProfileStore.getState().isSettingsOpen);
+                    setIsSettingsOpen(newValue);
+                } else {
+                    setIsSettingsOpen(value);
+                }
+            }) as React.Dispatch<React.SetStateAction<boolean>>,
+        [setIsSettingsOpen]
     );
+
+    const setProfileOpen = useMemo(
+        () =>
+            ((value: boolean | ((prev: boolean) => boolean)) => {
+                if (typeof value === "function") {
+                    const newValue = value(useSocialProfileStore.getState().isProfileOpen);
+                    setIsProfileOpen(newValue);
+                } else {
+                    setIsProfileOpen(value);
+                }
+            }) as React.Dispatch<React.SetStateAction<boolean>>,
+        [setIsProfileOpen]
+    );
+
+    const setAddFriendOpen = useMemo(
+        () =>
+            ((value: boolean | ((prev: boolean) => boolean)) => {
+                if (typeof value === "function") {
+                    const newValue = value(useSocialProfileStore.getState().isAddFriendOpen);
+                    setIsAddFriendOpen(newValue);
+                } else {
+                    setIsAddFriendOpen(value);
+                }
+            }) as React.Dispatch<React.SetStateAction<boolean>>,
+        [setIsAddFriendOpen]
+    );
+
+    const value = useMemo(
+        () => ({
+            currentUser,
+            isSettingsOpen,
+            setIsSettingsOpen: setSettingsOpen,
+            isProfileOpen,
+            setIsProfileOpen: setProfileOpen,
+            isAddFriendOpen,
+            setIsAddFriendOpen: setAddFriendOpen,
+        }),
+        [currentUser, isSettingsOpen, setSettingsOpen, isProfileOpen, setProfileOpen, isAddFriendOpen, setAddFriendOpen]
+    );
+
+    return <SocialProfileContext.Provider value={value}>{children}</SocialProfileContext.Provider>;
 }
 
 export function useSocialProfile() {

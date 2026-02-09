@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { ConfigProvider, App, theme as antTheme } from "antd";
 import { ThemeProvider, useTheme, type Theme } from "@/app/context/ThemeContext";
 import ErrorBoundary from "@/app/error-boundary";
 import { WebVitalsTracker } from "@/app/components/common/WebVitalsTracker";
+import { QueryProvider } from "@/lib/providers/QueryProvider";
 
 function AntdConfigProvider({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme();
@@ -46,41 +46,26 @@ function AntdConfigProvider({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Providers Component với Error Boundary và Performance Monitoring
+ * Providers Component with Error Boundary, React Query, and Performance Monitoring
  * 
- * Features:
- * - Error Boundary: Catch errors trong providers
- * - Web Vitals Tracking: Monitor Core Web Vitals
- * - Performance Monitoring: Track provider render time
+ * Stack:
+ * - ErrorBoundary: Catch errors in providers
+ * - ThemeProvider: Theme context for light/dark mode
+ * - QueryProvider: React Query for server state management
+ * - AntdConfigProvider: Ant Design theming
+ * - WebVitalsTracker: Core Web Vitals monitoring
  */
 export function Providers({ children, theme }: { children: React.ReactNode; theme?: Theme }) {
-  const renderStartTime = useRef<number | null>(null);
-
-  useEffect(() => {
-    // Record render start time on mount
-    if (typeof window !== "undefined") {
-      renderStartTime.current = performance.now();
-    }
-
-    // Measure provider mount time after render
-    return () => {
-      if (typeof window !== "undefined" && renderStartTime.current !== null) {
-
-
-
-      }
-    };
-  }, []);
-
   return (
     <ErrorBoundary>
       <ThemeProvider initialTheme={theme}>
-        <AntdConfigProvider>
-          <WebVitalsTracker />
-          {children}
-        </AntdConfigProvider>
+        <QueryProvider>
+          <AntdConfigProvider>
+            <WebVitalsTracker />
+            {children}
+          </AntdConfigProvider>
+        </QueryProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
 }
-

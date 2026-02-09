@@ -1,17 +1,8 @@
-import axios, { AxiosInstance } from "axios";
+import apiClient from "@/app/config/api";
 
-// AI Python Tool URL
-const AI_API_URL = (process.env.NEXT_PUBLIC_FLASK_API_URL || "http://localhost:5000") + "/ai-exam";
-
-// Create dedicated axios instance for AI API to optimize bundle size
-// This prevents bundling unnecessary interceptors from main apiClient
-const aiApiClient: AxiosInstance = axios.create({
-  baseURL: AI_API_URL,
-  timeout: 60000, // 60 seconds for AI operations
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+// ✅ Use NestJS proxy instead of direct Python server calls
+// This ensures JWT authentication is handled automatically via apiClient interceptors
+// All AI exam endpoints are proxied through NestJS at /ai-exam/*
 
 export interface RagTestOverview {
   id: string;
@@ -37,6 +28,8 @@ export interface RagQuestion {
   explanation: string;
   score: number;
   order: number;
+  /** Ảnh đính kèm câu hỏi; nếu không có thì hiển thị ảnh mặc định */
+  imageUrl?: string;
 }
 
 export interface RagTestDetail extends RagTestOverview {
@@ -49,8 +42,8 @@ export const getRagTestsByClass = async (classId: string | number, studentId?: n
     const params = studentId ? `student_id=${studentId}` : "";
     const endpoint = isTeacher ? "teacher" : "published";
 
-    // Explicitly call specialized endpoints to ensure correct data (especially drafts for teachers)
-    const response = await aiApiClient.get(`/tests/class/${classId}/${endpoint}?${params}${params ? "&" : ""}_ts=${ts}`);
+    // ✅ Call through NestJS proxy with JWT auth
+    const response = await apiClient.get(`/ai-exam/tests/class/${classId}/${endpoint}?${params}${params ? "&" : ""}_ts=${ts}`);
     return response.data.data;
   } catch (error) {
     console.error("Error fetching RAG tests:", error);
@@ -61,7 +54,7 @@ export const getRagTestsByClass = async (classId: string | number, studentId?: n
 export const getRagTestDetail = async (testId: string, studentId?: number): Promise<RagTestDetail | null> => {
   try {
     const params = studentId ? `?student_id=${studentId}` : "";
-    const response = await aiApiClient.get(`/test/${testId}${params}`);
+    const response = await apiClient.get(`/ai-exam/test/${testId}${params}`);
     return response.data.data;
   } catch (error: any) {
     if (error.response?.status === 403) {
@@ -75,7 +68,7 @@ export const getRagTestDetail = async (testId: string, studentId?: number): Prom
 
 export const deleteRagTest = async (testId: string): Promise<boolean> => {
   try {
-    const response = await aiApiClient.delete(`/test/${testId}`);
+    const response = await apiClient.delete(`/ai-exam/test/${testId}`);
     return response.data.status === "success";
   } catch (error) {
     console.error("Error deleting RAG test:", error);
@@ -85,7 +78,7 @@ export const deleteRagTest = async (testId: string): Promise<boolean> => {
 
 export const deleteRagTestsByClass = async (classId: string | number): Promise<boolean> => {
   try {
-    const response = await aiApiClient.delete(`/tests/class/${classId}`);
+    const response = await apiClient.delete(`/ai-exam/tests/class/${classId}`);
     return response.data.status === "success";
   } catch (error) {
     console.error("Error deleting class RAG tests:", error);
@@ -106,7 +99,7 @@ export interface UpdateTestData {
 
 export const updateRagTest = async (testId: string, data: UpdateTestData): Promise<boolean> => {
   try {
-    const response = await aiApiClient.put(`/test/${testId}`, data, {
+    const response = await apiClient.put(`/ai-exam/test/${testId}`, data, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -120,8 +113,8 @@ export const updateRagTest = async (testId: string, data: UpdateTestData): Promi
 
 export const publishRagTest = async (testId: string, isPublished: boolean): Promise<boolean> => {
   try {
-    const response = await aiApiClient.post(
-      `/test/${testId}/publish`,
+    const response = await apiClient.post(
+      `/ai-exam/test/${testId}/publish`,
       { is_published: isPublished },
       {
         headers: {
@@ -148,7 +141,7 @@ export interface UpdateQuestionData {
 
 export const updateRagQuestion = async (questionId: string, data: UpdateQuestionData): Promise<boolean> => {
   try {
-    const response = await aiApiClient.put(`/question/${questionId}`, data, {
+    const response = await apiClient.put(`/ai-exam/question/${questionId}`, data, {
       headers: {
         "Content-Type": "application/json",
       },

@@ -29,6 +29,7 @@ import {
   type StudentSubmission,
 } from "@/lib/api/submissions";
 import { getUserIdFromCookie, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
+import { getMediaUrl } from "@/lib/utils/media";
 import { sanitizeForDisplay } from "@/lib/utils/sanitize";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -575,7 +576,7 @@ export default function SubmitExercisePage() {
                       {assignment.attachments.map(att => (
                         <a
                           key={att.attachment_id}
-                          href={`https://pub-3aaf3c9cd7694383ab5e47980be6dc67.r2.dev/${att.file_url}`}
+                          href={getMediaUrl(att.file_url)}
                           target="_blank"
                           rel="noreferrer"
                           className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-md transition-all group"

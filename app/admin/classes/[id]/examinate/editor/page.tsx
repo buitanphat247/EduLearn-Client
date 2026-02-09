@@ -8,6 +8,7 @@ import { PartData, QuestionItem, QuestionType, GeneralConfig, QuestionCard, getQ
 import { MathFieldInput } from "@/app/components/exams/editor/MathFieldInput";
 import { MATH_DATA } from "@/app/components/exams/editor/constants";
 import { stripBoldTags } from "@/app/components/exams/editor/utils";
+import { getMediaUrl } from "@/lib/utils/media";
 
 // Initial data - lazy load để tối ưu initial render
 const getInitialPartsData = (): PartData[] => [
@@ -148,7 +149,7 @@ const getInitialPartsData = (): PartData[] => [
           { key: "D", content: "5 ." },
         ],
         correct_answer: { A: false, B: false, C: false, D: false },
-        picture: "https://pub-3aaf3c9cd7694383ab5e47980be6dc67.r2.dev/image-maths/20260102_162121_508.jpeg",
+        picture: getMediaUrl("/image-maths/20260102_162121_508.jpeg"),
       },
     ],
   },
@@ -182,7 +183,7 @@ const getInitialPartsData = (): PartData[] => [
       {
         id: "3",
         question: "Cho hình bình hành [:$mathm15_1$]. Gọi [:$mathm15_2$] là giao điểm của [:$mathm15_3$] và [:$mathm15_4$] (Hình bên).",
-        picture: "https://pub-3aaf3c9cd7694383ab5e47980be6dc67.r2.dev/image-maths/20260102_162123_673.jpeg",
+        picture: getMediaUrl("/image-maths/20260102_162123_673.jpeg"),
         answers: [
           { key: "A", content: "[:$mathm15_5$] và [:$mathm15_6$] là hai vectơ đối nhau." },
           { key: "B", content: "[:$mathm15_7$] và [:$mathm15_8$] là hai vectơ đối nhau." },
@@ -217,7 +218,7 @@ const getInitialPartsData = (): PartData[] => [
         id: "2",
         question:
           "Để đo khoảng cách từ vị trí [:$mathm18_1$] đến vị trí [:$mathm18_2$] ở hai bên bờ hồ, bạn Hà tiến hành đo khoảng cách [:$mathm18_3$] và các góc [:$mathm18_4$]. Kết quả nhận được là: [:$mathm18_5$] và [:$mathm18_6$] (Hình bên). Khoảng cách từ vị trí [:$mathm18_7$] đến vị trí [:$mathm18_8$] là bao nhiêu mét (làm tròn kết quả đến hàng đơn vị của mét)?",
-        picture: "https://pub-3aaf3c9cd7694383ab5e47980be6dc67.r2.dev/image-maths/20260102_162125_437.jpeg",
+        picture: getMediaUrl("/image-maths/20260102_162125_437.jpeg"),
         answers: [{ key: "A", content: "31" }],
         correct_answer: { A: false },
       },

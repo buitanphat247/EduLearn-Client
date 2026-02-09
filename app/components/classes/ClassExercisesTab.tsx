@@ -8,6 +8,7 @@ import { SearchOutlined, PlusOutlined, MoreOutlined, FileOutlined, CalendarOutli
 import { IoBookOutline } from "react-icons/io5";
 import { getAssignmentsByClass, getAssignmentById, deleteAssignment, getAssignmentStudents, type AssignmentResponse, type AssignmentDetailResponse } from "@/lib/api/assignments";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { getMediaUrl } from "@/lib/utils/media";
 import { sanitizeForDisplay } from "@/lib/utils/sanitize";
 import type { ClassExercisesTabProps, Exercise } from "./types";
 
@@ -411,17 +412,12 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
       return;
     }
 
-    // Base URL for file storage
-    const baseUrl = "https://pub-3aaf3c9cd7694383ab5e47980be6dc67.r2.dev";
-
-    // Download each attachment
+    // Dùng proxy để tránh CORS khi fetch file từ R2
     for (const attachment of selectedAssignment.attachments) {
       try {
-        // Remove leading slash if present and combine with base URL
-        const filePath = attachment.file_url.startsWith("/") ? attachment.file_url.slice(1) : attachment.file_url;
-        const fileUrl = `${baseUrl}/${filePath}`;
+        const fileUrl = getMediaUrl(attachment.file_url);
 
-        // Fetch file as blob
+        // Fetch file as blob qua proxy same-origin
         const response = await fetch(fileUrl);
         if (!response.ok) {
           throw new Error(`Không thể tải file: ${attachment.file_name}`);
