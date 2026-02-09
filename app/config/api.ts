@@ -104,6 +104,11 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
+// ✅ DEBUG: Log API URL to verify environment config (Visible in Browser Console)
+if (typeof window !== "undefined") {
+  console.log("[API Config] Active Base URL:", getBaseURL());
+}
+
 // ✅ Auth cache with improved TTL và validation
 let cachedAuthHeader: string | null = null;
 let cachedAuthTimestamp = 0;
