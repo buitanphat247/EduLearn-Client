@@ -52,16 +52,7 @@ export default async function RootLayout({
         {/* PrefetchRoutes component sẽ prefetch routes dựa trên user context và pathname */}
 
         {/* Font Awesome - Load async để không block render */}
-        <link
-          rel="preload"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-          as="style"
-        />
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-          referrerPolicy="no-referrer"
-        />
+
         {/* ✅ Use Next.js Script component instead of dangerouslySetInnerHTML to prevent XSS */}
         <Script
           id="no-transitions-script"

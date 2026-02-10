@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Form, Input, Button, Checkbox, App, ConfigProvider, theme, Select } from "antd";
-import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
+import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -357,7 +357,7 @@ export default function AuthPage() {
                       </Form.Item>
 
                       <Form.Item name="phone" rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }, { pattern: /^[0-9]{10,11}$/, message: "SĐT không hợp lệ!" }]} className="mb-0">
-                        <Input placeholder="Số điện thoại" size="large" prefix={<i className="fas fa-phone text-slate-400 dark:text-slate-500 text-sm mr-2" />} className="bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50 hover:bg-white dark:hover:bg-slate-900/80 transition-all font-medium" />
+                        <Input placeholder="Số điện thoại" size="large" prefix={<PhoneOutlined className="text-slate-400 dark:text-slate-500 mr-2" />} className="bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700/50 hover:bg-white dark:hover:bg-slate-900/80 transition-all font-medium" />
                       </Form.Item>
 
                       <Form.Item name="role_id" initialValue={3} className="mb-0 col-span-1 md:col-span-2">

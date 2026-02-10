@@ -34,8 +34,8 @@ export default function Testimonials() {
   return (
     <section className="py-24 bg-slate-50 dark:bg-[#0f172a] relative overflow-hidden transition-colors duration-300">
       {/* Grid Pattern Background */}
-      <div className="absolute inset-0 opacity-[0.05] dark:opacity-[0.03]" 
-           style={{ backgroundImage: 'radial-gradient(#3b82f6 1.5px, transparent 1.5px)', backgroundSize: '32px 32px' }}>
+      <div className="absolute inset-0 opacity-[0.05] dark:opacity-[0.03]"
+        style={{ backgroundImage: 'radial-gradient(#3b82f6 1.5px, transparent 1.5px)', backgroundSize: '32px 32px' }}>
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
@@ -49,26 +49,26 @@ export default function Testimonials() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.map((item) => (
-             <div key={item.id} className="bg-white dark:bg-[#1e293b] rounded-3xl p-8 border border-slate-200 dark:border-slate-700/50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 relative group">
-                {/* Decorative Quote */}
-                <div className="absolute top-6 right-8 text-slate-200 dark:text-slate-700/50 group-hover:text-blue-100 dark:group-hover:text-blue-500/20 transition-colors duration-300">
-                   <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H15.017C14.4647 8 14.017 8.44772 14.017 9V11C14.017 11.5523 13.5693 12 13.017 12H12.017V5H22.017V15C22.017 18.3137 19.3307 21 16.017 21H14.017ZM5.0166 21L5.0166 18C5.0166 16.8954 5.91203 16 7.0166 16H10.0166C10.5689 16 11.0166 15.5523 11.0166 15V9C11.0166 8.44772 10.5689 8 10.0166 8H6.0166C5.46432 8 5.0166 8.44772 5.0166 9V11C5.0166 11.5523 4.56889 12 4.0166 12H3.0166V5H13.0166V15C13.0166 18.3137 10.3303 21 7.0166 21H5.0166Z" /></svg>
-                </div>
+            <div key={item.id} className="bg-white dark:bg-[#1e293b] rounded-3xl p-8 border border-slate-200 dark:border-slate-700/50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 relative group">
+              {/* Decorative Quote */}
+              <div className="absolute top-6 right-8 text-slate-200 dark:text-slate-700/50 group-hover:text-blue-100 dark:group-hover:text-blue-500/20 transition-colors duration-300">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H15.017C14.4647 8 14.017 8.44772 14.017 9V11C14.017 11.5523 13.5693 12 13.017 12H12.017V5H22.017V15C22.017 18.3137 19.3307 21 16.017 21H14.017ZM5.0166 21L5.0166 18C5.0166 16.8954 5.91203 16 7.0166 16H10.0166C10.5689 16 11.0166 15.5523 11.0166 15V9C11.0166 8.44772 10.5689 8 10.0166 8H6.0166C5.46432 8 5.0166 8.44772 5.0166 9V11C5.0166 11.5523 4.56889 12 4.0166 12H3.0166V5H13.0166V15C13.0166 18.3137 10.3303 21 7.0166 21H5.0166Z" /></svg>
+              </div>
 
-                <div className="flex items-center gap-4 mb-6">
-                   <div className="p-1 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full">
-                      <Avatar size={56} className="border-4 border-white dark:border-[#1e293b]" style={{ backgroundColor: item.color, verticalAlign: 'middle' }}>
-                        {item.avatar}
-                      </Avatar>
-                   </div>
-                   <div>
-                      <h4 className="text-slate-900 dark:text-white font-bold text-lg">{item.name}</h4>
-                      <p className="text-blue-600 dark:text-blue-400 text-sm font-medium">{item.role}</p>
-                   </div>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-1 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full">
+                  <Avatar size={56} className="border-4 border-white dark:border-[#1e293b]" style={{ backgroundColor: item.color, verticalAlign: 'middle' }}>
+                    {item.avatar}
+                  </Avatar>
                 </div>
-                
-                <p className="text-slate-600 dark:text-slate-300 leading-relaxed italic relative z-10">"{item.content}"</p>
-             </div>
+                <div>
+                  <h3 className="text-slate-900 dark:text-white font-bold text-lg">{item.name}</h3>
+                  <p className="text-blue-600 dark:text-blue-400 text-sm font-medium">{item.role}</p>
+                </div>
+              </div>
+
+              <p className="text-slate-600 dark:text-slate-300 leading-relaxed italic relative z-10">"{item.content}"</p>
+            </div>
           ))}
         </div>
       </div>
