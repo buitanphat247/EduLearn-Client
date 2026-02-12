@@ -75,15 +75,25 @@ class NotificationSocketClient {
   }
 
   /**
-   * Get JWT token from cookie _at
+   * Get JWT token from cookie or localStorage
    */
-  private getToken(): string | null {
+    private getToken(): string | null {
     if (typeof window === "undefined") return null;
-
     try {
       const { getCookie } = require("@/lib/utils/cookies");
-      const token = getCookie("_at");
+      const token = getCookie("_at") || getCookie("access_token") || getCookie("token");
       if (token) return token;
+      return localStorage.getItem("token") || localStorage.getItem("access_token");
+    } catch (e) {
+      return null;
+    }
+  } = require("@/lib/utils/cookies");
+      // Try multiple cookie names
+      const token = getCookie("_at") || getCookie("access_token") || getCookie("token");
+      if (token) return token;
+
+      // Fallback to localStorage as last resort
+      return localStorage.getItem("token") || localStorage.getItem("access_token");
     } catch (e) {
       console.error("Error getting token:", e);
     }

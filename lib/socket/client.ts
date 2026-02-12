@@ -92,6 +92,18 @@ class SocketClient {
   /**
    * Connect to socket server
    */
+    private getToken(): string | null {
+    if (typeof window === "undefined") return null;
+    try {
+      const { getCookie } = require("@/lib/utils/cookies");
+      const token = getCookie("_at") || getCookie("access_token") || getCookie("token");
+      if (token) return token;
+      return localStorage.getItem("token") || localStorage.getItem("access_token");
+    } catch (e) {
+      return null;
+    }
+  }
+
   connect(): SocketInstance | null {
     // Return existing connection if available
     if (this.socket?.connected) {
@@ -175,7 +187,19 @@ class SocketClient {
   /**
    * Disconnect socket
    */
-  disconnect(): void {
+  dis  private getToken(): string | null {
+    if (typeof window === "undefined") return null;
+    try {
+      const { getCookie } = require("@/lib/utils/cookies");
+      const token = getCookie("_at") || getCookie("access_token") || getCookie("token");
+      if (token) return token;
+      return localStorage.getItem("token") || localStorage.getItem("access_token");
+    } catch (e) {
+      return null;
+    }
+  }
+
+  connect(): void {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
