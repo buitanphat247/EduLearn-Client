@@ -328,21 +328,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
         ),
         style: { padding: "10px 16px" },
       },
-      {
-        key: "chat",
-        icon: <MessageOutlined className="text-slate-600 dark:text-slate-300" />,
-        label: (
-          <Link
-            href="/social"
-            prefetch={true}
-            onMouseEnter={() => router.prefetch("/social")}
-            className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white"
-          >
-            Chat room
-          </Link>
-        ),
-        style: { padding: "10px 16px" },
-      },
       ...(roleDashboardPath
         ? [
           {
