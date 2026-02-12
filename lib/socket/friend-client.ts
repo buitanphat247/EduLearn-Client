@@ -80,9 +80,9 @@ class FriendSocketClient {
   }
 
   /**
-   * Get JWT token from cookie _at
+   * Get JWT token from cookie or localStorage
    */
-    private getToken(): string | null {
+  private getToken(): string | null {
     if (typeof window === "undefined") return null;
     try {
       const { getCookie } = require("@/lib/utils/cookies");
@@ -92,13 +92,6 @@ class FriendSocketClient {
     } catch (e) {
       return null;
     }
-  } = require("@/lib/utils/cookies");
-      const token = getCookie("_at");
-      if (token) return token;
-    } catch (e) {
-      if (isDev) console.error("[FriendSocket] Error getting token:", e);
-    }
-    return null;
   }
 
   /**

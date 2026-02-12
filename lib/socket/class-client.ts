@@ -77,9 +77,9 @@ class ClassSocketClient {
   }
 
   /**
-   * Get JWT token from cookie _at
+   * Get JWT token from cookie or localStorage
    */
-    private getToken(): string | null {
+  private getToken(): string | null {
     if (typeof window === "undefined") return null;
     try {
       const { getCookie } = require("@/lib/utils/cookies");
@@ -89,13 +89,6 @@ class ClassSocketClient {
     } catch (e) {
       return null;
     }
-  } = require("@/lib/utils/cookies");
-      const token = getCookie("_at");
-      if (token) return token;
-    } catch (e) {
-      if (isDev) console.error("[ClassSocket] Error getting token:", e);
-    }
-    return null;
   }
 
   connect(): SocketInstance | null {

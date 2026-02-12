@@ -92,7 +92,7 @@ class SocketClient {
   /**
    * Connect to socket server
    */
-    private getToken(): string | null {
+  private getToken(): string | null {
     if (typeof window === "undefined") return null;
     try {
       const { getCookie } = require("@/lib/utils/cookies");
@@ -187,19 +187,7 @@ class SocketClient {
   /**
    * Disconnect socket
    */
-  dis  private getToken(): string | null {
-    if (typeof window === "undefined") return null;
-    try {
-      const { getCookie } = require("@/lib/utils/cookies");
-      const token = getCookie("_at") || getCookie("access_token") || getCookie("token");
-      if (token) return token;
-      return localStorage.getItem("token") || localStorage.getItem("access_token");
-    } catch (e) {
-      return null;
-    }
-  }
-
-  connect(): void {
+  disconnect(): void {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
