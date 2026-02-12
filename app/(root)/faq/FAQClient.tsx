@@ -1,4 +1,4 @@
-\"use client\";
+"use client";
 
 import { useState, useEffect } from "react";
 import { Input, Collapse, ConfigProvider, theme as antTheme, Empty } from "antd";
