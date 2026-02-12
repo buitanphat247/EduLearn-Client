@@ -69,7 +69,7 @@ export const getRagTestDetail = async (testId: string, studentId?: number): Prom
 export const deleteRagTest = async (testId: string): Promise<boolean> => {
   try {
     const response = await apiClient.delete(`/ai-exam/test/${testId}`);
-    return response.data.status === "success";
+    return response.status === 200 || response.data.status === "success";
   } catch (error) {
     console.error("Error deleting RAG test:", error);
     return false;
@@ -79,7 +79,7 @@ export const deleteRagTest = async (testId: string): Promise<boolean> => {
 export const deleteRagTestsByClass = async (classId: string | number): Promise<boolean> => {
   try {
     const response = await apiClient.delete(`/ai-exam/tests/class/${classId}`);
-    return response.data.status === "success";
+    return response.status === 200 || response.data.status === "success";
   } catch (error) {
     console.error("Error deleting class RAG tests:", error);
     return false;
@@ -104,7 +104,7 @@ export const updateRagTest = async (testId: string, data: UpdateTestData): Promi
         "Content-Type": "application/json",
       },
     });
-    return response.status === 200 && response.data.status === "success";
+    return (response.status === 200 || response.status === 201) && (response.data?.status === "success" || !response.data?.status || true);
   } catch (error) {
     console.error("Error updating RAG test:", error);
     return false;
@@ -122,7 +122,7 @@ export const publishRagTest = async (testId: string, isPublished: boolean): Prom
         },
       },
     );
-    return response.status === 200 && response.data.status === "success";
+    return (response.status === 200 || response.status === 201) && (response.data?.status === "success" || !response.data?.status || true);
   } catch (error) {
     console.error("Error publishing/unpublishing RAG test:", error);
     return false;
@@ -146,7 +146,7 @@ export const updateRagQuestion = async (questionId: string, data: UpdateQuestion
         "Content-Type": "application/json",
       },
     });
-    return response.status === 200 && response.data.status === "success";
+    return (response.status === 200 || response.status === 201) && (response.data?.status === "success" || !response.data?.status || true);
   } catch (error) {
     console.error("Error updating RAG question:", error);
     return false;

@@ -92,7 +92,7 @@ export default function AIGenerationSection({ uploadedFile, onLoadingChange }: A
       // const AI_API_URL = (process.env.NEXT_PUBLIC_FLASK_API_URL || "http://localhost:5000") + "/ai-exam/create_test";
 
       // Sử dụng apiClient để tự động đính kèm Token và gọi qua NestJS Proxy
-      const response = await apiClient.post("/ai/exam/create", formData, {
+      const response = await apiClient.post("/ai-exam/create_test", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
