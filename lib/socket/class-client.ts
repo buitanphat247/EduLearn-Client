@@ -19,20 +19,20 @@ class ClassSocketClient {
 
   private getSocketUrl(): string {
     if (typeof window === "undefined") return "";
-
-    // Try to get from environment variable
-    let envUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
-
-    // Default: derive from API URL
+    const envUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.edulearning.io.vn/api";
-
     let socketUrl = envUrl || apiUrl;
-
-    // ✅ Robust URL parsing and correction
     try {
       if (typeof socketUrl === "string" && socketUrl.includes("//") && !socketUrl.includes("://")) {
         socketUrl = socketUrl.replace("//", "://");
       }
+      const url = new URL(socketUrl.includes("://") ? socketUrl : `https://${socketUrl}`);
+      console.warn(`[Socket] Connecting to origin: ${url.origin}`);
+      return url.origin;
+    } catch (e) {
+      return socketUrl.split("/api")[0];
+    }
+  }
 
       const url = new URL(socketUrl.includes("://") ? socketUrl : `https://${socketUrl}`);
       const finalUrl = url.origin;

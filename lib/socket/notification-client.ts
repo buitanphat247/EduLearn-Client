@@ -19,14 +19,23 @@ class NotificationSocketClient {
 
   private getSocketUrl(): string {
     if (typeof window === "undefined") return "";
-
     const envUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
-    if (envUrl) {
-      return envUrl;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.edulearning.io.vn/api";
+    let socketUrl = envUrl || apiUrl;
+    try {
+      if (typeof socketUrl === "string" && socketUrl.includes("//") && !socketUrl.includes("://")) {
+        socketUrl = socketUrl.replace("//", "://");
+      }
+      const url = new URL(socketUrl.includes("://") ? socketUrl : `https://${socketUrl}`);
+      console.warn(`[Socket] Connecting to origin: ${url.origin}`);
+      return url.origin;
+    } catch (e) {
+      return socketUrl.split("/api")[0];
     }
+  }
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611";
-    return apiUrl.replace("/api", "");
+    return new URL(apiUrl).origin;
   }
 
   private getUserId(): number | string | null {
