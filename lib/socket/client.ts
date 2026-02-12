@@ -29,23 +29,8 @@ class SocketClient {
       console.warn(`[Socket] Connecting to origin: ${url.origin}`);
       return url.origin;
     } catch (e) {
+      console.error("[Socket] URL derivation failed:", e);
       return socketUrl.split("/api")[0];
-    }
-  }
-
-      const url = new URL(socketUrl.includes("://") ? socketUrl : `https://${socketUrl}`);
-
-      // We only want the origin (scheme + host + port), socket.io handles paths
-      const finalUrl = url.origin;
-
-      // ✅ Use console.warn to ensure visibility in production (as console.log is stripped)
-      console.warn("[SocketClient] Connecting to:", finalUrl);
-      return finalUrl;
-    } catch (error) {
-      console.error("[SocketClient] URL Parse error:", error);
-      const fallback = socketUrl.split("/api")[0];
-      console.warn("[SocketClient] Fallback URL:", fallback);
-      return fallback;
     }
   }
 

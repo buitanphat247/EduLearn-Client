@@ -25,16 +25,12 @@ class ChatSocketClient {
         socketUrl = socketUrl.replace("//", "://");
       }
       const url = new URL(socketUrl.includes("://") ? socketUrl : `https://${socketUrl}`);
-      console.warn(`[Socket] Connecting to origin: ${url.origin}`);
+      console.warn(`[ChatSocket] Connecting to origin: ${url.origin}`);
       return url.origin;
     } catch (e) {
+      console.error("[ChatSocket] URL derivation failed:", e);
       return socketUrl.split("/api")[0];
     }
-  }
-
-    // Default: same origin as API, but on socket.io path
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611";
-    return new URL(apiUrl).origin;
   }
 
   private getUserId(): number | string | null {

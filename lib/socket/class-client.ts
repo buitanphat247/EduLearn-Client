@@ -27,22 +27,11 @@ class ClassSocketClient {
         socketUrl = socketUrl.replace("//", "://");
       }
       const url = new URL(socketUrl.includes("://") ? socketUrl : `https://${socketUrl}`);
-      console.warn(`[Socket] Connecting to origin: ${url.origin}`);
+      console.warn(`[ClassSocket] Connecting to origin: ${url.origin}`);
       return url.origin;
     } catch (e) {
+      console.error("[ClassSocket] URL derivation failed:", e);
       return socketUrl.split("/api")[0];
-    }
-  }
-
-      const url = new URL(socketUrl.includes("://") ? socketUrl : `https://${socketUrl}`);
-      const finalUrl = url.origin;
-
-      console.warn("[ClassSocket] Final URL Origin:", finalUrl);
-      return finalUrl;
-    } catch (error) {
-      console.error("[ClassSocket] URL Parse error:", error);
-      const fallback = socketUrl.split("/api")[0];
-      return fallback;
     }
   }
 
