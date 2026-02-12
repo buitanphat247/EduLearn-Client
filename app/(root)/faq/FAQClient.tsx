@@ -1,6 +1,6 @@
-"use client";
+\"use client\";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input, Collapse, ConfigProvider, theme as antTheme, Empty } from "antd";
 import {
   SearchOutlined,
@@ -28,8 +28,40 @@ interface FAQClientProps {
 
 export default function FAQClient({ faqData }: FAQClientProps) {
   const { theme } = useTheme();
+  const [faqs, setFaqs] = useState<FAQItem[]>(faqData || []);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+
+  // Đồng bộ lại state khi SSR trả về data
+  useEffect(() => {
+    setFaqs(faqData || []);
+  }, [faqData]);
+
+  // Fallback: nếu SSR không đọc được markdown (faqData rỗng) thì gọi /api/faq (cũng đọc từ docs)
+  useEffect(() => {
+    if (faqData && faqData.length > 0) return;
+
+    let cancelled = false;
+
+    const fetchFaqFromApi = async () => {
+      try {
+        const res = await fetch("/api/faq", { cache: "no-store" });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!cancelled && json?.status && Array.isArray(json.data)) {
+          setFaqs(json.data as FAQItem[]);
+        }
+      } catch (error) {
+        console.error("Không thể tải dữ liệu FAQ từ /api/faq", error);
+      }
+    };
+
+    fetchFaqFromApi();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [faqData]);
 
   const categories = [
     { id: "all", label: "Tất cả", icon: <QuestionCircleOutlined /> },
@@ -39,7 +71,7 @@ export default function FAQClient({ faqData }: FAQClientProps) {
     { id: "technical", label: "Kỹ thuật", icon: <CodeOutlined /> },
   ];
 
-  const filteredFAQs = faqData.filter((faq) => {
+  const filteredFAQs = faqs.filter((faq) => {
     const matchesSearch =
       faq.question.toLowerCase().includes(searchTerm.toLowerCase()) || faq.answer.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = activeCategory === "all" || faq.category === activeCategory;
