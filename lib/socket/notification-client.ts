@@ -119,12 +119,13 @@ class NotificationSocketClient {
         query: {
           userId: String(userId),
         },
+        withCredentials: true, // ✅ Send cookies cross-origin
         transports: ["websocket", "polling"],
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionAttempts: 5,
         timeout: 20000,
-      });
+      } as any);
 
       this.socket.on("connect", () => {
         if (isDev) console.log("[NotificationSocket] Connected:", this.socket?.id);
@@ -132,16 +133,12 @@ class NotificationSocketClient {
         // Reset auth state on connect/reconnect
         this.isAuthenticated = false;
 
-        // Send both encrypted cookie AND JWT token for robust auth
-        if (encryptedUser || token) {
-          if (isDev) console.log("[NotificationSocket] Authenticating...");
-          this.socket?.emit("authenticate", {
-            encryptedData: encryptedUser,
-            token: token,
-          });
-        } else {
-          if (isDev) console.warn("[NotificationSocket] No authentication data found");
-        }
+        // Always send authenticate - server can also read cookies from handshake
+        if (isDev) console.log("[NotificationSocket] Authenticating...");
+        this.socket?.emit("authenticate", {
+          encryptedData: encryptedUser,
+          token: token,
+        });
 
         this.isConnecting = false;
         this.connectionListeners.forEach((listener) => listener(true));

@@ -121,25 +121,24 @@ class ClassSocketClient {
         query: {
           userId: String(userId),
         },
+        withCredentials: true, // ✅ Send cookies cross-origin
         transports: ["websocket", "polling"],
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionAttempts: 5,
         timeout: 20000,
-      });
+      } as any);
 
       this.socket.on("connect", () => {
         if (isDev) console.log("[ClassSocket] Connected:", this.socket?.id);
 
         this.isAuthenticated = false;
 
-        // Authenticate using encrypted user data
-        if (encryptedUser || token) {
-          this.socket?.emit("authenticate", {
-            encryptedData: encryptedUser,
-            token: token,
-          });
-        }
+        // Always send authenticate - server can also read cookies from handshake
+        this.socket?.emit("authenticate", {
+          encryptedData: encryptedUser,
+          token: token,
+        });
 
         this.isConnecting = false;
         this.connectionListeners.forEach((listener) => listener(true));
