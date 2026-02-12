@@ -15,8 +15,8 @@ interface FAQItem {
 function getFAQData(): FAQItem[] {
   try {
     // public/ được copy vào standalone build khi deploy prod; app/ thì không
-    const publicPath = path.join(process.cwd(), 'public', 'faq', 'docs', 'README.md');
-    const appPath = path.join(process.cwd(), 'app/(root)/faq/docs/README.md');
+    const publicPath = path.join(process.cwd(), 'public', 'faq', 'docs', 'faq-content.md');
+    const appPath = path.join(process.cwd(), 'app/(root)/faq/docs/faq-content.md');
     const filePath = fs.existsSync(publicPath) ? publicPath : appPath;
     
     if (!fs.existsSync(filePath)) {
