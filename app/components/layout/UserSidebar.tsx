@@ -96,7 +96,7 @@ export default function UserSidebar() {
   };
 
   return (
-    <aside className="w-64 h-screen flex flex-col z-50 transition-all duration-300 border-r border-gray-100 dark:!border-slate-700 bg-white dark:bg-gray-900">
+    <aside className="w-64 h-screen flex flex-col z-50 transition-all duration-300 border-r border-gray-100 dark:border-slate-700! bg-white dark:bg-gray-900">
       {/* Logo Section */}
       <div className="p-4 pb-6 flex items-center gap-3">
         <div className="w-10 h-10 bg-linear-to-br from-indigo-600 via-purple-600 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">

@@ -9,7 +9,7 @@ import Swal from "sweetalert2";
 import type { ClassExamsTabProps, Exam } from "./types";
 import { getRagTestsByClass, deleteRagTest } from "@/lib/api/rag-exams";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
-import { classSocketClient } from "@/lib/socket/class-client";
+
 
 const ClassExamsTab = memo(function ClassExamsTab({
   classId,
@@ -196,8 +196,7 @@ const ClassExamsTab = memo(function ClassExamsTab({
                   const success = await deleteRagTest(exam.id);
                   if (success) {
                     message.success("Đã xóa bộ đề AI thành công");
-                    // Emit socket event to notify other users
-                    classSocketClient.emit("exam_deleted", { class_id: classId, id: exam.id });
+
                     // Refresh list to ensure consistency
                     await fetchRagTests();
                   } else {

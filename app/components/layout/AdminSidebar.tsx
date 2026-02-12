@@ -128,7 +128,7 @@ export default function AdminSidebar() {
 
   return (
     <aside
-      className="w-64 h-screen flex flex-col z-50 transition-all duration-300 border-r border-gray-100 dark:!border-slate-700 bg-white dark:bg-gray-900"
+      className="w-64 h-screen flex flex-col z-50 transition-all duration-300 border-r border-gray-100 dark:border-slate-700! bg-white dark:bg-gray-900"
       aria-label="Admin navigation sidebar"
     >
       {/* Logo Section */}

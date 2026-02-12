@@ -91,7 +91,7 @@ export default function CustomCard({
         tabIndex={onClick ? 0 : undefined}
         aria-label={onClick && typeof title === "string" ? `Card: ${title}` : undefined}
       >
-        <header className={`px-6 py-4 border-b border-gray-100 dark:!border-slate-700 flex items-center justify-between ${headerClassName}`}>
+        <header className={`px-6 py-4 border-b border-gray-100 dark:border-slate-700! flex items-center justify-between ${headerClassName}`}>
           <div>{typeof title === "string" ? <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{title}</h3> : title}</div>
           {extra && <div>{extra}</div>}
         </header>

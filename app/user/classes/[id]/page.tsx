@@ -12,11 +12,9 @@ import ClassExamsTab from "@/app/components/classes/ClassExamsTab";
 import CustomCard from "@/app/components/common/CustomCard";
 import { getClassById, getClassStudentsByClass, type ClassStudentRecord } from "@/lib/api/classes";
 import { CLASS_STATUS_MAP, formatStudentId } from "@/lib/utils/classUtils";
-import { getUserIdFromCookie, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
 import { useUserId } from "@/app/hooks/useUserId"; // Added import
 import type { StudentItem } from "@/interface/students";
 import type { ColumnsType } from "antd/es/table";
-import { classSocketClient } from "@/lib/socket/class-client";
 
 type ClassDataState = {
   id: string;
@@ -218,164 +216,6 @@ export default function UserClassDetail() {
     }
   }, [classId, contextUserId, userLoading, fetchClassDetail]);
 
-  // Socket refs
-  const socketInitializedRef = useRef(false);
-  const unsubscribersRef = useRef<Array<() => void>>([]);
-  const classIdSocketRef = useRef<string | null>(null);
-
-  // Socket.io real-time updates
-  useEffect(() => {
-    if (!classId) return;
-
-    if (!socketInitializedRef.current || classIdSocketRef.current !== classId) {
-      // Cleanup previous socket
-      if (socketInitializedRef.current && classIdSocketRef.current && classIdSocketRef.current !== classId) {
-        classSocketClient.leaveClass(classIdSocketRef.current);
-        unsubscribersRef.current?.forEach((unsub) => {
-          if (typeof unsub === 'function') try { unsub(); } catch (e) { /* ignore */ }
-        });
-        unsubscribersRef.current = [];
-      }
-
-      // Connect and join
-      classSocketClient.connect();
-      classSocketClient.joinClass(classId);
-      classIdSocketRef.current = classId;
-
-      // Socket listeners
-      const unsubscribeUpdated = classSocketClient.on("class_updated", (data: any) => {
-        if (Number(data.class_id) !== Number(classId)) return;
-
-        setClassData((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            name: data.name,
-            code: data.code,
-            status: data.status === "active" ? CLASS_STATUS_MAP.active : CLASS_STATUS_MAP.inactive,
-          };
-        });
-        classNameRef.current = data.name;
-      });
-
-      const unsubscribeJoined = classSocketClient.on("student_joined", (data: any) => {
-        if (Number(data.class_id) !== Number(classId)) return;
-
-        const newStudent = mapStudentRecordToItem(data, classNameRef.current);
-        setStudents((prev) => {
-          if (prev.some((s) => String(s.userId) === String(newStudent.userId))) return prev;
-
-          const newList = [newStudent, ...prev];
-          const newCount = data.student_count ?? newList.length;
-          setClassData((prevData) => (prevData ? { ...prevData, students: newCount } : prevData));
-          return newList;
-        });
-      });
-
-      const unsubscribeRemoved = classSocketClient.on("student_removed", (data: any) => {
-        if (Number(data.class_id) !== Number(classId)) return;
-
-        const currentUserId = getUserIdFromCookie();
-        if (String(data.user_id) === String(currentUserId)) {
-          messageRef.current.warning({
-            content: "Bạn đã được quản trị viên mời ra khỏi lớp học này.",
-            key: "removed_from_class",
-            duration: 5,
-          });
-          router.push("/user/classes");
-          return;
-        }
-
-        setStudents((prev) => {
-          const newList = prev.filter((s) => String(s.userId) !== String(data.user_id));
-          const newCount = data.student_count ?? newList.length;
-          setClassData((prevData) => (prevData ? { ...prevData, students: newCount } : prevData));
-          return newList;
-        });
-      });
-
-      const unsubscribeStatus = classSocketClient.on("student_status_updated", (data: any) => {
-        if (Number(data.class_id) !== Number(classId)) return;
-
-        const currentUserId = getUserIdFromCookie();
-        const isCurrentUser = String(data.user_id) === String(currentUserId);
-
-        if (isCurrentUser && data.status === "banned") return;
-
-        if (data.status === "banned") {
-          setStudents((prev) => {
-            const newList = prev.filter((s) => String(s.userId) !== String(data.user_id));
-            const newCount = data.student_count ?? newList.length;
-            setClassData((prevData) => (prevData ? { ...prevData, students: newCount } : prevData));
-            return newList;
-          });
-        } else {
-          setStudents((prev) => {
-            const index = prev.findIndex((s) => String(s.userId) === String(data.user_id));
-            if (index !== -1) {
-              const newList = [...prev];
-              newList[index] = {
-                ...newList[index],
-                status: data.status === "banned" ? "Bị cấm" : "Đang học",
-                apiStatus: data.status,
-              };
-              return newList;
-            }
-            return prev;
-          });
-          if (data.student_count !== undefined) {
-            setClassData((prevData) => (prevData ? { ...prevData, students: data.student_count } : prevData));
-          }
-        }
-      });
-
-      const unsubscribeDeleted = classSocketClient.on("class_deleted", (data: any) => {
-        if (Number(data.class_id) !== Number(classId)) return;
-
-        messageRef.current.warning({
-          content: `Lớp học "${data.name}" đã bị giải tán bởi giáo viên.`,
-          key: "class_deleted",
-          duration: 5,
-        });
-        router.push("/user/classes");
-      });
-
-      const unsubscribeBanned = classSocketClient.on("student_banned", (data: any) => {
-        if (Number(data.class_id) !== Number(classId)) return;
-
-        messageRef.current.error({
-          content: data.message || "Bạn đã bị chặn khỏi lớp học này.",
-          key: "student_banned",
-          duration: 5,
-        });
-        router.push("/user/classes");
-      });
-
-      unsubscribersRef.current = [
-        unsubscribeUpdated,
-        unsubscribeJoined,
-        unsubscribeRemoved,
-        unsubscribeStatus,
-        unsubscribeDeleted,
-        unsubscribeBanned,
-      ];
-
-      socketInitializedRef.current = true;
-    }
-
-    return () => {
-      if (socketInitializedRef.current && classIdSocketRef.current === classId) {
-        if (classId) classSocketClient.leaveClass(classId);
-        unsubscribersRef.current?.forEach((unsub) => {
-          if (typeof unsub === 'function') try { unsub(); } catch (e) { /* ignore */ }
-        });
-        unsubscribersRef.current = [];
-        socketInitializedRef.current = false;
-        classIdSocketRef.current = null;
-      }
-    };
-  }, [classId, router, mapStudentRecordToItem]);
-
   // Memoized values
   const classInfo = useMemo(() => {
     if (!classData) return null;
@@ -452,7 +292,7 @@ export default function UserClassDetail() {
 
   // Memoized students table
   const studentsTableContent = useMemo(() => (
-    <CustomCard title="Danh sách học sinh" bodyClassName="py-6" className="border border-gray-200 dark:!border-slate-600">
+    <CustomCard title="Danh sách học sinh" bodyClassName="py-6" className="border border-gray-200 dark:border-slate-600!">
       <Table
         columns={studentColumns}
         dataSource={students}

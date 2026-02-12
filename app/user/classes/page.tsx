@@ -7,8 +7,6 @@ import { useRouter } from "next/navigation";
 import { getClassStudentsByUser, joinClassByCode, type ClassStudentRecord } from "@/lib/api/classes";
 import { getCurrentUser } from "@/lib/api/users";
 import type { ColumnsType } from "antd/es/table";
-import { classSocketClient } from "@/lib/socket/class-client";
-import { getUserIdFromCookie, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
 import { useUserId } from "@/app/hooks/useUserId";
 
 type ClassStatusFilter = "all" | "online" | "banned";
@@ -129,253 +127,6 @@ export default function UserClasses() {
       setLoading(false);
     }
   }, [userId, userLoading, fetchClasses]);
-
-  // Refs to prevent duplicate socket connections on rerender
-  const classIdsRef = useRef<string[]>([]);
-  const isInitializedRef = useRef(false);
-  const unsubscribersRef = useRef<Array<() => void>>([]);
-  const globalSocketInitRef = useRef(false);
-
-  // Stable message ref to avoid dependency issues
-  const messageRef = useRef(message);
-  useEffect(() => {
-    messageRef.current = message;
-  }, [message]);
-
-  // Always connect socket for user-specific events (even without classes)
-  useEffect(() => {
-    if (globalSocketInitRef.current) return;
-
-    classSocketClient.connect();
-    globalSocketInitRef.current = true;
-
-    // Listen for user-specific events - Update status and student count
-    const unsubscribeBanned = classSocketClient.on("student_banned", (data: any) => {
-      if (Number(data.class_id)) {
-        setClasses((prev) => prev.map((c) =>
-          Number(c.classId) === Number(data.class_id)
-            ? {
-              ...c,
-              studentStatus: "banned" as const,
-              students: data.student_count !== undefined ? data.student_count : c.students,
-            }
-            : c
-        ));
-        // Use setTimeout to avoid blocking state updates
-        setTimeout(() => {
-          messageRef.current.error({
-            content: data.message || "Bạn đã bị chặn khỏi lớp học này",
-            key: `banned_${data.class_id}`,
-            duration: 5,
-          });
-        }, 0);
-      }
-    });
-
-    const unsubscribeUnbanned = classSocketClient.on("student_unbanned", (data: any) => {
-      if (Number(data.class_id)) {
-        setClasses((prev) => prev.map((c) =>
-          Number(c.classId) === Number(data.class_id)
-            ? {
-              ...c,
-              studentStatus: "online" as const,
-              students: data.student_count !== undefined ? data.student_count : c.students,
-            }
-            : c
-        ));
-        // Use setTimeout to avoid blocking state updates
-        setTimeout(() => {
-          messageRef.current.success({
-            content: data.message || "Bạn đã được gỡ chặn khỏi lớp học!",
-            key: `unbanned_${data.class_id}`,
-            duration: 5,
-          });
-        }, 0);
-      }
-    });
-
-    return () => {
-      if (typeof unsubscribeBanned === 'function') unsubscribeBanned();
-      if (typeof unsubscribeUnbanned === 'function') unsubscribeUnbanned();
-      globalSocketInitRef.current = false;
-    };
-  }, []);
-
-  // Memoize online class IDs to reduce dependency recalculation
-  const onlineClassIds = useMemo(() =>
-    classes.filter((c) => c.studentStatus === "online").map((c) => c.classId),
-    [classes]
-  );
-  const onlineClassIdsString = useMemo(() =>
-    JSON.stringify([...onlineClassIds].sort()),
-    [onlineClassIds]
-  );
-
-  // Real-time updates via Socket.io for class-specific events
-  useEffect(() => {
-    if (onlineClassIds.length === 0) {
-      // Cleanup class rooms if no online classes
-      if (classIdsRef.current && Array.isArray(classIdsRef.current)) {
-        classIdsRef.current.forEach((id) => {
-          if (id) classSocketClient.leaveClass(id);
-        });
-      }
-      classIdsRef.current = [];
-      return;
-    }
-
-    // Only reconnect if class IDs changed or not initialized
-    const previousClassIdsString = classIdsRef.current && Array.isArray(classIdsRef.current)
-      ? JSON.stringify([...classIdsRef.current].sort())
-      : "[]";
-
-    if (!isInitializedRef.current || previousClassIdsString !== onlineClassIdsString) {
-      // Cleanup previous class rooms safely
-      if (classIdsRef.current && Array.isArray(classIdsRef.current)) {
-        classIdsRef.current.forEach((id) => {
-          if (id) classSocketClient.leaveClass(id);
-        });
-      }
-      if (unsubscribersRef.current && Array.isArray(unsubscribersRef.current)) {
-        unsubscribersRef.current.forEach((unsub) => {
-          if (typeof unsub === 'function') {
-            try { unsub(); } catch (e) { /* ignore */ }
-          }
-        });
-      }
-      unsubscribersRef.current = [];
-
-      // Join all class rooms for this user
-      onlineClassIds.forEach((id) => {
-        classSocketClient.joinClass(id);
-      });
-
-      classIdsRef.current = onlineClassIds;
-
-      // Listen for updates
-      const unsubscribe = classSocketClient.on("class_updated", (data: any) => {
-        setClasses((prev) => {
-          const index = prev.findIndex((c) => Number(c.classId) === Number(data.class_id));
-          if (index === -1) return prev;
-
-          const updatedList = [...prev];
-          updatedList[index] = {
-            ...updatedList[index],
-            name: data.name,
-            code: data.code,
-            status: data.status === "active" ? "Đang hoạt động" : "Không hoạt động",
-          };
-
-          return updatedList;
-        });
-      });
-
-      // Listen for student joined (to update count)
-      const unsubscribeJoined = classSocketClient.on("student_joined", (data: any) => {
-        setClasses((prev) => {
-          const index = prev.findIndex((c) => Number(c.classId) === Number(data.class_id));
-          if (index === -1) return prev;
-
-          const updatedList = [...prev];
-          updatedList[index] = {
-            ...updatedList[index],
-            students: data.student_count ?? updatedList[index].students + 1,
-          };
-          return updatedList;
-        });
-      });
-
-      // Listen for student removed
-      const unsubscribeRemoved = classSocketClient.on("student_removed", (data: any) => {
-        const currentUserId = getUserIdFromCookie();
-
-        if (Number(data.user_id) === Number(currentUserId)) {
-          // Current user was removed, remove class from list
-          setClasses((prev) => prev.filter((c) => Number(c.classId) !== Number(data.class_id)));
-          // Use setTimeout to avoid blocking state updates
-          setTimeout(() => {
-            messageRef.current.warning(`Bạn đã được mời khỏi lớp học`);
-          }, 0);
-        } else {
-          // Other student removed, update count
-          setClasses((prev) => {
-            const index = prev.findIndex((c) => Number(c.classId) === Number(data.class_id));
-            if (index === -1) return prev;
-
-            const updatedList = [...prev];
-            updatedList[index] = {
-              ...updatedList[index],
-              students: data.student_count ?? Math.max(0, updatedList[index].students - 1),
-            };
-            return updatedList;
-          });
-        }
-      });
-
-      // Listen for student status updated (for other students - update count)
-      const unsubscribeStatus = classSocketClient.on("student_status_updated", (data: any) => {
-        const currentUserId = getUserIdFromCookie();
-        const isCurrentUser = Number(data.user_id) === Number(currentUserId);
-
-        // Current user banned/unbanned is handled by global socket listeners
-        if (isCurrentUser) return;
-
-        // Other student status changed, update count
-        if (data.student_count !== undefined) {
-          setClasses((prev) => {
-            const index = prev.findIndex((c) => Number(c.classId) === Number(data.class_id));
-            if (index === -1) return prev;
-
-            const updatedList = [...prev];
-            updatedList[index] = {
-              ...updatedList[index],
-              students: data.student_count,
-            };
-            return updatedList;
-          });
-        }
-      });
-
-      // Listen for class deleted
-      const unsubscribeDeleted = classSocketClient.on("class_deleted", (data: any) => {
-        setClasses((prev) => prev.filter((c) => Number(c.classId) !== Number(data.class_id)));
-        // Use setTimeout to avoid blocking state updates
-        setTimeout(() => {
-          messageRef.current.info(`Lớp học "${data.name}" đã bị giải tán bởi giáo viên`);
-        }, 0);
-      });
-
-      unsubscribersRef.current = [
-        unsubscribe,
-        unsubscribeJoined,
-        unsubscribeRemoved,
-        unsubscribeStatus,
-        unsubscribeDeleted,
-      ];
-
-      isInitializedRef.current = true;
-    }
-
-    return () => {
-      // Only cleanup on unmount, not on every rerender
-      if (isInitializedRef.current) {
-        if (classIdsRef.current && Array.isArray(classIdsRef.current)) {
-          classIdsRef.current.forEach((id) => {
-            if (id) classSocketClient.leaveClass(id);
-          });
-        }
-        if (unsubscribersRef.current && Array.isArray(unsubscribersRef.current)) {
-          unsubscribersRef.current.forEach((unsub) => {
-            if (typeof unsub === 'function') {
-              try { unsub(); } catch (e) { /* ignore */ }
-            }
-          });
-        }
-        unsubscribersRef.current = [];
-        isInitializedRef.current = false;
-      }
-    };
-  }, [onlineClassIdsString, onlineClassIds]);
 
   // Stable handlers
   const handleTableChange = useCallback((page: number, pageSize: number) => {
@@ -523,7 +274,7 @@ export default function UserClasses() {
           prefix={<SearchOutlined className="text-gray-400" />}
           placeholder="Tìm kiếm lớp học hoặc mã code... (Ctrl+K)"
           size="middle"
-          className="flex-1 min-w-[200px] dark:bg-gray-700/50 dark:!border-slate-600 dark:text-white dark:placeholder-gray-500 hover:dark:!border-slate-500 focus:dark:!border-blue-500"
+          className="flex-1 min-w-[200px] dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
           value={searchQuery}
           onChange={handleSearchChange}
           allowClear
@@ -586,7 +337,7 @@ export default function UserClasses() {
                 prefix={<KeyOutlined className="text-gray-400" />}
                 placeholder="Nhập mã code tại đây..."
                 size="large"
-                className="rounded-lg dark:bg-gray-700/50 dark:!border-slate-600 dark:text-white dark:placeholder-gray-500 hover:dark:!border-slate-500 focus:dark:!border-blue-500"
+                className="rounded-lg dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
                 autoFocus
               />
             </Form.Item>

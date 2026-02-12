@@ -101,7 +101,7 @@ export function useExamController(examId: string, classId: string, studentId: nu
 
     if (socketRef.current?.connected && attemptIdRef.current) {
       socketRef.current.emit("report_violation", {
-        attemptId: attemptIdRef.current,
+        attempt_id: attemptIdRef.current,
         type,
         message: msg,
       });
@@ -227,49 +227,78 @@ export function useExamController(examId: string, classId: string, studentId: nu
     }
   }, [violations.length, test, handleRoboticSubmit]);
 
-  // --- 3. SOCKET LOGIC ---
+  // --- 3. SOCKET LOGIC (Direct Connection to Exam Server) ---
   const connectSocket = useCallback(
     (aid: string) => {
-      if (socketRef.current?.connected) return;
-      const fullUrl = process.env.NEXT_PUBLIC_FLASK_API_URL || "http://localhost:5000";
-      console.log("[Socket] Connecting to:", fullUrl, "for attempt:", aid);
+      // If already connected to the same attempt, do nothing
+      if (socketRef.current?.connected && attemptIdRef.current === aid) return;
 
-      const socket = io(fullUrl, {
-        path: "/socket.io",
+      // Disconnect existing if any
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+
+      // Config URL - default to localhost:5000 if not set, or use specific Env var for Exam Server
+      const examServerUrl = process.env.NEXT_PUBLIC_EXAM_SERVER_URL || "http://localhost:5000";
+      console.log("[ExamSocket] Connecting to:", examServerUrl, "for attempt:", aid);
+
+      const socket = io(examServerUrl, {
+        path: "/socket.io", // Standard Socket.IO path
         transports: ["websocket"],
         reconnection: true,
-        reconnectionAttempts: 20,
+        reconnectionAttempts: 10,
         reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        timeout: 10000,
+        timeout: 20000,
+        query: {
+          attempt_id: aid,
+          user_id: String(studentId),
+        },
       });
       socketRef.current = socket;
 
       socket.on("connect", () => {
-        console.log("[Socket] Connected!");
+        console.log("[ExamSocket] Connected!", socket.id);
         setSocketConnected(true);
-        socket.emit("join_attempt", { attemptId: aid });
+        // Explicit join attempt event
+        socket.emit("join_attempt", { attempt_id: aid });
       });
-      socket.on("disconnect", (reason: any) => {
-        console.warn("[Socket] Disconnected:", reason);
+
+      socket.on("connect_error", (err: any) => {
+        console.error("[ExamSocket] Connection Error:", err.message);
         setSocketConnected(false);
-        if (reason === "io server disconnect") socket.connect();
       });
+
+      socket.on("disconnect", (reason: any) => {
+        console.warn("[ExamSocket] Disconnected:", reason);
+        setSocketConnected(false);
+      });
+
+      // --- Exam Specific Events ---
+
+      // 1. Time Sync
       socket.on("time_sync", (data: { remaining_seconds: number }) => {
         if (data && typeof data.remaining_seconds === "number") {
           const svTime = Math.max(0, data.remaining_seconds);
           setRemainingSeconds((prev) => {
-            if (prev === null) return svTime;
-            if (Math.abs(prev - svTime) > 2) return svTime;
+            // If local timer drift is > 2s, sync with server
+            if (prev === null || Math.abs(prev - svTime) > 2) return svTime;
             return prev;
           });
         }
       });
+
+      // 2. Time Up - Auto Submit
       socket.on("time_up", () => {
-        handleRoboticSubmit("Hết giờ làm bài.");
+        console.warn("[ExamSocket] Time Up event received.");
+        handleRoboticSubmit("Hết giờ làm bài (Server confirmed).");
+      });
+
+      // 3. Force Submit / Kick
+      socket.on("force_submit", (data: { reason: string }) => {
+        handleRoboticSubmit(data.reason || "Giáo viên yêu cầu nộp bài.");
       });
     },
-    [handleRoboticSubmit],
+    [handleRoboticSubmit, studentId],
   );
 
   // --- 4. DATA LOADING & START PROCESS ---
@@ -338,42 +367,40 @@ export function useExamController(examId: string, classId: string, studentId: nu
     }
   }, [examId, classId, studentId, test, enterFullScreen, exitFullScreen, message]);
 
-  // Socket Connection Effect (Only after attemptId is set & hasStarted)
+  // Socket Lifecycle
   useEffect(() => {
-    if (attemptId && test?.duration_minutes && !socketRef.current && hasStarted) {
+    if (hasStarted && attemptId && !isSubmitted) {
       connectSocket(attemptId);
     }
     return () => {
-      socketRef.current?.disconnect();
-      socketRef.current = null;
+      if (socketRef.current) {
+        console.log("[ExamSocket] Cleaning up socket...");
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
-  }, [attemptId, test?.duration_minutes, connectSocket, hasStarted]);
+  }, [hasStarted, attemptId, isSubmitted, connectSocket]);
 
-  // Local Timer
+  // Heartbeat & Auto-Save Loop
   useEffect(() => {
-    if (!hasStarted || isSubmitted || !test) return;
-    if (remainingSeconds === null && test.duration_minutes) {
-      setRemainingSeconds(test.duration_minutes * 60);
-    }
-    timerIntervalRef.current = setInterval(() => {
-      setRemainingSeconds((prev) => (prev === null || prev <= 0 ? 0 : prev - 1));
-    }, 1000);
-    return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    };
-  }, [hasStarted, isSubmitted, test]);
+    if (!hasStarted || isSubmitted || !attemptId) return;
 
-  // Heartbeat
-  useEffect(() => {
-    if (!attemptId || isSubmitted || !hasStarted) return;
     const interval = setInterval(() => {
       if (socketRef.current?.connected) {
-        socketRef.current.emit("heartbeat", { attemptId });
-        socketRef.current.emit("save_answers", { attemptId, answers: latestAnswersRef.current });
+        // Heartbeat
+        socketRef.current.emit("heartbeat", { attempt_id: attemptId });
+
+        // Auto Save Answers
+        const answersToSave = latestAnswersRef.current;
+        socketRef.current.emit("save_answers", {
+          attempt_id: attemptId,
+          answers: answersToSave,
+        });
       }
-    }, 10000);
+    }, 5000); // 5s interval
+
     return () => clearInterval(interval);
-  }, [attemptId, isSubmitted, hasStarted]);
+  }, [hasStarted, isSubmitted, attemptId]);
 
   // --- Interaction ---
   const handleSelectOption = useCallback(
@@ -385,7 +412,7 @@ export function useExamController(examId: string, classId: string, studentId: nu
         return next;
       });
       if (socketRef.current?.connected && attemptId) {
-        socketRef.current.emit("save_answers", { attemptId, answers: { ...userAnswers, [qId]: opt } });
+        socketRef.current.emit("save_answers", { attempt_id: attemptId, answers: { ...userAnswers, [qId]: opt } });
       }
     },
     [attemptId, userAnswers],

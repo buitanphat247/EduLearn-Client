@@ -2,7 +2,6 @@ import { useState } from "react";
 import { message } from "antd";
 import { updateRagTest, publishRagTest, RagTestDetail } from "@/lib/api/rag-exams";
 import { transactionQueue } from "../utils/transactionQueue";
-import { classSocketClient } from "@/lib/socket/class-client";
 
 interface UseTestMetadataProps {
   testId: string | null;
@@ -43,8 +42,7 @@ export function useTestMetadata({ testId, test, setTest, refetch, classId }: Use
             const success = await updateRagTest(testId!, payload);
             if (success) {
               message.success("Đã cập nhật cấu hình");
-              // Emit socket event
-              classSocketClient.emit("exam_updated", { class_id: classId, id: testId });
+
               await refetch();
             } else {
               message.error("Cập nhật thất bại");
@@ -85,8 +83,7 @@ export function useTestMetadata({ testId, test, setTest, refetch, classId }: Use
             const success = await publishRagTest(testId!, isPublished);
             if (success) {
               message.success(isPublished ? "Đã xuất bản đề thi thành công!" : "Đã hủy xuất bản đề thi thành công!");
-              // Emit socket event
-              classSocketClient.emit("exam_updated", { class_id: classId, id: testId });
+
               await refetch();
             } else {
               message.error(isPublished ? "Xuất bản thất bại" : "Hủy xuất bản thất bại");

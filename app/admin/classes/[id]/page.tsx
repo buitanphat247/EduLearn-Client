@@ -26,7 +26,7 @@ import {
 import { deleteRagTestsByClass } from "@/lib/api/rag-exams";
 import type { StudentItem } from "@/interface/students";
 import { CLASS_STATUS_MAP, formatStudentId } from "@/lib/utils/classUtils";
-import { classSocketClient } from "@/lib/socket/class-client";
+
 
 type ClassDataState = {
   id: string;
@@ -192,63 +192,7 @@ export default function ClassDetail() {
     if (classId && userId) fetchClassDetail(true);
   }, [classId, userId, fetchClassDetail]);
 
-  // Real-time updates via Socket.io
-  useEffect(() => {
-    if (!classId || !userId) return;
 
-    // Connect and join class room
-    classSocketClient.connect();
-    classSocketClient.joinClass(classId);
-
-    // Listeners
-    const unsubscribeJoined = classSocketClient.on("student_joined", (data: any) => {
-      if (Number(data.class_id) !== Number(classId)) return;
-
-      // Update count
-      setClassData(prev => prev ? ({ ...prev, students: data.student_count ?? (prev.students + 1) }) : prev);
-
-      // Re-fetch to get new student details
-      fetchClassDetail(false);
-    });
-
-    const unsubscribeRemoved = classSocketClient.on("student_removed", (data: any) => {
-      if (Number(data.class_id) !== Number(classId)) return;
-
-      // Update count
-      setClassData(prev => prev ? ({ ...prev, students: data.student_count ?? Math.max(0, prev.students - 1) }) : prev);
-
-      // Remove student from list
-      setStudents(prev => prev.filter(s => String(s.userId) !== String(data.user_id)));
-    });
-
-    const unsubscribeStatus = classSocketClient.on("student_status_updated", (data: any) => {
-      if (Number(data.class_id) !== Number(classId)) return;
-
-      // Update count if provided
-      if (data.student_count !== undefined) {
-        setClassData(prev => prev ? ({ ...prev, students: data.student_count }) : prev);
-      }
-
-      // Update student status in list
-      setStudents(prev => prev.map(s => {
-        if (String(s.userId) === String(data.user_id)) {
-          return {
-            ...s,
-            apiStatus: data.status,
-            status: data.status === "banned" ? "Bị cấm" : "Đang học"
-          };
-        }
-        return s;
-      }));
-    });
-
-    return () => {
-      classSocketClient.leaveClass(classId);
-      if (typeof unsubscribeJoined === 'function') unsubscribeJoined();
-      if (typeof unsubscribeRemoved === 'function') unsubscribeRemoved();
-      if (typeof unsubscribeStatus === 'function') unsubscribeStatus();
-    };
-  }, [classId, userId, fetchClassDetail]);
 
   // Handlers - all stable with useCallback
   const handleEdit = useCallback(() => setIsEditModalOpen(true), []);

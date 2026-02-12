@@ -457,7 +457,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
             onSearchChange(e.target.value);
             onPageChange(1);
           }}
-          className="flex-1 dark:bg-gray-700/50 dark:!border-slate-600 dark:text-white dark:placeholder-gray-500 hover:dark:!border-slate-500 focus:dark:!border-blue-500"
+          className="flex-1 dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
           allowClear
         />
         {!readOnly && (
@@ -472,7 +472,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
           Array.from({ length: 6 }).map((_, index) => (
             <div
               key={`skeleton-${index}`}
-              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:!border-slate-600 p-6"
+              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-slate-600! p-6"
             >
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div className="flex items-center gap-3">
@@ -501,7 +501,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
             return (
               <div
                 key={exercise.id}
-                className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:!border-slate-600 p-6 hover:shadow-lg transition-all cursor-pointer relative ${deletingId === exercise.id ? "opacity-50 pointer-events-none" : ""
+                className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-slate-600! p-6 hover:shadow-lg transition-all cursor-pointer relative ${deletingId === exercise.id ? "opacity-50 pointer-events-none" : ""
                   }`}
                 onClick={(e) => handleCardClick(exercise, e)}
               >
@@ -662,7 +662,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
               </div>
 
               {/* Due Date */}
-              <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:!border-slate-600">
+              <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-slate-600!">
                 <CalendarOutlined className="text-blue-500 dark:text-blue-400 text-lg mt-0.5" />
                 <div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Hạn nộp</div>
@@ -678,7 +678,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
                 <div>
                   <div className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Mô tả</div>
                   <div
-                    className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:!border-slate-600 prose prose-sm max-w-none text-gray-700 dark:text-gray-200 max-h-56 overflow-y-auto"
+                    className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-slate-600! prose prose-sm max-w-none text-gray-700 dark:text-gray-200 max-h-56 overflow-y-auto"
                     dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(selectedAssignment.description) }}
                   />
                 </div>
@@ -692,7 +692,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
                     {selectedAssignment.attachments.map((attachment) => (
                       <div
                         key={String(attachment.attachment_id)}
-                        className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:!border-slate-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                        className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-slate-600! hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                       >
                         <FileOutlined className="text-blue-500 dark:text-blue-400 text-lg" />
                         <div className="flex-1 min-w-0">
@@ -706,7 +706,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
               )}
 
               {/* Action Button */}
-              <div className="pt-4 border-t border-gray-200 dark:!border-slate-600">
+              <div className="pt-4 border-t border-gray-200 dark:border-slate-600!">
                 <Button
                   type="primary"
                   icon={<FileOutlined />}
