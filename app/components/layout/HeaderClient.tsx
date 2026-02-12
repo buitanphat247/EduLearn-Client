@@ -42,7 +42,7 @@ const fixUtf8 = (str: string | undefined | null): string => {
 
 const NAV_LINKS = [
   { to: "/", label: "Trang chủ" },
-  { to: "/news", label: "Tin tức" },
+  // { to: "/news", label: "Tin tức" },
   { to: "/events", label: "Sự kiện" },
 ] as const;
 
