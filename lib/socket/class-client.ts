@@ -21,14 +21,29 @@ class ClassSocketClient {
     if (typeof window === "undefined") return "";
 
     // Try to get from environment variable
-    const envUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
-    if (envUrl) {
-      return envUrl;
-    }
+    let envUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
 
-    // Default: same origin as API, but on socket.io path
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611";
-    return apiUrl.replace("/api", "");
+    // Default: derive from API URL
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.edulearning.io.vn/api";
+
+    let socketUrl = envUrl || apiUrl;
+
+    // ✅ Robust URL parsing and correction
+    try {
+      if (typeof socketUrl === "string" && socketUrl.includes("//") && !socketUrl.includes("://")) {
+        socketUrl = socketUrl.replace("//", "://");
+      }
+
+      const url = new URL(socketUrl.includes("://") ? socketUrl : `https://${socketUrl}`);
+      const finalUrl = url.origin;
+
+      console.warn("[ClassSocket] Final URL Origin:", finalUrl);
+      return finalUrl;
+    } catch (error) {
+      console.error("[ClassSocket] URL Parse error:", error);
+      const fallback = socketUrl.split("/api")[0];
+      return fallback;
+    }
   }
 
   private getUserId(): number | string | null {

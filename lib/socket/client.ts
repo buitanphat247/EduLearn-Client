@@ -18,17 +18,36 @@ class SocketClient {
    */
   private getSocketUrl(): string {
     if (typeof window === "undefined") return "";
-    
-    // Try to get from environment variable
-    const envUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
-    if (envUrl) {
-      return envUrl;
-    }
 
-    // Default: same origin as API, but on socket.io path
-    // Nếu API là /api-proxy thì socket có thể là ws://localhost:1611
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611";
-    return apiUrl.replace("/api", "");
+    // 1. Try to get from environment variable
+    let envUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
+
+    // 2. Default: derive from API URL
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.edulearning.io.vn/api";
+
+    let socketUrl = envUrl || apiUrl;
+
+    // ✅ Robust URL parsing and correction
+    try {
+      // Fix potential typo: https// -> https://
+      if (typeof socketUrl === "string" && socketUrl.includes("//") && !socketUrl.includes("://")) {
+        socketUrl = socketUrl.replace("//", "://");
+      }
+
+      const url = new URL(socketUrl.includes("://") ? socketUrl : `https://${socketUrl}`);
+
+      // We only want the origin (scheme + host + port), socket.io handles paths
+      const finalUrl = url.origin;
+
+      // ✅ Use console.warn to ensure visibility in production (as console.log is stripped)
+      console.warn("[SocketClient] Connecting to:", finalUrl);
+      return finalUrl;
+    } catch (error) {
+      console.error("[SocketClient] URL Parse error:", error);
+      const fallback = socketUrl.split("/api")[0];
+      console.warn("[SocketClient] Fallback URL:", fallback);
+      return fallback;
+    }
   }
 
   /**
@@ -37,16 +56,16 @@ class SocketClient {
    */
   private getAccessToken(): string | null {
     if (typeof window === "undefined") return null;
-    
+
     // ✅ Try cookie first (more secure, httpOnly cookies are not accessible via JS)
     // Note: If token is in httpOnly cookie, it won't be accessible here
     // This method should be used for non-httpOnly tokens only
     try {
-      const cookies = document.cookie.split(';');
+      const cookies = document.cookie.split(";");
       for (const cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
+        const [name, value] = cookie.trim().split("=");
         // Check for common token cookie names
-        if ((name === '_at' || name === 'access_token') && value) {
+        if ((name === "_at" || name === "access_token") && value) {
           try {
             return decodeURIComponent(value);
           } catch {
@@ -55,7 +74,7 @@ class SocketClient {
         }
       }
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === "development") {
         console.error("Error getting token from cookie:", error);
       }
     }
@@ -63,7 +82,7 @@ class SocketClient {
     // ❌ Removed localStorage fallback (security risk - XSS vulnerability)
     // If token is needed, it should be provided via httpOnly cookie or secure context
     // Only use localStorage if absolutely necessary and document the security risk
-    
+
     return null;
   }
 
@@ -72,7 +91,7 @@ class SocketClient {
    */
   private getUserId(): number | string | null {
     if (typeof window === "undefined") return null;
-    
+
     try {
       const userStr = localStorage.getItem("user");
       if (userStr) {
@@ -134,7 +153,7 @@ class SocketClient {
       this.socket.on("connect", () => {
         console.log("Socket connected:", this.socket?.id);
         this.isConnecting = false;
-        
+
         // Join user room for receiving personal events
         const userId = this.getUserId();
         if (userId && this.socket) {
@@ -148,7 +167,7 @@ class SocketClient {
       this.socket.on("disconnect", (reason: string) => {
         console.log("Socket disconnected:", reason);
         this.isConnecting = false;
-        
+
         // Notify all listeners
         this.connectionListeners.forEach((listener) => listener(false));
       });
@@ -156,11 +175,10 @@ class SocketClient {
       this.socket.on("connect_error", (error: Error) => {
         console.error("Socket connection error:", error);
         this.isConnecting = false;
-        
+
         // Notify all listeners
         this.connectionListeners.forEach((listener) => listener(false));
       });
-
     } catch (error) {
       console.error("Error creating socket connection:", error);
       this.isConnecting = false;
@@ -200,7 +218,7 @@ class SocketClient {
    */
   onConnectionChange(listener: (connected: boolean) => void): () => void {
     this.connectionListeners.add(listener);
-    
+
     // Return unsubscribe function
     return () => {
       this.connectionListeners.delete(listener);
@@ -242,7 +260,7 @@ class SocketClient {
    */
   off(event: string, callback?: (...args: any[]) => void): void {
     if (!this.socket) return;
-    
+
     if (callback) {
       this.socket.off(event, callback);
     } else {
@@ -253,4 +271,3 @@ class SocketClient {
 
 // Export singleton instance
 export const socketClient = new SocketClient();
-
