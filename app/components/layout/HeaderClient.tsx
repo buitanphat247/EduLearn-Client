@@ -412,10 +412,9 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
           <div className="hidden md:flex items-center space-x-8">
             <NavLink to="/" label="Trang chủ" />
 
-            {/* Chỉ hiện Tin tức, Sự kiện, Tính năng khi đã đăng nhập */}
+            {/* Chỉ hiện Sự kiện, Tính năng khi đã đăng nhập */}
             {user && (
               <>
-                <NavLink to="/news" label="Tin tức" />
                 <NavLink to="/events" label="Sự kiện" />
 
                 <DropdownNavButton
