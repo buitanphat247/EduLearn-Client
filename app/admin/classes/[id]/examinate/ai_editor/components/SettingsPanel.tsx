@@ -149,7 +149,7 @@ export default function SettingsPanel({ form, onSave, onTogglePublish, saving, i
                 loading={saving}
                 block
                 size="middle"
-                className="h-10 rounded-xl bg-gray-900 dark:bg-gray-700 border-none font-bold text-base uppercase tracking-widest shadow-none hover:!bg-gray-800 dark:hover:!bg-gray-600"
+                className="h-10 rounded-xl bg-gray-900 dark:bg-gray-700 border-none font-bold text-base uppercase tracking-widest shadow-none hover:bg-gray-800! dark:hover:bg-gray-600!"
               >
                 Lưu cấu hình
               </Button>
