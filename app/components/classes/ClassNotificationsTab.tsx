@@ -41,6 +41,7 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
   const [total, setTotal] = useState(0);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [loadingEdit, setLoadingEdit] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   const [classDetails, setClassDetails] = useState<ClassDetailResponse | null>(null);
 
   // Fetch class details to get the name
@@ -181,10 +182,21 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
     }
   }, []);
 
-  const handleMenuClick = (key: string, n: Notification) => {
+  const handleMenuClick = async (key: string, n: Notification) => {
     if (key === "view") {
-      const full = notifications.find((item) => String(item.notification_id) === n.id);
-      if (full) { setSelectedNotification(full); setIsDetailModalOpen(true); }
+      try {
+        setLoadingDetail(true);
+        const id = Number(n.id);
+        if (isNaN(id)) return;
+        // Gọi API để lấy chi tiết và check membership
+        const detail = await getNotificationById(id);
+        setSelectedNotification(detail);
+        setIsDetailModalOpen(true);
+      } catch (error: any) {
+        messageRef.current.error(error?.message || "Không thể xem thông báo này. Bạn có thể không còn là thành viên của lớp học này.");
+      } finally {
+        setLoadingDetail(false);
+      }
     } else if (key === "edit") {
       handleEditNotification(n);
     } else if (key === "delete") {
@@ -263,7 +275,7 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
             {displayNotifications.map((n) => (
               <div
                 key={n.id}
-                className="bg-white dark:bg-gray-800 rounded-lg border-l-4 border-blue-500 border border-gray-200 dark:border-slate-600 p-6 hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-slate-600 border-l-4 border-l-blue-500 p-6 hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => handleMenuClick("view", n)}
               >
                 <div className="flex flex-col h-full">
@@ -304,12 +316,16 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
         footer={null}
         width={700}
         centered
-        destroyOnClose
+        destroyOnHidden
         styles={{
           mask: { backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' }
         }}
       >
-        {selectedNotification && (
+        {loadingDetail ? (
+          <div className="py-8 text-center">
+            <Skeleton active paragraph={{ rows: 4 }} />
+          </div>
+        ) : selectedNotification && (
           <div className="space-y-5 pt-2">
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-slate-400 block mb-1">Tiêu đề</label>

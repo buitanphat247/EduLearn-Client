@@ -82,7 +82,12 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
   });
   const [imgError, setImgError] = useState(false);
 
-  const FALLBACK_CAT = getMediaUrl("/avatars/anh3_1770318347807_gt8xnc.jpeg");
+  // Check if user has valid avatar
+  const hasValidAvatar = useMemo(() => {
+    if (!user?.avatar) return false;
+    const avatarStr = String(user.avatar).trim();
+    return avatarStr !== '' && avatarStr !== 'null' && avatarStr !== 'undefined';
+  }, [user?.avatar]);
 
   useEffect(() => {
     const syncUser = () => {
@@ -92,6 +97,7 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
           try {
             const parsedUser = JSON.parse(storedUser);
             setUser(parsedUser);
+            // Reset imgError when user changes
             setImgError(false);
           } catch (e) {
             console.error("Error parsing user from localStorage", e);
@@ -464,28 +470,31 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
                       }
                     }}
                   >
-                    <div className="w-10 h-10 rounded-full border-2 border-slate-200 dark:border-white/30 bg-slate-100 dark:bg-white/20 backdrop-blur-sm flex items-center justify-center text-slate-600 dark:text-white group-hover:bg-white group-hover:text-blue-600 group-hover:border-blue-500 transition-colors duration-300 shadow-sm relative overflow-hidden">
-                      <Avatar
-                        size={40}
-                        src={getCachedImageUrl((!user.avatar || imgError) ? FALLBACK_CAT : getMediaUrl(user.avatar))}
-                        onError={() => {
-                          setImgError(true);
-                          return true;
-                        }}
-                        className="flex items-center justify-center bg-transparent border-none"
-                        icon={<UserOutlined style={{ fontSize: 20 }} />}
-                      />
-                    </div>
+                    <Avatar
+                      size={40}
+                      src={hasValidAvatar && !imgError ? getCachedImageUrl(getMediaUrl(user.avatar)) : undefined}
+                      onError={() => {
+                        setImgError(true);
+                        return true;
+                      }}
+                      style={{
+                        backgroundColor: '#2563eb',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      icon={<UserOutlined style={{ fontSize: 20, color: '#ffffff' }} />}
+                    />
                     <div className="hidden md:block text-right">
-                      <div className="text-sm font-bold text-slate-700 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                      <div className="text-sm font-bold text-slate-600 dark:text-slate-300 leading-tight">
                         {fixUtf8(user.fullname || user.username)}
                       </div>
-                      <div className="text-[10px] text-slate-500 dark:text-blue-100 font-medium opacity-80 uppercase tracking-widest group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium opacity-80 uppercase tracking-widest">
                         {userRoleLabel.toUpperCase()}
                       </div>
                     </div>
                     <svg
-                      className="w-4 h-4 text-slate-500 dark:text-blue-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 hidden md:block"
+                      className="w-4 h-4 text-slate-500 dark:text-slate-400 hidden md:block"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"

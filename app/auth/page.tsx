@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Form, Input, Button, Checkbox, App, ConfigProvider, theme, Select } from "antd";
 import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from "@ant-design/icons";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { signIn, signUp } from "@/lib/api/auth";
@@ -20,18 +20,26 @@ export default function AuthPage() {
   const [signUpLoading, setSignUpLoading] = useState(false);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { message } = App.useApp();
 
   const [shouldAnimate, setShouldAnimate] = useState(false); // Control animation state
+  const sessionRevokedShownRef = useRef(false);
 
-  // ✅ Fix race condition - Add isMounted check và cleanup
+  // Chỉ một toast khi bị chuyển về đăng nhập do phiên đã bị đăng xuất (tránh trùng với toast từ layout)
+  useEffect(() => {
+    const reason = searchParams.get("reason");
+    if (reason === "session_revoked" && !sessionRevokedShownRef.current) {
+      sessionRevokedShownRef.current = true;
+      message.warning("Phiên đăng nhập đã bị đăng xuất khỏi hệ thống. Vui lòng đăng nhập lại.");
+      if (typeof window !== "undefined") window.history.replaceState({}, "", "/auth");
+    }
+  }, [searchParams, message]);
+
   useEffect(() => {
     let isMounted = true;
 
     const checkAuth = async () => {
-      // Wait a bit to ensure cookies are set
-      await new Promise(resolve => setTimeout(resolve, 100));
-
       if (!isMounted) return;
 
       const user = getCurrentUser();
@@ -60,17 +68,14 @@ export default function AuthPage() {
     }
   }, [isSignUp, shouldAnimate]);
 
-  // ✅ Constants for magic numbers
   const REDIRECT_DELAY_MS = 500;
-  const RATE_LIMIT_DELAY_MS = 1000; // 1 second between attempts
+  const RATE_LIMIT_DELAY_MS = 1000;
   const MAX_ATTEMPTS = 5;
 
-  // ✅ Rate limiting state
   const [attemptCount, setAttemptCount] = useState(0);
   const lastAttemptRef = useRef<number>(0);
   const isSubmittingRef = useRef(false);
 
-  // ✅ Type safety - Define interfaces
   interface SignInValues {
     email: string;
     password: string;
@@ -78,7 +83,6 @@ export default function AuthPage() {
   }
 
   const handleSignIn = async (values: SignInValues) => {
-    // ✅ Rate limiting check
     const now = Date.now();
     const timeSinceLastAttempt = now - lastAttemptRef.current;
 
@@ -87,7 +91,6 @@ export default function AuthPage() {
       return;
     }
 
-    // ✅ Check attempt count
     if (attemptCount >= MAX_ATTEMPTS) {
       message.error("Quá nhiều lần thử. Vui lòng thử lại sau 5 phút.");
       return;
@@ -104,22 +107,14 @@ export default function AuthPage() {
 
       const response = await signIn({
         emailOrUsername: values.email,
-        password: values.password, // ✅ Password sent over HTTPS (acceptable - backend handles hashing)
+        password: values.password,
         device_name: deviceName,
       });
 
       if (response.status && response.data?.user) {
-        // Backend đã mã hóa và set cookie rồi
-        // KHÔNG lưu vào localStorage nữa - chỉ dùng cookie đã mã hóa
-        // Tất cả thông tin sẽ được đọc từ cookie ở server-side
-
         message.success("Đăng nhập thành công!");
-        // ✅ Reset attempt count on success
         setAttemptCount(0);
-        // ✅ Use router.push instead of window.location.href for better control
-        setTimeout(() => {
-          router.push("/profile");
-        }, REDIRECT_DELAY_MS);
+        window.location.href = "/profile";
       } else {
         message.error(response.message || "Đăng nhập thất bại. Vui lòng thử lại!");
         setAttemptCount(prev => prev + 1);
@@ -143,7 +138,6 @@ export default function AuthPage() {
     }
   };
 
-  // ✅ Type safety - Define interface
   interface SignUpValues {
     name: string;
     username: string;
@@ -156,7 +150,6 @@ export default function AuthPage() {
   }
 
   const handleSignUp = async (values: SignUpValues) => {
-    // ✅ Rate limiting check
     const now = Date.now();
     const timeSinceLastAttempt = now - lastAttemptRef.current;
 
@@ -175,7 +168,7 @@ export default function AuthPage() {
       const deviceName = navigator.userAgent || "Web Browser";
 
       const response = await signUp({
-        username: values.username, // ✅ User chooses their own username
+        username: values.username,
         fullname: values.name,
         email: values.email,
         phone: values.phone || "",
@@ -187,9 +180,7 @@ export default function AuthPage() {
       if (response.status && response.data?.user) {
         message.success("Đăng ký thành công!");
         setAttemptCount(0);
-        setTimeout(() => {
-          router.push("/profile");
-        }, REDIRECT_DELAY_MS);
+        window.location.href = "/profile";
       } else {
         message.error(response.message || "Đăng ký thất bại. Vui lòng thử lại!");
         setAttemptCount(prev => prev + 1);
@@ -240,7 +231,7 @@ export default function AuthPage() {
                 className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-slate-300 dark:border-slate-700/50 p-5 rounded-2xl hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all duration-300 hover:scale-105 cursor-default group shadow-sm hover:shadow-md"
                 style={{ animationDelay: `${index * 1.5}s` }}
               >
-                <div className="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">{item.icon}</div>
+                <div className="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300" suppressHydrationWarning>{item.icon}</div>
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1 transition-colors">{item.title}</h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">{item.desc}</p>
               </div>
@@ -363,7 +354,11 @@ export default function AuthPage() {
                       <Form.Item name="role_id" initialValue={3} className="mb-0 col-span-1 md:col-span-2">
                         <Select
                           size="large"
-                          classNames={{ popup: { root: "dark:bg-slate-800 dark:border-slate-700" } }}
+                          classNames={{
+                            popup: {
+                              root: "dark:bg-slate-800 dark:border-slate-700"
+                            }
+                          }}
                           options={[
                             { value: 3, label: 'Học sinh' },
                             { value: 2, label: 'Giảng viên' },

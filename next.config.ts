@@ -167,6 +167,20 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(self), geolocation=()",
           },
+          // Cross-Origin-Embedder-Policy removed - too strict, blocks external images
+          // Only needed for SharedArrayBuffer or high isolation features
+          // {
+          //   key: "Cross-Origin-Embedder-Policy",
+          //   value: "require-corp",
+          // },
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
+          {
+            key: "Cross-Origin-Resource-Policy",
+            value: "cross-origin",
+          },
         ],
       },
     ];
@@ -274,7 +288,7 @@ export default withSentryConfig(nextConfig, {
 
   // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
   // This can increase your server load as well as your hosting bill.
-  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
+  // Note: Check that the configured route will not match with your Next.js proxy, otherwise reporting of client-
   // side errors will fail.
   tunnelRoute: "/monitoring",
 

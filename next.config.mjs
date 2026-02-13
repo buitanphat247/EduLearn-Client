@@ -5,10 +5,11 @@ const nextConfig = {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611/api";
 
         return [
-            // Note: /api-proxy/assignment-attachments/*, /api-proxy/writing-chat-bot/*, and /api-proxy/friends/* routes
-            // are handled by API route handlers (to connect to Flask/backend). Only rewrite other /api-proxy routes.
+            // Note: /api-proxy/assignment-attachments/* and /api-proxy/friends/* routes
+            // are handled by API route handlers (to connect to Flask/backend).
+            // /api-proxy/writing-chat-bot/* is now proxied through NestJS (with auth) → Python backend
             {
-                source: "/api-proxy/:path((?!assignment-attachments|writing-chat-bot).*)",
+                source: "/api-proxy/:path*",
                 destination: `${apiUrl}/:path*`,
             },
         ];
@@ -159,11 +160,11 @@ const nextConfig = {
                         key: "Content-Security-Policy",
                         value: [
                             "default-src 'self'",
-                            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://cdn.tailwindcss.com https://unpkg.com",
+                            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://cdn.tailwindcss.com https://unpkg.com https://vercel.live",
                             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com https://cdnjs.cloudflare.com",
                             "font-src 'self' https://fonts.gstatic.com data:",
                             "img-src 'self' data: blob: https: http:",
-                            "connect-src 'self' https: wss: ws: http://localhost:* ws://localhost:*",
+                            "connect-src 'self' https: wss: ws: http://localhost:* ws://localhost:* https://vercel.live",
                             "frame-ancestors 'self'",
                             "base-uri 'self'",
                             "form-action 'self'",
@@ -191,6 +192,20 @@ const nextConfig = {
                     {
                         key: "Permissions-Policy",
                         value: "camera=(), microphone=(self), geolocation=()",
+                    },
+                    // Cross-Origin-Embedder-Policy removed - too strict, blocks external images
+                    // Only needed for SharedArrayBuffer or high isolation features
+                    // {
+                    //     key: "Cross-Origin-Embedder-Policy",
+                    //     value: "require-corp",
+                    // },
+                    {
+                        key: "Cross-Origin-Opener-Policy",
+                        value: "same-origin",
+                    },
+                    {
+                        key: "Cross-Origin-Resource-Policy",
+                        value: "cross-origin",
                     },
                 ],
             },
@@ -301,7 +316,7 @@ export default withSentryConfig(nextConfig, {
 
     // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
     // This can increase your server load as well as your hosting bill.
-    // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
+    // Note: Check that the configured route will not match with your Next.js proxy, otherwise reporting of client-
     // side errors will fail.
     tunnelRoute: "/monitoring",
 

@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, memo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { App, Input, Button, Tag, Dropdown, Pagination, Empty } from "antd";
 import type { MenuProps } from "antd";
-import { SearchOutlined, PlusOutlined, MoreOutlined, CalendarOutlined, RobotOutlined, ExclamationCircleFilled } from "@ant-design/icons";
+import { SearchOutlined, PlusOutlined, MoreOutlined, CalendarOutlined, RobotOutlined, ExclamationCircleFilled, ReloadOutlined } from "@ant-design/icons";
 import Swal from "sweetalert2";
 import type { ClassExamsTabProps, Exam } from "./types";
 import { getRagTestsByClass, deleteRagTest } from "@/lib/api/rag-exams";
@@ -128,6 +128,11 @@ const ClassExamsTab = memo(function ClassExamsTab({
   const handleCreateExam = () => {
     router.push(`/admin/classes/${classId}/examinate`);
   };
+
+  const handleFastRefresh = useCallback(async () => {
+    await fetchRagTests();
+    message.success({ content: "Đã cập nhật danh sách kỳ thi", key: "exams_refresh", duration: 2 });
+  }, [fetchRagTests, message]);
 
   const getMenuItems = useCallback(
     (exam: Exam): MenuProps["items"] => {
@@ -364,8 +369,17 @@ const ClassExamsTab = memo(function ClassExamsTab({
             onSearchChange(e.target.value);
             onPageChange(1);
           }}
-          className="flex-1 dark:bg-gray-700/50 dark:!border-slate-600 dark:text-white dark:placeholder-gray-500 hover:dark:!border-slate-500 focus:dark:!border-blue-500"
+          className="flex-1 dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
         />
+        <Button
+          size="middle"
+          icon={<ReloadOutlined />}
+          onClick={handleFastRefresh}
+          loading={isLoading}
+          title="Làm mới danh sách kỳ thi"
+        >
+          Làm mới
+        </Button>
         {!readOnly && (
           <Button size="middle" icon={<PlusOutlined />} onClick={handleCreateExam} className="bg-blue-600 hover:bg-blue-700">
             Tạo kỳ thi mới
@@ -380,7 +394,7 @@ const ClassExamsTab = memo(function ClassExamsTab({
               key={exam.id}
               onClick={(e) => handleCardClick(exam, e)}
               className={`bg-white dark:bg-gray-800 rounded-lg border-l-4 ${exam.isAi ? "border-cyan-500" : "border-orange-500"
-                } border-t border-r border-b border-gray-200 dark:!border-slate-600 p-6 hover:shadow-md transition-shadow ${readOnly ? "cursor-pointer" : ""} ${exam.isLocked ? "opacity-60 grayscale cursor-not-allowed" : ""
+                } border-t border-r border-b border-gray-200 dark:border-slate-600! p-6 hover:shadow-md transition-shadow ${readOnly ? "cursor-pointer" : ""} ${exam.isLocked ? "opacity-60 grayscale cursor-not-allowed" : ""
                 }`}
             >
               <div className="flex flex-col h-full">

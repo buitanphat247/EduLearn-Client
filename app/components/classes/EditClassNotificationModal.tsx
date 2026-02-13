@@ -87,7 +87,7 @@ export default function EditClassNotificationModal({ open, notification, classId
       width={600}
       maskClosable={!submitting && !loading}
       closable={!submitting && !loading}
-      destroyOnClose={true}
+      destroyOnHidden={true}
     >
       <Spin spinning={loading}>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>

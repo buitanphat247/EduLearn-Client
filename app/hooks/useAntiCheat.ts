@@ -28,6 +28,8 @@ interface UseAntiCheatProps {
   enable?: boolean;
   /** Initial violations count (for resuming exams) */
   initialViolationsCount?: number;
+  /** Max violations allowed before lock (default: 5) */
+  maxViolations?: number;
 }
 
 /**
@@ -58,7 +60,7 @@ interface UseAntiCheatProps {
  * });
  * ```
  */
-export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCount = 0 }: UseAntiCheatProps = {}) => {
+export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCount = 0, maxViolations = 5 }: UseAntiCheatProps = {}) => {
   const { modal, message } = App.useApp();
   const [violations, setViolations] = useState<Violation[]>([]);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -147,7 +149,7 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
           } else if (isLocked) {
             title = "BÀI THI ĐÃ BỊ KHÓA";
             icon = "🚫";
-            btnText = "Quay lại";
+            btnText = "Kết thúc bài thi"; // Updated text
           } else if (isError) {
             title = "KHÔNG THỂ BẮT ĐẦU";
             icon = "🚫";
@@ -181,7 +183,9 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
           overlayRef.current = div;
 
           div.querySelector("#resume-btn")?.addEventListener("click", () => {
-            if (isHardBlock) {
+            if (isLocked) {
+              window.dispatchEvent(new CustomEvent("exam_force_submit"));
+            } else if (isHardBlock) {
               window.dispatchEvent(new CustomEvent("exam_locked_exit"));
             } else {
               enterFullScreenRef.current();
@@ -309,8 +313,10 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
     }
   }, []);
 
+  type IncidentType = "exit_fullscreen" | "focus_loss" | "mouse_leave";
+
   const handleOutIncident = useCallback(
-    (type: "exit_fullscreen" | "focus_loss", customMsg?: string) => {
+    (type: IncidentType, customMsg?: string) => {
       // 0. If overlay is ALREADY showing, do not count further incidents
       if (overlayRef.current) return;
 
@@ -329,20 +335,28 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
 
       // 3. Show overlay immediately (plain text, không dùng HTML inline để tránh lỗi hiển thị)
       let displayMsg = "";
-      if (currentCount < 5) {
+      const introByType = type === "mouse_leave" ? "Con trỏ chuột rời khỏi vùng làm bài. Vui lòng đưa chuột trở lại!\n\n" : "";
+
+      const limit = maxViolations;
+
+      if (currentCount < limit) {
         displayMsg =
+          introByType +
           `Vui lòng QUAY LẠI bài thi ngay!\n\n` +
-          `CẢNH BÁO VI PHẠM LẦN: ${currentCount}/5\n` +
-          `(Hệ thống sẽ TỰ ĐỘNG KHÓA bài thi nếu bạn vi phạm đủ 5 lần)`;
+          `CẢNH BÁO VI PHẠM LẦN: ${currentCount}/${limit}\n` +
+          `(Hệ thống sẽ TỰ ĐỘNG KHÓA bài thi nếu bạn vi phạm đủ ${limit} lần)`;
       } else {
-        displayMsg =
-          `BẠN ĐÃ VI PHẠM QUY CHẾ THI ĐỦ 5 LẦN.\n` +
-          `Bài thi đã bị KHÓA vĩnh viễn và hệ thống đã tự động nộp bài làm của bạn.`;
+        displayMsg = `BẠN ĐÃ VI PHẠM QUY CHẾ THI ĐỦ ${limit} LẦN.\n` + `Bài thi đã bị KHÓA vĩnh viễn và hệ thống đã tự động nộp bài làm của bạn.`;
       }
       toggleBlockingOverlaySecure(true, displayMsg);
     },
-    [recordViolation, toggleBlockingOverlaySecure],
+    [recordViolation, toggleBlockingOverlaySecure, maxViolations],
   );
+
+  const handleOutIncidentRef = useRef(handleOutIncident);
+  useEffect(() => {
+    handleOutIncidentRef.current = handleOutIncident;
+  }, [handleOutIncident]);
 
   useEffect(() => {
     if (!enable || paused) return;
@@ -424,7 +438,7 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
     };
   }, [enable]);
 
-  // 4. Visibility & Blur (Strict Alt+Tab Detection)
+  // 4. Visibility & Blur (Strict Alt+Tab Detection) — luôn cảnh báo overlay + toast
   useEffect(() => {
     if (!enable || paused) return;
 
@@ -432,6 +446,11 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
     const handleVisibilityChange = () => {
       if (paused) return;
       if (document.hidden) {
+        message.warning({
+          content: "⚠️ Phát hiện rời khỏi tab thi! Quay lại ngay để tránh bị tính vi phạm.",
+          duration: 4,
+          key: "visibility-violation",
+        });
         handleOutIncident("focus_loss");
         document.title = "⚠️ VI PHẠM ⚠️";
       } else {
@@ -442,6 +461,11 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
     // Detect Loss of Focus (Alt+Tab, Click other Window)
     const handleBlur = () => {
       if (paused) return;
+      message.warning({
+        content: "⚠️ Phát hiện mất tập trung (blur)! Quay lại cửa sổ bài thi ngay.",
+        duration: 4,
+        key: "blur-violation",
+      });
       handleOutIncident("focus_loss");
     };
 
@@ -452,63 +476,75 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
       window.removeEventListener("blur", handleBlur);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [enable, handleOutIncident, paused]);
+  }, [enable, handleOutIncident, paused, message]);
 
-  // 5. Mouse Leave Detection - Giám sát con trỏ rời khỏi viewport
+  // 5. Mouse Leave Detection - Giám sát con trỏ rời khỏi viewport → cảnh báo overlay như blur/fullscreen
   useEffect(() => {
     if (!enable || paused) return;
 
     let mouseOutTimeout: NodeJS.Timeout | null = null;
-    const MOUSE_OUT_DELAY_MS = 300; // Delay để tránh false positive
+    const MOUSE_OUT_DELAY_MS = 400; // Delay tránh false positive khi di chuột qua viền
 
     const handleMouseOut = (e: MouseEvent) => {
       if (paused) return;
 
-      // Kiểm tra xem chuột có rời khỏi window không
-      // Khi chuột rời window, toElement/relatedTarget là null và
-      // clientX/clientY nằm ngoài viewport
-      const isLeavingWindow = e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight;
+      // Chuột rời window: tại viền viewport và relatedTarget null (không còn element đích)
+      const atEdge = e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight;
+      const leavingWindow = atEdge && e.relatedTarget === null;
 
-      if (isLeavingWindow && e.relatedTarget === null) {
-        // Clear timeout trước đó nếu có
-        if (mouseOutTimeout) {
-          clearTimeout(mouseOutTimeout);
-        }
-
+      if (leavingWindow) {
+        if (mouseOutTimeout) clearTimeout(mouseOutTimeout);
         mouseOutTimeout = setTimeout(() => {
-          if (!paused) {
-            console.log("[Anti-Cheat] Mouse left viewport at:", { x: e.clientX, y: e.clientY });
-            recordViolationRef.current("mouse_leave", "Con trỏ chuột rời khỏi vùng làm bài");
-            message.warning({
-              content: "⚠️ Phát hiện con trỏ chuột rời khỏi vùng thi!",
-              duration: 3,
-              key: "mouse-leave-warning",
-            });
+          if (!paused && !overlayRef.current) {
+            handleOutIncidentRef.current("mouse_leave");
           }
         }, MOUSE_OUT_DELAY_MS);
       }
     };
 
     const handleMouseEnter = () => {
-      // Hủy timeout nếu chuột quay lại
       if (mouseOutTimeout) {
         clearTimeout(mouseOutTimeout);
         mouseOutTimeout = null;
       }
     };
 
-    // Sử dụng mouseout trên document và mouseover để cancel
     document.addEventListener("mouseout", handleMouseOut);
     document.addEventListener("mouseover", handleMouseEnter);
 
     return () => {
-      if (mouseOutTimeout) {
-        clearTimeout(mouseOutTimeout);
-      }
+      if (mouseOutTimeout) clearTimeout(mouseOutTimeout);
       document.removeEventListener("mouseout", handleMouseOut);
       document.removeEventListener("mouseover", handleMouseEnter);
     };
-  }, [enable, paused, message]);
+    return () => {
+      if (mouseOutTimeout) clearTimeout(mouseOutTimeout);
+      document.removeEventListener("mouseout", handleMouseOut);
+      document.removeEventListener("mouseover", handleMouseEnter);
+    };
+  }, [enable, paused]);
+
+  // 6. Active Polling Check (Hardening for missed events)
+  useEffect(() => {
+    if (!enable || paused) return;
+
+    const checkFocusInterval = setInterval(() => {
+      if (paused || overlayRef.current) return; // Don't check if already flagged/paused
+
+      // document.hasFocus() is the most reliable way to check active window
+      if (!document.hasFocus()) {
+        // console.warn("Polling detected focus loss!");
+        message.warning({
+          content: "⚠️ Cảnh báo: Bạn đang không tập trung vào màn hình thi!",
+          duration: 3,
+          key: "focus-polling",
+        });
+        handleOutIncident("focus_loss");
+      }
+    }, 1500); // Check every 1.5s
+
+    return () => clearInterval(checkFocusInterval);
+  }, [enable, paused, handleOutIncident, message]);
 
   // FINAL CLEANUP: Ensure overlay is removed when component unmounts
   useEffect(() => {

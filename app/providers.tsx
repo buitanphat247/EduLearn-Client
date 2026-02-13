@@ -5,6 +5,7 @@ import { ThemeProvider, useTheme, type Theme } from "@/app/context/ThemeContext"
 import ErrorBoundary from "@/app/error-boundary";
 import { WebVitalsTracker } from "@/app/components/common/WebVitalsTracker";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
+import AuthRedirectListener from "@/app/components/auth/AuthRedirectListener";
 
 function AntdConfigProvider({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme();
@@ -61,6 +62,7 @@ export function Providers({ children, theme }: { children: React.ReactNode; them
       <ThemeProvider initialTheme={theme}>
         <QueryProvider>
           <AntdConfigProvider>
+            <AuthRedirectListener />
             <WebVitalsTracker />
             {children}
           </AntdConfigProvider>

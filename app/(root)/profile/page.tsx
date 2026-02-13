@@ -30,8 +30,6 @@ export default function Profile() {
   const { theme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const FALLBACK_CAT = getMediaUrl("/avatars/anh3_1770318347807_gt8xnc.jpeg");
-
   useEffect(() => {
     let isMounted = true;
 
@@ -200,17 +198,17 @@ export default function Profile() {
 
           {/* Avatar - Circle */}
           <div className="shrink-0 relative group">
-            <div className="relative p-1 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]">
+            <div className="relative p-1 rounded-full bg-blue-500 dark:bg-blue-600 shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]">
               <div className="relative overflow-hidden rounded-full border-4 border-white dark:border-[#1e293b]">
                 <Avatar
                   size={140}
-                  src={getCachedImageUrl((!user.avatar || imgError) ? FALLBACK_CAT : getMediaUrl(user.avatar))}
+                  src={user.avatar && !imgError ? getCachedImageUrl(getMediaUrl(user.avatar)) : undefined}
                   onError={() => {
                     setImgError(true);
                     return true;
                   }}
-                  className="flex items-center justify-center bg-slate-200 dark:bg-slate-800"
-                  icon={<UserOutlined style={{ fontSize: 70, color: theme === 'dark' ? '#475569' : '#94a3b8' }} />}
+                  className="flex items-center justify-center bg-blue-600"
+                  icon={<UserOutlined style={{ fontSize: 70, color: '#ffffff' }} />}
                 />
               </div>
 
@@ -241,7 +239,7 @@ export default function Profile() {
             </div>
 
             {isAdmin && (
-              <div className="absolute -top-1 -right-1 bg-gradient-to-br from-yellow-400 to-orange-500 text-white rounded-full p-2 shadow-xl border-2 border-white dark:border-[#1e293b] z-20">
+              <div className="absolute -top-1 -right-1 bg-linear-to-br from-yellow-400 to-orange-500 text-white rounded-full p-2 shadow-xl border-2 border-white dark:border-[#1e293b] z-20">
                 <CrownOutlined className="text-lg block" />
               </div>
             )}

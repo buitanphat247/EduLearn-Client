@@ -23,7 +23,7 @@ function ClassesHeader({ searchValue, onSearchChange, onAddClick, onJoinClick }:
           prefix={<SearchOutlined className="text-gray-400" />}
           placeholder="Tìm kiếm lớp học hoặc mã code... (Ctrl+K)"
           size="middle"
-          className="flex-1 min-w-[200px] dark:bg-gray-700/50 dark:!border-slate-600 dark:text-white dark:placeholder-gray-500 hover:dark:!border-slate-500 focus:dark:!border-blue-500"
+          className="flex-1 min-w-[200px] dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
           value={searchValue}
           onChange={handleSearchChange}
           allowClear

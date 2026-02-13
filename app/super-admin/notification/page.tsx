@@ -122,6 +122,20 @@ export default function SuperAdminNotifications() {
     }
   }, [fetchNotifications, pagination.current, pagination.pageSize, debouncedSearchQuery, userId, userLoading]);
 
+  // Listen for refresh event from sidebar
+  useEffect(() => {
+    const handleRefreshEvent = () => {
+      if (userId && !userLoading) {
+        fetchNotifications(pagination.current, pagination.pageSize, debouncedSearchQuery);
+      }
+    };
+
+    window.addEventListener("refresh-notifications", handleRefreshEvent);
+    return () => {
+      window.removeEventListener("refresh-notifications", handleRefreshEvent);
+    };
+  }, [fetchNotifications, pagination.current, pagination.pageSize, debouncedSearchQuery, userId, userLoading]);
+
   const handleTableChange = useCallback((page: number, pageSize: number) => {
     setPagination((prev) => ({ ...prev, current: page, pageSize }));
   }, []);

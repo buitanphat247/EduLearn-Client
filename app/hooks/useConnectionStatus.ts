@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { chatSocketClient } from "@/lib/socket";
+import { socketClient } from "@/lib/socket";
 
 type ConnectionStatus = "connected" | "disconnected" | "connecting" | "reconnecting";
 
@@ -25,13 +25,13 @@ export function useConnectionStatus(): UseConnectionStatusReturn {
 
   useEffect(() => {
     // Initial status check
-    if (chatSocketClient.isConnected()) {
+    if (socketClient.isConnected()) {
       setStatus("connected");
       setLastConnectedAt(new Date());
     }
 
     // Subscribe to connection changes
-    const unsubscribe = chatSocketClient.onConnectionChange((isConnected) => {
+    const unsubscribe = socketClient.onConnectionChange((isConnected) => {
       if (isConnected) {
         setStatus("connected");
         setLastConnectedAt(new Date());
@@ -61,7 +61,7 @@ export function useConnectionStatus(): UseConnectionStatusReturn {
     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
 
     reconnectTimeoutRef.current = setTimeout(() => {
-      chatSocketClient.connect();
+      socketClient.connect();
     }, delay);
   }, [status, reconnectAttempts]);
 

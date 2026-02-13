@@ -2,16 +2,35 @@ import apiClient, { clearTokens, clearAuthCache, clearResponseCache } from "@/ap
 import { clearUserCache, clearCookieCache, saveUserDataToSession } from "@/lib/utils/cookies";
 import type { SignInRequest, SignInResponse, SignUpRequest, SignUpResponse } from "@/interface/auth";
 
+/**
+ * Helper function to set cookies from response body
+ * Next.js rewrite doesn't forward Set-Cookie headers automatically
+ */
+function setCookiesFromResponse(response: any): void {
+  if (typeof window === "undefined" || !response.data?.cookies) return;
+  
+  const isDev = process.env.NODE_ENV === "development";
+  const sameSiteAttr = isDev ? 'SameSite=Lax' : 'SameSite=None; Secure=true';
+  const cookies = response.data.cookies;
+  
+  Object.keys(cookies).forEach((name) => {
+    if (name === '_at' || name === '_u' || name === '_rt') {
+      const cookieData = cookies[name];
+      const value = cookieData.value || cookieData;
+      const maxAge = cookieData.maxAge || (7 * 24 * 60 * 60 * 1000);
+      const expDate = new Date(Date.now() + maxAge);
+      document.cookie = `${name}=${encodeURIComponent(value)}; path=/; expires=${expDate.toUTCString()}; ${sameSiteAttr}`;
+    }
+  });
+}
+
 export const signIn = async (credentials: SignInRequest): Promise<SignInResponse> => {
   try {
     const response = await apiClient.post<SignInResponse>("/auth/signin", credentials, {
-      withCredentials: true, // Cần để gửi và nhận cookie
+      withCredentials: true,
     });
 
-    // Backend đã mã hóa và set accessToken và user vào cookie rồi
-    // KHÔNG lưu vào localStorage nữa - chỉ dùng cookie đã mã hóa
-    // Tất cả thông tin sẽ được đọc từ cookie ở server-side
-
+    setCookiesFromResponse(response);
     return response.data;
   } catch (error: any) {
     const errorMessage = error?.response?.data?.message || error?.message || "Đăng nhập thất bại";
@@ -22,13 +41,10 @@ export const signIn = async (credentials: SignInRequest): Promise<SignInResponse
 export const signUp = async (data: SignUpRequest): Promise<SignUpResponse> => {
   try {
     const response = await apiClient.post<SignUpResponse>("/auth/signup", data, {
-      withCredentials: true, // Cần để gửi và nhận cookie
+      withCredentials: true,
     });
 
-    // Backend đã mã hóa và set accessToken và user vào cookie rồi
-    // KHÔNG lưu vào localStorage nữa - chỉ dùng cookie đã mã hóa
-    // Tất cả thông tin sẽ được đọc từ cookie ở server-side
-
+    setCookiesFromResponse(response);
     return response.data;
   } catch (error: any) {
     const errorMessage = error?.response?.data?.message || error?.message || "Đăng ký thất bại";
@@ -36,51 +52,46 @@ export const signUp = async (data: SignUpRequest): Promise<SignUpResponse> => {
   }
 };
 
+const clearAuthState = () => {
+  clearTokens();
+  clearUserCache();
+  clearCookieCache();
+  clearAuthCache();
+  clearResponseCache();
+  if (typeof window !== "undefined") {
+    try {
+      const theme = localStorage.getItem("theme");
+      localStorage.clear();
+      if (theme) {
+        localStorage.setItem("theme", theme);
+      }
+    } catch (error) {
+      console.error("Error clearing localStorage:", error);
+    }
+  }
+};
+
 export const signOut = async (): Promise<void> => {
   try {
-    await apiClient.post(
-      "/auth/signout",
-      {},
-      {
-        withCredentials: true, // Cần để gửi cookie _at và _u
-      },
-    );
+    await apiClient.post("/auth/signout", {}, { withCredentials: true });
   } catch (error: any) {
-    // Logout vẫn tiếp tục ngay cả khi API call fail
-    // Backend có thể đã xóa token rồi, hoặc network error
-    if (process.env.NODE_ENV === "development") {
-      const status = error?.response?.status;
-      if (status === 400) {
-        console.error("Dữ liệu không hợp lệ khi đăng xuất");
-      } else if (status === 401) {
-        console.error("Token không hợp lệ khi đăng xuất");
-      } else if (error?.message) {
-        console.error("Error signing out:", error.message);
-      }
-    }
+    // Continue logout even if API call fails
   } finally {
-    // Luôn clear tokens và cache, kể cả khi API call fail
-    clearTokens();
-    clearUserCache();
-    clearCookieCache();
-    clearAuthCache();
-    clearResponseCache(); // Clear tất cả API response cache
+    clearAuthState();
+  }
+};
 
-    // ✅ Clear localStorage safely with error handling
-    if (typeof window !== "undefined") {
-      try {
-        // Chỉ xóa các keys liên quan đến authentication
-        // Giữ lại theme và các settings khác
-        const theme = localStorage.getItem("theme");
-        localStorage.clear();
-        // Khôi phục theme sau khi clear
-        if (theme) {
-          localStorage.setItem("theme", theme);
-        }
-      } catch (error) {
-        console.error("Error clearing localStorage:", error);
-      }
-    }
+/** Đăng xuất khỏi mọi thiết bị: vô hiệu hóa tất cả refresh token, xóa cookie/localStorage rồi redirect về trang đăng nhập */
+export const signOutAllDevices = async (): Promise<void> => {
+  try {
+    await apiClient.post("/auth/signout-all", {}, { withCredentials: true });
+  } catch (error: any) {
+    // Vẫn xóa state local dù API lỗi (token hết hạn, mạng...)
+  } finally {
+    clearAuthState();
+  }
+  if (typeof window !== "undefined") {
+    window.location.href = "/auth";
   }
 };
 
@@ -112,11 +123,9 @@ export interface ProfileResponse {
 export const getProfile = async (): Promise<ProfileResponse["data"]> => {
   try {
     const response = await apiClient.get<ProfileResponse>("/auth/profile", {
-      withCredentials: true, // Cần để gửi cookie _u và _at
+      withCredentials: true,
     });
 
-    // Response từ backend đã được ResponseInterceptor wrap:
-    // { status, message, data: user, statusCode, timestamp }
     if (response.data.status && response.data.data) {
       return response.data.data;
     }

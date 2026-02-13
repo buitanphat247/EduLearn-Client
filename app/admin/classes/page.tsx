@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { App } from "antd";
+import { App, Button, Input } from "antd";
+import { ReloadOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import ClassesHeader from "@/app/components/classes/ClassesHeader";
 import ClassesTable from "@/app/components/classes/ClassesTable";
 import CreateClassModal from "@/app/components/classes/CreateClassModal";
@@ -36,6 +37,22 @@ export default function AdminClasses() {
     messageRef.current = message;
   }, [message]);
 
+  // Request tracking để tránh race condition
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0);
+  const isMountedRef = useRef(true);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -56,14 +73,26 @@ export default function AdminClasses() {
     status: apiClass.status === "active" ? CLASS_STATUS_MAP.active : CLASS_STATUS_MAP.inactive,
   }), []);
 
-  // Fetch classes - stable callback
+  // Fetch classes - stable callback với race condition protection
   const fetchClasses = useCallback(async () => {
-    if (userIdLoading || !userId) return;
+    if (userIdLoading || !userId || !isMountedRef.current) return;
 
+    // Cancel previous request nếu đang chạy
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
+    // Tạo AbortController mới cho request này
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    
+    // Tăng request ID để track latest request
+    const currentRequestId = ++requestIdRef.current;
 
     try {
-      setLoading(true);
+      if (isMountedRef.current) {
+        setLoading(true);
+      }
 
       const result = await getClassesByUser({
         userId: userId,
@@ -72,16 +101,37 @@ export default function AdminClasses() {
         search: debouncedSearchQuery || undefined,
       });
 
+      // Check if request was aborted hoặc component unmounted
+      if (abortController.signal.aborted || !isMountedRef.current || currentRequestId !== requestIdRef.current) {
+        return;
+      }
+
       const mappedClasses: ClassItem[] = result.classes.map(mapClassData);
 
-
-
-      setClasses(mappedClasses);
-      setPagination((prev) => ({ ...prev, total: result.total }));
+      // Chỉ update state nếu đây là latest request và component vẫn mounted
+      if (isMountedRef.current && currentRequestId === requestIdRef.current) {
+        setClasses(mappedClasses);
+        setPagination((prev) => ({ ...prev, total: result.total }));
+      }
     } catch (error: any) {
-      messageRef.current.error(error?.message || "Không thể tải danh sách lớp học");
+      // Ignore AbortError (expected khi cancel)
+      if (error?.name === 'AbortError' || abortController.signal.aborted) {
+        return;
+      }
+      
+      if (isMountedRef.current && currentRequestId === requestIdRef.current) {
+        messageRef.current.error(error?.message || "Không thể tải danh sách lớp học");
+      }
     } finally {
-      setLoading(false);
+      // Chỉ update loading nếu đây là latest request
+      if (isMountedRef.current && currentRequestId === requestIdRef.current) {
+        setLoading(false);
+      }
+      
+      // Cleanup AbortController nếu đây là latest request
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null;
+      }
     }
   }, [userId, userIdLoading, pagination.current, pagination.pageSize, debouncedSearchQuery, mapClassData]);
 
@@ -170,6 +220,14 @@ export default function AdminClasses() {
     });
   }, [modal]);
 
+  const handleFastRefresh = useCallback(() => {
+    const hide = messageRef.current.loading("Đang làm mới danh sách lớp học...", 0);
+    fetchClasses().finally(() => {
+      hide();
+      messageRef.current.success("Đã cập nhật danh sách lớp học mới nhất");
+    });
+  }, [fetchClasses]);
+
   // Memoize pagination config
   const paginationConfig = useMemo(() => ({
     current: pagination.current,
@@ -180,11 +238,35 @@ export default function AdminClasses() {
 
   return (
     <div className="space-y-3">
-      <ClassesHeader
-        searchValue={searchQuery}
-        onSearchChange={setSearchQuery}
-        onAddClick={handleOpenCreateModal}
-      />
+      <div className="flex flex-wrap gap-3 items-center">
+        <Input
+          prefix={<SearchOutlined className="text-gray-400" />}
+          placeholder="Tìm kiếm lớp học hoặc mã code... (Ctrl+K)"
+          size="middle"
+          className="flex-1 min-w-[200px] dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          allowClear
+        />
+        <Button
+          type="default"
+          icon={<ReloadOutlined spin={loading} />}
+          size="middle"
+          onClick={handleFastRefresh}
+          disabled={loading}
+          className="shadow-sm"
+          title="Làm mới danh sách"
+        />
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          size="middle"
+          className="shadow-sm"
+          onClick={handleOpenCreateModal}
+        >
+          Thêm lớp học
+        </Button>
+      </div>
 
       <CreateClassModal
         open={isCreateModalOpen}

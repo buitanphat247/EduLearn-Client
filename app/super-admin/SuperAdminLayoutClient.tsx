@@ -3,11 +3,13 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import SuperAdminSidebar from "../components/layout/SuperAdminSidebar";
 import { usePathname } from "next/navigation";
-import { Modal, Spin, message, Breadcrumb } from "antd";
+import { Modal, Spin, message, Breadcrumb, Avatar } from "antd";
+import { UserOutlined } from "@ant-design/icons";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { useUserId } from "@/app/hooks/useUserId";
 import Link from "next/link";
 import { ServerAuthedUserProvider } from "../context/ServerAuthedUserProvider";
+import { useUserProfile } from "@/app/hooks/useUserProfile";
 
 const pageTitles: Record<string, string> = {
   "/super-admin": "Dashboard",
@@ -29,10 +31,9 @@ interface InitialUserData {
 
 function SuperAdminHeader({ initialUserData }: { initialUserData: InitialUserData | null }) {
   const pathname = usePathname();
-  const { userId, loading: userIdLoading } = useUserId();
+  // Use the new hook
+  const { userInfo, loading: loadingProfile, fetchUserInfo } = useUserProfile();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
 
   const getBreadcrumbItems = useMemo(() => {
     const items = [
@@ -53,35 +54,10 @@ function SuperAdminHeader({ initialUserData }: { initialUserData: InitialUserDat
     return items;
   }, [pathname]);
 
-  const fetchUserInfo = useCallback(async (showError = false) => {
-    if (!userId) {
-      if (showError && !userIdLoading) message.error("Không tìm thấy thông tin người dùng");
-      return;
-    }
-
-    if (showError) setLoadingProfile(true);
-    try {
-      const user = await getUserInfo(userId);
-      setUserInfo(user);
-    } catch (error: any) {
-      if (showError) {
-        message.error(error?.message || "Không thể tải thông tin người dùng");
-      }
-      console.error("Error fetching user info:", error);
-    } finally {
-      if (showError) setLoadingProfile(false);
-    }
-  }, [userId, userIdLoading]);
-
-  // Fetch when userId becomes available
   useEffect(() => {
-    if (!userId || userIdLoading) return;
-    fetchUserInfo(false);
-  }, [userId, userIdLoading, fetchUserInfo]);
-
-  useEffect(() => {
-    if (!isProfileModalOpen || userInfo) return;
-    fetchUserInfo(true);
+    if (isProfileModalOpen && !userInfo) {
+      fetchUserInfo(true);
+    }
   }, [isProfileModalOpen, userInfo, fetchUserInfo]);
 
   const getInitials = useCallback((name: string) => {
@@ -116,7 +92,13 @@ function SuperAdminHeader({ initialUserData }: { initialUserData: InitialUserDat
             onClick={() => setIsProfileModalOpen(true)}
             className="flex items-center gap-3 pl-4 border-l border-gray-300 dark:border-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
           >
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">{displayInitials}</div>
+            <div className="relative p-0.5 rounded-full bg-blue-500 dark:bg-blue-600">
+              <Avatar
+                size={40}
+                className="flex items-center justify-center bg-blue-600"
+                icon={<UserOutlined style={{ fontSize: 20, color: '#ffffff' }} />}
+              />
+            </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{displayName}</span>
               <span className="text-xs text-gray-600 dark:text-gray-400">{displayRole}</span>
@@ -130,8 +112,12 @@ function SuperAdminHeader({ initialUserData }: { initialUserData: InitialUserDat
           {userInfo ? (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl">
-                  {getInitials(userInfo.fullname || userInfo.username || "SA")}
+                <div className="relative p-1 rounded-full bg-blue-500 dark:bg-blue-600">
+                  <Avatar
+                    size={80}
+                    className="flex items-center justify-center bg-blue-600"
+                    icon={<UserOutlined style={{ fontSize: 40, color: '#ffffff' }} />}
+                  />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{userInfo.fullname || userInfo.username}</h3>

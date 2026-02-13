@@ -39,7 +39,9 @@ export const getUserInfo = async (userId: number | string): Promise<UserInfoResp
     return response.data as any;
   } catch (error: any) {
     const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy thông tin user";
-    throw new Error(errorMessage);
+    const err = new Error(errorMessage) as Error & { code?: string };
+    if (error?.code) err.code = error.code;
+    throw err;
   }
 };
 

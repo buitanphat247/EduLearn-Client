@@ -7,10 +7,12 @@ import { RagTestDetail, RagQuestion, getRagTestDetail } from "@/lib/api/rag-exam
 import { startExamAttempt, submitExamAttempt, logSecurityEvent } from "@/lib/api/exam-attempts";
 import { useAntiCheat } from "@/app/hooks/useAntiCheat";
 
-// --- Constants & Config ---
+// --- Constants & Config (đọc từ .env, anti-cheat tắt khi bất kỳ điều kiện nào = true) ---
 const QUESTIONS_PER_PAGE = 1;
 const isMockExamMode = typeof process !== "undefined" && process.env.NEXT_PUBLIC_EXAM_MOCK_DATA === "true";
 const isExamDevMode = process.env.NEXT_PUBLIC_EXAM_DEV_MODE === "true";
+/** false = tắt anti-cheat hoàn toàn; true hoặc không set = bật (khi không phải mock/dev) */
+const isAntiCheatDisabledByEnv = process.env.NEXT_PUBLIC_EXAM_ANTICHEAT_ENABLED === "false";
 
 // Mock Data Generator
 const createMockTest = (examId: string): RagTestDetail => {
@@ -97,11 +99,11 @@ export function useExamController(examId: string, classId: string, studentId: nu
 
   // --- 1. ANTI-CHEAT & SECURITY (Defined First) ---
   const handleViolation = useCallback((type: string, msg: string) => {
-    if (isMockExamMode || isSubmittedRef.current) return;
+    if (isAntiCheatDisabledByEnv || isMockExamMode || isSubmittedRef.current) return;
 
     if (socketRef.current?.connected && attemptIdRef.current) {
       socketRef.current.emit("report_violation", {
-        attempt_id: attemptIdRef.current,
+        attemptId: attemptIdRef.current,
         type,
         message: msg,
       });
@@ -111,9 +113,9 @@ export function useExamController(examId: string, classId: string, studentId: nu
     }
   }, []);
 
-  // Manual DevTools Check
+  // Manual DevTools Check (chỉ chạy khi anti-cheat bật theo .env)
   useEffect(() => {
-    if (isMockExamMode || isExamDevMode) return;
+    if (isAntiCheatDisabledByEnv || isMockExamMode || isExamDevMode) return;
     const check = () => {
       const threshold = 160;
       const blocked = window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold;
@@ -127,12 +129,36 @@ export function useExamController(examId: string, classId: string, studentId: nu
     };
   }, []);
 
-  // Hook AntiCheat (Provides enter/exit FullScreen methods)
+  // --- ANTI-CHEAT: FORCED ENABLE (Không check .env) ---
+  // Luôn bật khi đã bắt đầu làm bài và chưa nộp
+  const antiCheatEnabled = !isSubmitted && hasStarted;
+
+  // Log debug để verify
+  useEffect(() => {
+    if (hasStarted) {
+      console.log("[AntiCheat FORCED] Status:", {
+        enabled: antiCheatEnabled,
+        reason: { hasStarted, isSubmitted, override: "FORCE_ENABLED" },
+      });
+    }
+  }, [hasStarted, antiCheatEnabled, isSubmitted]);
+
   const { isFullScreen, enterFullScreen, exitFullScreen, violations, toggleBlockingOverlaySecure, setPaused } = useAntiCheat({
-    enable: !isMockExamMode && !isExamDevMode && !isSubmitted && hasStarted,
+    enable: antiCheatEnabled,
     onViolation: handleViolation,
     initialViolationsCount: serverViolationCount,
+    maxViolations: test?.max_violations || 5,
   });
+
+  // --- Handling Final Violation Button Click ---
+  useEffect(() => {
+    const handleForceFinish = () => {
+      exitFullScreen();
+      router.push(`/user/classes/${classId}`);
+    };
+    window.addEventListener("exam_force_submit", handleForceFinish);
+    return () => window.removeEventListener("exam_force_submit", handleForceFinish);
+  }, [exitFullScreen, router, classId]);
 
   // --- 2. SUBMIT & ROBOTIC ACTIONS ---
   const handleRoboticSubmit = useCallback(
@@ -150,6 +176,12 @@ export function useExamController(examId: string, classId: string, studentId: nu
         }
       } catch (e) {
         console.error("Robotic submit failed:", e);
+      }
+
+      // Nếu là lỗi vi phạm Anti-Cheat, Overlay đã hiển thị thông báo "Bị khóa".
+      // Ta không cần hiện thêm SweetAlert nữa để tránh rối.
+      if (reason === "CHEATING_LIMIT_EXCEEDED") {
+        return;
       }
 
       Swal.fire({
@@ -223,7 +255,7 @@ export function useExamController(examId: string, classId: string, studentId: nu
   // Lock user limits
   useEffect(() => {
     if (test && violations.length >= (test.max_violations || 5)) {
-      handleRoboticSubmit("Bạn đã vi phạm quy chế thi quá số lần quy định.");
+      handleRoboticSubmit("CHEATING_LIMIT_EXCEEDED");
     }
   }, [violations.length, test, handleRoboticSubmit]);
 
@@ -260,7 +292,7 @@ export function useExamController(examId: string, classId: string, studentId: nu
         console.log("[ExamSocket] Connected!", socket.id);
         setSocketConnected(true);
         // Explicit join attempt event
-        socket.emit("join_attempt", { attempt_id: aid });
+        socket.emit("join_attempt", { attemptId: aid });
       });
 
       socket.on("connect_error", (err: any) => {
@@ -341,6 +373,7 @@ export function useExamController(examId: string, classId: string, studentId: nu
 
     if (isMockExamMode) {
       setAttemptId("mock-attempt");
+      setRemainingSeconds((test.duration_minutes || 30) * 60);
       setHasStarted(true);
       setLoading(false);
       return;
@@ -358,6 +391,9 @@ export function useExamController(examId: string, classId: string, studentId: nu
       }
 
       setHasStarted(true); // UI Switch to Exam Main
+      // Khởi tạo đồng hồ ngay (server sẽ sync qua time_sync khi socket connect)
+      const initialSeconds = (test.duration_minutes || 15) * 60;
+      setRemainingSeconds(initialSeconds);
     } catch (error: any) {
       console.error(error);
       exitFullScreen(); // Revert Fullscreen if start failed
@@ -366,6 +402,25 @@ export function useExamController(examId: string, classId: string, studentId: nu
       setLoading(false);
     }
   }, [examId, classId, studentId, test, enterFullScreen, exitFullScreen, message]);
+
+  // Đếm ngược local mỗi giây (server time_sync sẽ override nếu có)
+  useEffect(() => {
+    if (!hasStarted || isSubmitted || remainingSeconds === null) return;
+    const interval = setInterval(() => {
+      setRemainingSeconds((prev) => {
+        if (prev === null || prev <= 0) return prev;
+        return Math.max(0, prev - 1);
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [hasStarted, isSubmitted, remainingSeconds === null]);
+
+  // Khi đồng hồ về 0 → tự động nộp bài
+  useEffect(() => {
+    if (hasStarted && !isSubmitted && remainingSeconds === 0) {
+      handleRoboticSubmit("Hết giờ làm bài.");
+    }
+  }, [hasStarted, isSubmitted, remainingSeconds, handleRoboticSubmit]);
 
   // Socket Lifecycle
   useEffect(() => {
@@ -388,12 +443,12 @@ export function useExamController(examId: string, classId: string, studentId: nu
     const interval = setInterval(() => {
       if (socketRef.current?.connected) {
         // Heartbeat
-        socketRef.current.emit("heartbeat", { attempt_id: attemptId });
+        socketRef.current.emit("heartbeat", { attemptId });
 
         // Auto Save Answers
         const answersToSave = latestAnswersRef.current;
         socketRef.current.emit("save_answers", {
-          attempt_id: attemptId,
+          attemptId,
           answers: answersToSave,
         });
       }
@@ -412,7 +467,7 @@ export function useExamController(examId: string, classId: string, studentId: nu
         return next;
       });
       if (socketRef.current?.connected && attemptId) {
-        socketRef.current.emit("save_answers", { attempt_id: attemptId, answers: { ...userAnswers, [qId]: opt } });
+        socketRef.current.emit("save_answers", { attemptId, answers: { ...userAnswers, [qId]: opt } });
       }
     },
     [attemptId, userAnswers],

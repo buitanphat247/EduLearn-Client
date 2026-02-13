@@ -167,7 +167,7 @@ function RoadmapCard({ item, align }: RoadmapCardProps) {
             <ul className="space-y-4">
                 {item.features.map((feature, idx) => (
                     <li key={idx} className={`flex items-start gap-3 ${align === 'right' ? 'lg:flex-row-reverse lg:text-right' : ''}`}>
-                        <span className="text-blue-600 text-xl flex-shrink-0 mt-0.5">
+                        <span className="text-blue-600 text-xl shrink-0 mt-0.5">
                             {getIconForFeature(feature.title)}
                         </span>
                         <div>
@@ -183,7 +183,7 @@ function RoadmapCard({ item, align }: RoadmapCardProps) {
                                 <ul className={`mt-2 space-y-1 ${align === 'right' ? 'lg:mr-1' : 'ml-1'}`}>
                                     {feature.subItems.map((sub, subIdx) => (
                                         <li key={subIdx} className={`text-xs text-slate-500 dark:text-slate-500 flex items-center gap-2 ${align === 'right' ? 'lg:flex-row-reverse' : ''}`}>
-                                            <span className="w-1 h-1 bg-slate-400 rounded-full flex-shrink-0" />
+                                            <span className="w-1 h-1 bg-slate-400 rounded-full shrink-0" />
                                             {sub}
                                         </li>
                                     ))}

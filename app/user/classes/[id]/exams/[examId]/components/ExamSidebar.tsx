@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Button } from "antd";
 import { RagTestDetail } from "@/lib/api/rag-exams";
 import { SidebarStatCard } from "./SidebarStatCard";
@@ -112,6 +112,17 @@ export function ExamSidebar(props: ExamSidebarProps) {
     onSelectQuestion,
     onSubmit,
   } = props;
+
+  const [gridCols, setGridCols] = useState(4);
+
+  useEffect(() => {
+    const updateGridCols = () => {
+      setGridCols(window.innerWidth >= 640 ? 5 : 4);
+    };
+    updateGridCols();
+    window.addEventListener('resize', updateGridCols);
+    return () => window.removeEventListener('resize', updateGridCols);
+  }, []);
 
   return (
     <aside className="flex flex-col overflow-y-auto p-6 gap-5 border-l border-slate-200/80">
@@ -243,7 +254,13 @@ export function ExamSidebar(props: ExamSidebarProps) {
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm">
-          <div className="grid grid-cols-5 gap-3">
+          <div 
+            className="gap-2 w-full" 
+            style={{ 
+              display: 'grid',
+              gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
+            }}
+          >
             {test.questions.map((q, idx) => {
               const answered = !!userAnswers[q.id];
               const flagged = flaggedQuestions.has(q.id);
@@ -255,16 +272,16 @@ export function ExamSidebar(props: ExamSidebarProps) {
                   type="button"
                   onClick={() => onSelectQuestion(idx)}
                   className={`
-                    rounded-2xl px-4 py-2 text-sm font-semibold transition-all border-2
+                    w-full rounded-2xl px-3 py-2 text-sm font-semibold transition-all border-2
                     focus:outline-none focus-visible:ring-0
                     ${active
-                      ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                      : flagged
-                        ? "border-red-400 bg-red-50 text-red-500"
-                        : answered
-                          ? "border-slate-200 bg-indigo-600 text-white shadow-sm"
-                          : "border-slate-200 text-slate-400 hover:border-indigo-400 hover:text-indigo-600"
-                    }
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                        : flagged
+                          ? "border-red-400 bg-red-50 text-red-500"
+                          : answered
+                            ? "border-slate-200 bg-indigo-600 text-white shadow-sm"
+                            : "border-slate-200 text-slate-400 hover:border-indigo-400 hover:text-indigo-600"
+                      }
                   `}
                 >
                   {idx + 1}

@@ -30,6 +30,20 @@ export default function WritingPracticePage() {
   const { theme: currentTheme } = useTheme();
   const id = params?.id as string;
 
+  // Validate ID before using
+  if (!id || id === "undefined" || id === "null") {
+    return (
+      <main className="min-h-screen bg-slate-50 dark:bg-[#0f172a] flex items-center justify-center transition-colors duration-500">
+        <div className="text-center text-slate-800 dark:text-white">
+          <p className="text-lg mb-4">ID bài luyện tập không hợp lệ</p>
+          <Button type="primary" onClick={() => router.push("/writing")}>
+            Quay lại
+          </Button>
+        </div>
+      </main>
+    );
+  }
+
   // Custom hooks
   const { data, loading, currentIndex, setCurrentIndex } = useWritingData(id);
   const { formattedTime, start: startTimer } = useTimer(false);

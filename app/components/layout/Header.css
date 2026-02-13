@@ -233,3 +233,31 @@ div[role="button"]:focus {
   outline: none !important;
   box-shadow: none !important;
 }
+
+/* Force Avatar background to blue in header */
+header nav .ant-avatar,
+header nav .ant-avatar.ant-avatar-icon,
+header nav .ant-avatar:not([src]),
+header nav .ant-avatar[src=""] {
+  background-color: #2563eb !important;
+  background: #2563eb !important;
+}
+
+html.dark header nav .ant-avatar,
+html.dark header nav .ant-avatar.ant-avatar-icon,
+html.dark header nav .ant-avatar:not([src]),
+html.dark header nav .ant-avatar[src=""] {
+  background-color: #2563eb !important;
+  background: #2563eb !important;
+}
+
+/* Force Avatar icon color to white */
+header nav .ant-avatar .anticon,
+header nav .ant-avatar-icon .anticon {
+  color: #ffffff !important;
+}
+
+html.dark header nav .ant-avatar .anticon,
+html.dark header nav .ant-avatar-icon .anticon {
+  color: #ffffff !important;
+}

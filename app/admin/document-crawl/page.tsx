@@ -352,7 +352,11 @@ export default function AdminContent() {
           onChange={setSelectedFileType}
           allowClear
           style={{ width: 200 }}
-          classNames={{ popup: { root: "dark:bg-gray-800 dark:text-gray-200" } }}
+          classNames={{
+            popup: {
+              root: "dark:bg-gray-800 dark:text-gray-200"
+            }
+          }}
         >
           <Option value="pdf">PDF</Option>
           <Option value="docx">Word</Option>

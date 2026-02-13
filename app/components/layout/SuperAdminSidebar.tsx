@@ -12,6 +12,7 @@ import {
   CloudDownloadOutlined,
   SafetyCertificateOutlined,
   LogoutOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { Button, App } from "antd";
 
@@ -30,9 +31,16 @@ export default function SuperAdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { message } = App.useApp();
+  const isNotificationPage = pathname?.startsWith("/super-admin/notification");
 
   const handleGoHome = () => {
     router.push("/");
+  };
+
+  const handleFastRefresh = () => {
+    // Dispatch custom event to refresh notifications
+    window.dispatchEvent(new CustomEvent("refresh-notifications"));
+    message.success("Đang làm mới thông báo...");
   };
 
   return (
@@ -51,6 +59,7 @@ export default function SuperAdminSidebar() {
           const Icon = item.icon;
           const isExactMatch = item.path === "/super-admin";
           const isActive = isExactMatch ? pathname === "/super-admin" : pathname?.startsWith(item.path);
+          const isNotificationItem = item.path === "/super-admin/notification";
 
           return (
             <div
@@ -65,7 +74,7 @@ export default function SuperAdminSidebar() {
                 href={item.path} 
                 prefetch={false}
                 onMouseEnter={() => router.prefetch(item.path)}
-                className="flex items-center gap-4 w-full"
+                className="flex items-center gap-4 flex-1"
               >
                 <Icon
                   className={`text-xl transition-all duration-300 ${
@@ -84,6 +93,20 @@ export default function SuperAdminSidebar() {
                   {item.label}
                 </span>
               </Link>
+              {isNotificationItem && isNotificationPage && (
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<ReloadOutlined />}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleFastRefresh();
+                  }}
+                  className="ml-auto opacity-70 hover:opacity-100 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200"
+                  title="Làm mới thông báo"
+                />
+              )}
             </div>
           );
         })}

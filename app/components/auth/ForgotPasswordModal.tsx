@@ -53,7 +53,7 @@ export default function ForgotPasswordModal({ open, onCancel }: ForgotPasswordMo
             open={open}
             onCancel={handleCancel}
             footer={null}
-            destroyOnClose
+            destroyOnHidden
             centered
             maskClosable={!loading}
             closable={!loading}

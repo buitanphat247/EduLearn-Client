@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
-import { Table, Tag, Button, Card, Typography, Space, Badge, Statistic, Row, Col, Tooltip, Modal, List, Empty, Descriptions } from "antd";
+import { App, Table, Tag, Button, Card, Typography, Space, Badge, Statistic, Row, Col, Tooltip, Modal, List, Empty, Descriptions } from "antd";
 import {
   ArrowLeftOutlined,
+  ReloadOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
   UserOutlined,
@@ -189,6 +190,7 @@ SecurityLogModal.displayName = "SecurityLogModal";
 export default function ExamDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { message } = App.useApp();
   const classId = params.id as string;
   const examId = params.examId as string;
 
@@ -233,6 +235,11 @@ export default function ExamDetailPage() {
     () => (attempts.length > 0 ? Math.round((attempts.filter((a) => a.status === "submitted").length / attempts.length) * 100) : 0),
     [attempts]
   );
+
+  const handleFastRefresh = useCallback(async () => {
+    await fetchData();
+    message.success({ content: "Đã cập nhật dữ liệu", key: "exam_detail_refresh", duration: 2 });
+  }, [fetchData, message]);
 
   const columns = useMemo(
     () => [
@@ -380,14 +387,23 @@ export default function ExamDetailPage() {
     <div className="p-0 min-h-screen">
       <RouteErrorBoundary routeName="admin">
         <div className="flex flex-col gap-6">
-          {/* Simple Back Button */}
-          <div>
+          {/* Header: Quay lại (trái) — Làm mới (phải) */}
+          <div className="flex items-center justify-between">
             <Button
               icon={<ArrowLeftOutlined />}
               className="rounded-lg font-medium border-gray-200"
               onClick={() => router.push(`/admin/classes/${classId}`)}
             >
               Quay lại
+            </Button>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={handleFastRefresh}
+              loading={loading}
+              className="rounded-lg font-medium border-gray-200"
+              title="Làm mới dữ liệu"
+            >
+              Làm mới
             </Button>
           </div>
 
@@ -413,7 +429,7 @@ export default function ExamDetailPage() {
                 columns={columns}
                 rowKey="id"
                 pagination={{
-                  pageSize: 10,
+                  pageSize: 20,
                   className: "p-4",
                 }}
                 className="custom-admin-table"

@@ -4,12 +4,14 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import AdminSidebar from "../components/layout/AdminSidebar";
 import { usePathname } from "next/navigation";
 import { Spin, message, Modal, Avatar } from "antd";
+import { UserOutlined } from "@ant-design/icons";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import { useUserId } from "@/app/hooks/useUserId";
 import NotificationBell from "@/app/components/notifications/NotificationBell";
 import { ServerAuthedUserProvider } from "../context/ServerAuthedUserProvider";
+import { useUserProfile } from "@/app/hooks/useUserProfile";
 
 const pageTitles: Record<string, string> = {
   "/admin": "Trang chủ",
@@ -30,12 +32,8 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
   const pathname = usePathname();
   const { userId } = useUserId();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [mounted, setMounted] = useState(false);
-
-  const FALLBACK_CAT = getMediaUrl("/avatars/anh3_1770318347807_gt8xnc.jpeg");
 
   useEffect(() => {
     setMounted(true);
@@ -51,51 +49,14 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
     return undefined;
   }, [pathname]);
 
-  // Memoize fetch function
-  const fetchUserInfo = useCallback(async (showError = false) => {
-    if (!userId) {
-      if (showError) message.error("Không tìm thấy thông tin người dùng");
-      return;
-    }
-
-    let isMounted = true;
-    if (showError) setLoadingProfile(true);
-
-    try {
-      const user = await getUserInfo(userId);
-      if (isMounted) {
-        setUserInfo(user);
-      }
-    } catch (error: unknown) {
-      if (isMounted) {
-        const errorMessage = error instanceof Error
-          ? error.message
-          : "Không thể tải thông tin người dùng";
-        if (showError) {
-          message.error(errorMessage);
-        }
-        console.error("Error fetching user info:", error);
-      }
-    } finally {
-      if (isMounted && showError) {
-        setLoadingProfile(false);
-      }
-    }
-  }, [userId]);
-
-  const fetchUserInfoRef = useRef(fetchUserInfo);
-  fetchUserInfoRef.current = fetchUserInfo;
-
-  // Fetch user info when userId becomes available
-  useEffect(() => {
-    if (!userId) return;
-    fetchUserInfoRef.current(false);
-  }, [userId]);
+  // Use the new hook for user profile management
+  const { userInfo, loading: loadingProfile, fetchUserInfo } = useUserProfile();
 
   useEffect(() => {
-    if (!isProfileModalOpen || userInfo) return;
-    fetchUserInfoRef.current(true);
-  }, [isProfileModalOpen, userInfo]);
+    if (isProfileModalOpen && !userInfo) {
+      fetchUserInfo(true);
+    }
+  }, [isProfileModalOpen, userInfo, fetchUserInfo]);
 
   // Handle user-updated event to sync avatar
   useEffect(() => {
@@ -134,9 +95,9 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
 
   const avatarUrl = useMemo(() => {
     // Server safe URL calculation
-    if (imgError) return FALLBACK_CAT;
+    if (imgError) return undefined;
     const url = userInfo?.avatar || initialUserData?.avatar;
-    return url ? getMediaUrl(url) : FALLBACK_CAT;
+    return url ? getMediaUrl(url) : undefined;
   }, [userInfo?.avatar, initialUserData?.avatar, imgError]);
 
   return (
@@ -158,17 +119,18 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
             onClick={() => setIsProfileModalOpen(true)}
             className="flex items-center gap-3 pl-4 cursor-pointer hover:opacity-80 transition-opacity"
           >
-            <Avatar
-              size={40}
-              src={mounted ? getCachedImageUrl(avatarUrl) : avatarUrl}
-              onError={() => {
-                setImgError(true);
-                return true;
-              }}
-              className="flex items-center justify-center bg-blue-600"
-            >
-              {displayInitials}
-            </Avatar>
+            <div className="relative p-0.5 rounded-full bg-blue-500 dark:bg-blue-600">
+              <Avatar
+                size={40}
+                src={avatarUrl ? (mounted ? getCachedImageUrl(avatarUrl) : avatarUrl) : undefined}
+                onError={() => {
+                  setImgError(true);
+                  return true;
+                }}
+                className="flex items-center justify-center bg-blue-600"
+                icon={<UserOutlined style={{ fontSize: 20, color: '#ffffff' }} />}
+              />
+            </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{displayName}</span>
               <span className="text-xs text-gray-600 dark:text-gray-400">{displayRole}</span>
@@ -182,13 +144,18 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
           {userInfo ? (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <Avatar
-                  size={80}
-                  src={mounted ? getCachedImageUrl((imgError || !userInfo.avatar) ? FALLBACK_CAT : getMediaUrl(userInfo.avatar)) : ((imgError || !userInfo.avatar) ? FALLBACK_CAT : getMediaUrl(userInfo.avatar))}
-                  className="flex items-center justify-center bg-blue-600"
-                >
-                  {getInitials(userInfo.fullname || userInfo.username || "A")}
-                </Avatar>
+                <div className="relative p-1 rounded-full bg-blue-500 dark:bg-blue-600">
+                  <Avatar
+                    size={80}
+                    src={userInfo.avatar && !imgError ? (mounted ? getCachedImageUrl(getMediaUrl(userInfo.avatar)) : getMediaUrl(userInfo.avatar)) : undefined}
+                    onError={() => {
+                      setImgError(true);
+                      return true;
+                    }}
+                    className="flex items-center justify-center bg-blue-600"
+                    icon={<UserOutlined style={{ fontSize: 40, color: '#ffffff' }} />}
+                  />
+                </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{userInfo.fullname || userInfo.username}</h3>
                   <p className="text-gray-600 dark:text-gray-400">{userInfo.role?.role_name || "Giáo viên"}</p>

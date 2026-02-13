@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   CommentOutlined,
@@ -14,7 +14,7 @@ import {
   RightOutlined,
   StarFilled,
 } from "@ant-design/icons";
-import { Form, Select, Radio, Button, Input, Spin, App } from "antd";
+import { Form, Select, Radio, Button, Input, Spin, App, Modal, Pagination, Empty } from "antd";
 import {
   getWritingTopics,
   generateWritingContent,
@@ -137,11 +137,22 @@ export default function WritingFeature() {
   const [histories, setHistories] = useState<WritingHistoryItem[]>([]);
   const [loadingHistories, setLoadingHistories] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isCreatingModalOpen, setIsCreatingModalOpen] = useState(false);
+  
+  // Modal "Xem tất cả" states
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [allHistories, setAllHistories] = useState<WritingHistoryItem[]>([]);
+  const [loadingAllHistories, setLoadingAllHistories] = useState(false);
+  const [historyPagination, setHistoryPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
 
-  // Helper function to log topics for debugging - memoized
-  const logTopics = useCallback((topicsData: Record<string, WritingTopic[]>) => {
-
-  }, []);
+  // Refs for race condition protection
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
+  const isSubmittingRef = useRef(false);
 
   // Map goal value to category - memoized
   const goalToCategory = useCallback((goal: string): "general" | "ielts" | "work" | undefined => {
@@ -151,48 +162,79 @@ export default function WritingFeature() {
     return undefined;
   }, []);
 
-  // Fetch topics when goal changes - memoized
+  // Fetch topics when goal changes - memoized with race condition protection
   const fetchTopics = useCallback(
     async (goal: string) => {
       const category = goalToCategory(goal);
-      if (!category) return;
+      if (!category || !isMountedRef.current) return;
+
+      // Cancel previous request if exists
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
 
       setLoadingTopics(true);
       try {
         const response = await getWritingTopics(category);
+        
+        // Check if component is still mounted and request not cancelled
+        if (!isMountedRef.current || abortController.signal.aborted) {
+          return;
+        }
+
         if (response.status === 200 && response.data) {
-          // Log để debug
-          logTopics(response.data);
           setTopics(response.data);
           // Reset topic_select when topics change
-          form.setFieldsValue({ topic_select: undefined });
+          if (isMountedRef.current) {
+            form.setFieldsValue({ topic_select: undefined });
+          }
         } else {
-          message.warning("Không có dữ liệu chủ đề");
-          setTopics({});
+          if (isMountedRef.current) {
+            message.warning("Không có dữ liệu chủ đề");
+            setTopics({});
+          }
         }
       } catch (error: any) {
-        message.error(error?.message || "Không thể tải danh sách chủ đề");
-        setTopics({});
+        // Ignore abort errors
+        if (error?.name === 'AbortError' || abortController.signal.aborted) {
+          return;
+        }
+        
+        if (isMountedRef.current) {
+          message.error(error?.message || "Không thể tải danh sách chủ đề");
+          setTopics({});
+        }
       } finally {
-        setLoadingTopics(false);
+        if (isMountedRef.current && !abortController.signal.aborted) {
+          setLoadingTopics(false);
+        }
       }
     },
-    [goalToCategory, logTopics, message, form]
+    [goalToCategory, message, form]
   );
 
-  // Fetch history function - memoized
+  // Fetch history function - memoized with race condition protection
   const fetchHistory = useCallback(async () => {
+    if (!isMountedRef.current) return;
+
     setLoadingHistories(true);
     const userId = getUserIdFromCookie();
     if (!userId) {
-      setLoadingHistories(false);
+      if (isMountedRef.current) {
+        setLoadingHistories(false);
+      }
       return;
     }
 
     try {
       const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
       if (isNaN(userIdNumber)) {
-        setLoadingHistories(false);
+        if (isMountedRef.current) {
+          setLoadingHistories(false);
+        }
         return;
       }
 
@@ -203,53 +245,97 @@ export default function WritingFeature() {
         order_by: "created_at",
         order_desc: true,
       });
+
+      // Check if component is still mounted
+      if (!isMountedRef.current) return;
+
       if (historyResponse.status === 200 && historyResponse.data?.histories) {
-        // Map API response to WritingHistoryItem format
-        // API response has nested structure: { id, current_index, data: { vietnameseSentences, totalSentences, ... } }
-        const mappedHistories: WritingHistoryItem[] = historyResponse.data.histories.map((item: any) => ({
+        // Map API response to WritingHistoryItem format with proper typing
+        const mappedHistories: WritingHistoryItem[] = historyResponse.data.histories.map((item: {
+          id: number;
+          user_id?: number;
+          current_index?: number;
+          created_at?: string;
+          updated_at?: string;
+          data?: {
+            language?: string;
+            topic?: string;
+            difficulty?: number;
+            vietnameseSentences?: string[];
+            englishSentences?: string[];
+            totalSentences?: number;
+            practiceType?: string | null;
+            contentType?: string;
+            userPoints?: number;
+          };
+        }) => ({
           id: item.id,
           user_id: item.user_id,
           current_index: item.current_index ?? 0,
           created_at: item.created_at,
           updated_at: item.updated_at,
           // Flatten nested data fields
-          language: item.data?.language || "English",
+          language: (item.data?.language || "English") as "English",
           topic: item.data?.topic || "",
           difficulty: item.data?.difficulty || 2,
           vietnameseSentences: item.data?.vietnameseSentences || [],
           englishSentences: item.data?.englishSentences || [],
           totalSentences: item.data?.totalSentences || 0,
           practiceType: item.data?.practiceType || null,
-          contentType: item.data?.contentType || "DIALOGUE",
+          contentType: (item.data?.contentType || "DIALOGUE") as "DIALOGUE",
           userPoints: item.data?.userPoints || 0,
         }));
-        setHistories(mappedHistories);
+        
+        if (isMountedRef.current) {
+          setHistories(mappedHistories);
+        }
       }
     } catch (error) {
-      console.error("Error fetching history:", error);
+      if (isMountedRef.current) {
+        console.error("Error fetching history:", error);
+      }
     } finally {
-      setLoadingHistories(false);
+      if (isMountedRef.current) {
+        setLoadingHistories(false);
+      }
     }
   }, []);
 
   // Initial load - Load topics first, then history (non-blocking)
   useEffect(() => {
+    isMountedRef.current = true;
+    
     const initData = async () => {
       try {
         // Load topics first (required for form)
         await fetchTopics("communication");
         // Set loading to false after topics load (don't wait for history)
-        setIsInitialLoading(false);
+        if (isMountedRef.current) {
+          setIsInitialLoading(false);
+        }
         // Load history in background (non-blocking)
         fetchHistory().catch((error) => {
-          console.error("Error fetching history:", error);
+          if (isMountedRef.current) {
+            console.error("Error fetching history:", error);
+          }
         });
       } catch (error) {
-        console.error("Error initializing data:", error);
-        setIsInitialLoading(false);
+        if (isMountedRef.current) {
+          console.error("Error initializing data:", error);
+          setIsInitialLoading(false);
+        }
       }
     };
+    
     initData();
+
+    // Cleanup on unmount
+    return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [fetchTopics, fetchHistory]);
 
   // Map goal to learningPurpose - memoized
@@ -271,10 +357,14 @@ export default function WritingFeature() {
 
   // Handle navigation to practice page - memoized
   const handleHistoryNavigate = useCallback(
-    (item: WritingHistoryItem) => {
+    (item: WritingHistoryItem, closeModal?: boolean) => {
       // Use history_id (item.id) from database as the navigation ID
       // Practice page will fetch data from API using this ID
       if (item.id) {
+        // Close modal if navigating from modal
+        if (closeModal && isHistoryModalOpen) {
+          setIsHistoryModalOpen(false);
+        }
         // Navigate using history_id (number from database)
         // No need to save to sessionStorage - practice page will fetch from API
         router.push(`/writing/${item.id}`);
@@ -282,36 +372,170 @@ export default function WritingFeature() {
         message.error("Không tìm thấy ID của bài luyện tập");
       }
     },
-    [router, message]
+    [router, message, isHistoryModalOpen]
   );
 
-  // Handle form submit - memoized
-  const handleSubmit = useCallback(
-    async (values: any) => {
+  // Fetch all histories with pagination - memoized
+  const fetchAllHistories = useCallback(
+    async (page: number = 1, pageSize: number = 10) => {
+      if (!isMountedRef.current) return;
+
+      setLoadingAllHistories(true);
+      const userId = getUserIdFromCookie();
+      if (!userId) {
+        if (isMountedRef.current) {
+          setLoadingAllHistories(false);
+        }
+        return;
+      }
+
       try {
+        const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
+        if (isNaN(userIdNumber) || userIdNumber <= 0) {
+          if (isMountedRef.current) {
+            setLoadingAllHistories(false);
+          }
+          return;
+        }
+
+        const historyResponse = await getWritingHistory({
+          user_id: userIdNumber,
+          limit: pageSize,
+          page: page,
+          order_by: "created_at",
+          order_desc: true,
+        });
+
+        // Check if component is still mounted
+        if (!isMountedRef.current) return;
+
+        if (historyResponse.status === 200 && historyResponse.data) {
+          // Map API response to WritingHistoryItem format
+          const mappedHistories: WritingHistoryItem[] = historyResponse.data.histories.map((item: {
+            id: number;
+            user_id?: number;
+            current_index?: number;
+            created_at?: string;
+            updated_at?: string;
+            data?: {
+              language?: string;
+              topic?: string;
+              difficulty?: number;
+              vietnameseSentences?: string[];
+              englishSentences?: string[];
+              totalSentences?: number;
+              practiceType?: string | null;
+              contentType?: string;
+              userPoints?: number;
+            };
+          }) => ({
+            id: item.id,
+            user_id: item.user_id,
+            current_index: item.current_index ?? 0,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+            language: (item.data?.language || "English") as "English",
+            topic: item.data?.topic || "",
+            difficulty: item.data?.difficulty || 2,
+            vietnameseSentences: item.data?.vietnameseSentences || [],
+            englishSentences: item.data?.englishSentences || [],
+            totalSentences: item.data?.totalSentences || 0,
+            practiceType: item.data?.practiceType || null,
+            contentType: (item.data?.contentType || "DIALOGUE") as "DIALOGUE",
+            userPoints: item.data?.userPoints || 0,
+          }));
+
+          if (isMountedRef.current) {
+            setAllHistories(mappedHistories);
+            setHistoryPagination({
+              current: historyResponse.data.page || page,
+              pageSize: historyResponse.data.limit || pageSize,
+              total: historyResponse.data.total || 0,
+            });
+          }
+        }
+      } catch (error) {
+        if (isMountedRef.current) {
+          console.error("Error fetching all histories:", error);
+          message.error("Không thể tải lịch sử luyện tập");
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setLoadingAllHistories(false);
+        }
+      }
+    },
+    [message]
+  );
+
+  // Handle open "Xem tất cả" modal
+  const handleOpenHistoryModal = useCallback(() => {
+    setIsHistoryModalOpen(true);
+    // Fetch first page when opening modal
+    fetchAllHistories(1, 10);
+  }, [fetchAllHistories]);
+
+  // Handle pagination change
+  const handleHistoryPaginationChange = useCallback(
+    (page: number, pageSize: number) => {
+      fetchAllHistories(page, pageSize);
+    },
+    [fetchAllHistories]
+  );
+
+  // Handle form submit - memoized with double submit prevention
+  const handleSubmit = useCallback(
+    async (values: {
+      goal?: string;
+      method?: string;
+      topic_select?: string;
+      topic_custom?: string;
+    }) => {
+      // Prevent double submit
+      if (isSubmittingRef.current || submitting) {
+        return;
+      }
+
+      if (!isMountedRef.current) return;
+
+      try {
+        isSubmittingRef.current = true;
         setSubmitting(true);
+        setIsCreatingModalOpen(true); // Open modal when starting
 
         // Get user_id from cookie
         const userId = getUserIdFromCookie();
         if (!userId) {
-          message.error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
-          setSubmitting(false);
+          if (isMountedRef.current) {
+            message.error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
+            setSubmitting(false);
+            setIsCreatingModalOpen(false);
+          }
+          isSubmittingRef.current = false;
           return;
         }
 
         const topicValue = values.topic_select || values.topic_custom;
         if (!topicValue) {
-          message.warning("Vui lòng chọn hoặc nhập chủ đề");
-          setSubmitting(false);
+          if (isMountedRef.current) {
+            message.warning("Vui lòng chọn hoặc nhập chủ đề");
+            setSubmitting(false);
+            setIsCreatingModalOpen(false);
+          }
+          isSubmittingRef.current = false;
           return;
         }
 
         const modeValue = values.method === "ai" ? "AI_GENERATED" : "CUSTOM";
         const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
 
-        if (isNaN(userIdNumber)) {
-          message.error("User ID không hợp lệ");
-          setSubmitting(false);
+        if (isNaN(userIdNumber) || userIdNumber <= 0) {
+          if (isMountedRef.current) {
+            message.error("User ID không hợp lệ");
+            setSubmitting(false);
+            setIsCreatingModalOpen(false);
+          }
+          isSubmittingRef.current = false;
           return;
         }
 
@@ -329,21 +553,53 @@ export default function WritingFeature() {
 
         const response = await generateWritingContent(config);
 
+        // Check if component is still mounted
+        if (!isMountedRef.current) {
+          isSubmittingRef.current = false;
+          return;
+        }
+
+        // Validate response has ID before proceeding
+        if (!response?.id) {
+          message.error("Không nhận được ID từ server. Vui lòng thử lại.");
+          setSubmitting(false);
+          setIsCreatingModalOpen(false);
+          isSubmittingRef.current = false;
+          return;
+        }
+
         // Store data in sessionStorage to pass to practice page
-        sessionStorage.setItem(`writing_${response.id}`, JSON.stringify(response));
+        try {
+          sessionStorage.setItem(`writing_${response.id}`, JSON.stringify(response));
+        } catch (storageError) {
+          console.warn("Failed to save to sessionStorage:", storageError);
+          // Continue anyway - practice page can fetch from API
+        }
 
-        // Refresh history after creating new content
-        await fetchHistory();
+        // Refresh history after creating new content (non-blocking)
+        fetchHistory().catch((error) => {
+          if (isMountedRef.current) {
+            console.error("Error refreshing history:", error);
+          }
+        });
 
-        // Navigate to practice page with generated content ID
+        // Close modal and navigate to practice page
+        setIsCreatingModalOpen(false);
         router.push(`/writing/${response.id}`);
-      } catch (error: any) {
-        message.error(error?.message || "Không thể tạo bài luyện viết");
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Không thể tạo bài luyện viết";
+        if (isMountedRef.current) {
+          message.error(errorMessage);
+          setIsCreatingModalOpen(false);
+        }
       } finally {
-        setSubmitting(false);
+        if (isMountedRef.current) {
+          setSubmitting(false);
+        }
+        isSubmittingRef.current = false;
       }
     },
-    [goalToLearningPurpose, message, fetchHistory, router]
+    [goalToLearningPurpose, message, fetchHistory, router, submitting]
   );
 
   // Memoized static options
@@ -439,7 +695,11 @@ export default function WritingFeature() {
                   className="w-full text-sm"
                   disabled
                   size="middle"
-                  classNames={{ popup: { root: "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700" } }}
+                  classNames={{
+                    popup: {
+                      root: "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                    }
+                  }}
                   options={languageOptions}
                 />
               </Form.Item>
@@ -540,7 +800,11 @@ export default function WritingFeature() {
                   <Select
                     className="w-full text-sm"
                     size="middle"
-                    classNames={{ popup: { root: "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700" } }}
+                    classNames={{
+                      popup: {
+                        root: "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                      }
+                    }}
                     placeholder="Chọn chủ đề..."
                     loading={loadingTopics}
                     notFoundContent={loadingTopics ? <Spin size="small" /> : "Không có chủ đề nào"}
@@ -593,9 +857,12 @@ export default function WritingFeature() {
                 <HistoryOutlined className="text-blue-600 dark:text-blue-400" />
                 Lịch sử luyện tập
               </h3>
-              <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors border border-slate-200 dark:border-slate-700">
+              <button
+                onClick={handleOpenHistoryModal}
+                className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors border border-slate-200 dark:border-slate-700"
+              >
                 Xem tất cả
-              </span>
+              </button>
             </div>
 
             {loadingHistories ? (
@@ -618,6 +885,89 @@ export default function WritingFeature() {
           </div>
         )}
       </div>
+
+      {/* Creating Modal - Cannot be closed while creating */}
+      <Modal
+        open={isCreatingModalOpen}
+        closable={false}
+        maskClosable={false}
+        footer={null}
+        centered
+        width={400}
+        keyboard={false} // Prevent ESC key from closing
+        destroyOnHidden={false} // Keep modal state for better UX
+      >
+        <div className="text-center py-6">
+          <Spin size="large" className="mb-4" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            Đang tạo bài luyện viết
+          </h3>
+          <p className="text-slate-600 dark:text-slate-400">
+            Vui lòng đợi trong giây lát...
+          </p>
+        </div>
+      </Modal>
+
+      {/* History Modal - View All with Pagination */}
+      <Modal
+        open={isHistoryModalOpen}
+        onCancel={() => setIsHistoryModalOpen(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <HistoryOutlined className="text-blue-600 dark:text-blue-400" />
+            <span className="text-lg font-bold text-slate-900 dark:text-white">
+              Tất cả lịch sử luyện tập
+            </span>
+          </div>
+        }
+        footer={null}
+        centered
+        width={800}
+        className="history-modal"
+        destroyOnHidden={false} // Keep state for better UX when reopening
+      >
+        <div className="min-h-[400px]">
+          {loadingAllHistories ? (
+            <div className="flex justify-center items-center py-20">
+              <Spin size="large" />
+            </div>
+          ) : allHistories.length > 0 ? (
+            <>
+              <div className="space-y-4 mb-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                {allHistories.map((item) => (
+                  <HistoryItem
+                    key={item.id}
+                    item={item}
+                    onNavigate={(item) => handleHistoryNavigate(item, true)}
+                  />
+                ))}
+              </div>
+              <div className="flex justify-center pt-4 border-t border-slate-200 dark:border-slate-700">
+                <Pagination
+                  current={historyPagination.current}
+                  pageSize={historyPagination.pageSize}
+                  total={historyPagination.total}
+                  onChange={handleHistoryPaginationChange}
+                  onShowSizeChange={handleHistoryPaginationChange}
+                  showSizeChanger
+                  showQuickJumper
+                  showTotal={(total, range) =>
+                    `${range[0]}-${range[1]} của ${total} bài luyện tập`
+                  }
+                  pageSizeOptions={['10', '20', '50', '100']}
+                  className="dark:[&_.ant-pagination-item]:bg-slate-800 dark:[&_.ant-pagination-item]:border-slate-700 dark:[&_.ant-pagination-item]:text-white dark:[&_.ant-pagination-item-active]:bg-blue-600 dark:[&_.ant-pagination-item-active]:border-blue-600 dark:[&_.ant-pagination-prev]:text-white dark:[&_.ant-pagination-next]:text-white dark:[&_.ant-pagination-jump-prev]:text-white dark:[&_.ant-pagination-jump-next]:text-white"
+                />
+              </div>
+            </>
+          ) : (
+            <Empty
+              description="Chưa có lịch sử luyện tập"
+              className="py-20"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

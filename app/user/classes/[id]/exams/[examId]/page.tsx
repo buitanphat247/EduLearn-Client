@@ -48,7 +48,7 @@ const ExamStartScreen = ({ test, onStart }: { test: RagTestDetail; onStart: () =
               type="primary"
               size="large"
               onClick={onStart}
-              className="w-full h-16 text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-xl shadow-indigo-200 transition-all rounded-xl border-none"
+              className="w-full h-16 text-xl font-bold bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-xl shadow-indigo-200 transition-all rounded-xl border-none"
             >
               Tôi đã hiểu và Bắt đầu làm bài thi
             </Button>

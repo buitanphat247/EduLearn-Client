@@ -4,12 +4,14 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import UserSidebar from "../components/layout/UserSidebar";
 import { usePathname } from "next/navigation";
 import { Modal, Spin, message, Avatar } from "antd";
+import { UserOutlined } from "@ant-design/icons";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { useUserId } from "@/app/hooks/useUserId";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import NotificationBell from "@/app/components/notifications/NotificationBell";
 import { ServerAuthedUserProvider } from "../context/ServerAuthedUserProvider";
+import { useUserProfile } from "@/app/hooks/useUserProfile";
 
 const pageTitles: Record<string, string> = {
   "/user": "Trang chủ",
@@ -27,13 +29,8 @@ interface InitialUserData {
 
 function UserHeader({ initialUserData }: { initialUserData: InitialUserData | null }) {
   const pathname = usePathname();
-  const { userId, loading: userIdLoading } = useUserId();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
   const [imgError, setImgError] = useState(false);
-
-  const FALLBACK_CAT = getMediaUrl("/avatars/anh3_1770318347807_gt8xnc.jpeg");
 
   // Memoize page title calculation
   const currentPageTitle = useMemo(() => {
@@ -44,66 +41,17 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
     }
     return undefined;
   }, [pathname]);
+  // Use the new hook for user profile management
+  const { userInfo, loading: loadingProfile, fetchUserInfo } = useUserProfile();
 
-  // ✅ Memoize fetch function with cleanup - uses userId from hook
-  const fetchUserInfo = useCallback(async (showError = false, signal?: AbortSignal) => {
-    if (!userId) {
-      if (showError && !signal?.aborted && !userIdLoading) {
-        message.error("Không tìm thấy thông tin người dùng");
-      }
-      return;
-    }
-
-    if (showError && !signal?.aborted) setLoadingProfile(true);
-    try {
-      const user = await getUserInfo(userId);
-      // ✅ Only update state if not aborted
-      if (!signal?.aborted) {
-        setUserInfo(user);
-      }
-    } catch (error: any) {
-      // ✅ Only show error if not aborted
-      if (showError && !signal?.aborted) {
-        message.error(error?.message || "Không thể tải thông tin người dùng");
-      }
-      if (!signal?.aborted) {
-        console.error("Error fetching user info:", error);
-      }
-    } finally {
-      if (showError && !signal?.aborted) {
-        setLoadingProfile(false);
-      }
-    }
-  }, [userId, userIdLoading]);
-
-  // ✅ Fetch user info when userId becomes available
+  // Handle modal open/close fetch logic internally in the hook or explicitly here if needed
+  // The hook already fetches on mount/userId change. 
+  // We just need to trigger a manual fetch when modal opens if we want fresh data.
   useEffect(() => {
-    if (!userId || userIdLoading) return;
-    const abortController = new AbortController();
-    fetchUserInfo(false, abortController.signal);
-    return () => {
-      abortController.abort();
-    };
-  }, [userId, userIdLoading, fetchUserInfo]);
-
-  // ✅ Fetch user info when modal opens (with loading state) with cleanup
-  useEffect(() => {
-    if (!isProfileModalOpen || userInfo) return;
-    const abortController = new AbortController();
-    fetchUserInfo(true, abortController.signal);
-    return () => {
-      abortController.abort();
-    };
+    if (isProfileModalOpen && !userInfo) {
+      fetchUserInfo(true);
+    }
   }, [isProfileModalOpen, userInfo, fetchUserInfo]);
-
-  // Handle user-updated event to sync avatar
-  useEffect(() => {
-    const handleUpdate = () => {
-      fetchUserInfo(false);
-    };
-    window.addEventListener("user-updated", handleUpdate);
-    return () => window.removeEventListener("user-updated", handleUpdate);
-  }, [fetchUserInfo]);
 
   // Memoize getInitials function
   const getInitials = useCallback((name: string) => {
@@ -142,26 +90,24 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
             onClick={() => setIsProfileModalOpen(true)}
             className="flex items-center gap-3 pl-4 border-l border-gray-300 dark:border-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
           >
-            <Avatar
-              size={40}
-              src={
-                // Logic simplified to avoid hydration mismatch: use state/props directly, no cache checks during render if not needed
-                // OR better: use consistent logic. 
-                // Using getMediaUrl is consistent if is just string processing.
-                // getCachedImageUrl might access localstorage.
-                // We will skip cache check on server/first render.
-                (imgError || (!userInfo?.avatar && !initialUserData?.avatar))
-                  ? FALLBACK_CAT
-                  : getMediaUrl(userInfo?.avatar || initialUserData?.avatar!)
-              }
-              onError={() => {
-                setImgError(true);
-                return true;
-              }}
-              className="flex items-center justify-center bg-blue-600"
-            >
-              {displayInitials}
-            </Avatar>
+            <div className="relative p-0.5 rounded-full bg-blue-500 dark:bg-blue-600">
+              <Avatar
+                size={40}
+                src={
+                  userInfo?.avatar && !imgError
+                    ? getMediaUrl(userInfo.avatar)
+                    : initialUserData?.avatar && !imgError
+                    ? getMediaUrl(initialUserData.avatar)
+                    : undefined
+                }
+                onError={() => {
+                  setImgError(true);
+                  return true;
+                }}
+                className="flex items-center justify-center bg-blue-600"
+                icon={<UserOutlined style={{ fontSize: 20, color: '#ffffff' }} />}
+              />
+            </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{displayName}</span>
               <span className="text-xs text-gray-600 dark:text-gray-400">{displayRole}</span>
@@ -175,13 +121,18 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
           {userInfo ? (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <Avatar
-                  size={80}
-                  src={getCachedImageUrl((imgError || !userInfo.avatar) ? FALLBACK_CAT : getMediaUrl(userInfo.avatar))}
-                  className="flex items-center justify-center bg-blue-600"
-                >
-                  {getInitials(userInfo.fullname || userInfo.username || "A")}
-                </Avatar>
+                <div className="relative p-1 rounded-full bg-blue-500 dark:bg-blue-600">
+                  <Avatar
+                    size={80}
+                    src={userInfo.avatar && !imgError ? getCachedImageUrl(getMediaUrl(userInfo.avatar)) : undefined}
+                    onError={() => {
+                      setImgError(true);
+                      return true;
+                    }}
+                    className="flex items-center justify-center bg-blue-600"
+                    icon={<UserOutlined style={{ fontSize: 40, color: '#ffffff' }} />}
+                  />
+                </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{userInfo.fullname || userInfo.username}</h3>
                   <p className="text-gray-600 dark:text-gray-400">{userInfo.role?.role_name || "Học sinh"}</p>

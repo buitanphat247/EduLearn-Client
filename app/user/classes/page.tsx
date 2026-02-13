@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Table, Tag, Button, App, Modal, Form, Input, Tooltip, Select } from "antd";
-import { EyeOutlined, UserOutlined, KeyOutlined, StopOutlined, SearchOutlined } from "@ant-design/icons";
+import { EyeOutlined, UserOutlined, KeyOutlined, StopOutlined, SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { getClassStudentsByUser, joinClassByCode, type ClassStudentRecord } from "@/lib/api/classes";
 import { getCurrentUser } from "@/lib/api/users";
@@ -39,6 +39,22 @@ export default function UserClasses() {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [joining, setJoining] = useState(false);
   const [form] = Form.useForm();
+
+  // Request tracking để tránh race condition
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0);
+  const isMountedRef = useRef(true);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // Status filter
   const [statusFilter, setStatusFilter] = useState<ClassStatusFilter>("all");
@@ -92,12 +108,26 @@ export default function UserClasses() {
     };
   }, []);
 
-  // Fetch classes - stable callback
+  // Fetch classes - stable callback với race condition protection
   const fetchClasses = useCallback(async () => {
-    if (!userId) return; // Wait for userId
+    if (!userId || !isMountedRef.current) return;
+
+    // Cancel previous request nếu đang chạy
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Tạo AbortController mới cho request này
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    
+    // Tăng request ID để track latest request
+    const currentRequestId = ++requestIdRef.current;
 
     try {
-      setLoading(true);
+      if (isMountedRef.current) {
+        setLoading(true);
+      }
 
       const result = await getClassStudentsByUser({
         userId: userId,
@@ -106,15 +136,38 @@ export default function UserClasses() {
         search: debouncedSearchQuery.trim() || undefined,
       });
 
+      // Check if request was aborted hoặc component unmounted
+      if (abortController.signal.aborted || !isMountedRef.current || currentRequestId !== requestIdRef.current) {
+        return;
+      }
+
       const mappedClasses: ClassTableItem[] = result.classes.map(mapClassData);
 
-      setClasses(mappedClasses);
-      setPagination((prev) => ({ ...prev, total: result.total }));
+      // Chỉ update state nếu đây là latest request và component vẫn mounted
+      if (isMountedRef.current && currentRequestId === requestIdRef.current) {
+        setClasses(mappedClasses);
+        setPagination((prev) => ({ ...prev, total: result.total }));
+      }
     } catch (error: any) {
-      message.error(error?.message || "Không thể tải danh sách lớp học");
-      setClasses([]);
+      // Ignore AbortError (expected khi cancel)
+      if (error?.name === 'AbortError' || abortController.signal.aborted) {
+        return;
+      }
+      
+      if (isMountedRef.current && currentRequestId === requestIdRef.current) {
+        message.error(error?.message || "Không thể tải danh sách lớp học");
+        setClasses([]);
+      }
     } finally {
-      setLoading(false);
+      // Chỉ update loading nếu đây là latest request
+      if (isMountedRef.current && currentRequestId === requestIdRef.current) {
+        setLoading(false);
+      }
+      
+      // Cleanup AbortController nếu đây là latest request
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null;
+      }
     }
   }, [pagination.current, pagination.pageSize, debouncedSearchQuery, message, mapClassData, userId]);
 
@@ -143,11 +196,15 @@ export default function UserClasses() {
   }, [form]);
 
   const handleJoinByCode = useCallback(async (values: { code: string }) => {
+    if (!isMountedRef.current) return;
+    
     try {
       setJoining(true);
       const user = getCurrentUser();
       if (!user || !user.user_id) {
-        message.error("Vui lòng đăng nhập để thực hiện hành động này");
+        if (isMountedRef.current) {
+          message.error("Vui lòng đăng nhập để thực hiện hành động này");
+        }
         return;
       }
 
@@ -156,14 +213,49 @@ export default function UserClasses() {
         code: values.code,
       });
 
+      // Chỉ update state nếu component vẫn mounted
+      if (!isMountedRef.current) return;
+
       message.success("Tham gia lớp học thành công!");
       setIsJoinModalOpen(false);
       form.resetFields();
       fetchClasses();
     } catch (error: any) {
-      message.error(error?.message || "Mã code không hợp lệ hoặc bạn đã tham gia lớp này");
+      if (isMountedRef.current) {
+        // Extract error message from different possible response structures
+        const errorResponse = error?.response?.data;
+        const errorMessage =
+          errorResponse?.message ||
+          errorResponse?.error ||
+          error?.message ||
+          "Không thể tham gia lớp học";
+        
+        // Check if it's a conflict error (already a member)
+        // Backend returns: { status: false, message: "Bạn đã tham gia lớp học này rồi", statusCode: 409 }
+        const statusCode = error?.response?.status || errorResponse?.statusCode;
+        const isConflict = 
+          statusCode === 409 ||
+          errorMessage.toLowerCase().includes("đã tham gia") ||
+          errorMessage.toLowerCase().includes("đã là thành viên") ||
+          errorMessage.toLowerCase().includes("already") ||
+          errorMessage.toLowerCase().includes("conflict");
+        
+        if (isConflict) {
+          // Use backend message if available, otherwise use default
+          const conflictMessage = 
+            errorMessage.toLowerCase().includes("đã tham gia") || 
+            errorMessage.toLowerCase().includes("đã là thành viên")
+              ? errorMessage
+              : "Bạn đã là thành viên của lớp học này rồi";
+          message.warning(conflictMessage);
+        } else {
+          message.error(errorMessage);
+        }
+      }
     } finally {
-      setJoining(false);
+      if (isMountedRef.current) {
+        setJoining(false);
+      }
     }
   }, [message, form, fetchClasses]);
 
@@ -174,6 +266,14 @@ export default function UserClasses() {
   const handleFilterChange = useCallback((value: string) => {
     setStatusFilter(value as ClassStatusFilter);
   }, []);
+
+  const handleFastRefresh = useCallback(() => {
+    const hide = message.loading("Đang làm mới danh sách lớp học...", 0);
+    fetchClasses().finally(() => {
+      hide();
+      message.success("Đã cập nhật danh sách lớp học mới nhất");
+    });
+  }, [fetchClasses, message]);
 
   // Stable router ref - must be defined before columns
   const routerRef = useRef(router);
@@ -285,6 +385,15 @@ export default function UserClasses() {
           style={{ width: 160 }}
           options={filterOptions}
           size="middle"
+        />
+        <Button
+          type="default"
+          icon={<ReloadOutlined spin={loading} />}
+          size="middle"
+          onClick={handleFastRefresh}
+          disabled={loading}
+          className="shadow-sm"
+          title="Làm mới danh sách"
         />
         <Button type="primary" icon={<KeyOutlined />} size="middle" onClick={handleOpenJoinModal} className="shadow-sm">
           Tham gia bằng code

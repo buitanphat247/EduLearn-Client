@@ -64,14 +64,34 @@ export interface WritingGenerateResponse {
  */
 export async function generateWritingContent(config: WritingGenerateConfig): Promise<WritingGenerateResponse> {
   try {
-    const response = await apiClient.post<WritingGenerateResponse & { status?: any }>("/writing-chat-bot/generate", config);
+    const response = await apiClient.post<WritingGenerateResponse & { status?: any; data?: any }>("/writing-chat-bot/generate", config);
 
-    // Normalize status if present in the wrapped response
-    if (response.data && (response.data as any).status === true) {
-      (response.data as any).status = 200;
+    // Handle nested response structure: {status, message, data: {...}}
+    // ResponseInterceptor wraps responses, so we need to unwrap if needed
+    let data = response.data;
+    
+    // If response is wrapped in {status, message, data}, unwrap it
+    if (data && typeof data === 'object' && 'data' in data && data.status !== undefined) {
+      data = data.data;
     }
 
-    return response.data;
+    if (!data) {
+      throw new Error("Không nhận được dữ liệu từ server");
+    }
+
+    // Ensure id is present and is a string
+    if (!data.id) {
+      console.error("Response missing id field:", data);
+      throw new Error("Không nhận được ID từ server. Vui lòng thử lại.");
+    }
+
+    // Convert id to string if it's a number
+    const normalizedData = {
+      ...data,
+      id: String(data.id),
+    };
+
+    return normalizedData;
   } catch (error: any) {
     throw new Error(error?.response?.data?.message || error?.message || "Không thể tạo nội dung luyện viết");
   }

@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Badge, Drawer, Empty, Button, message, Avatar, List, Typography, Spin, Tag } from "antd";
-import { BellOutlined, CheckOutlined } from "@ant-design/icons";
+import { Drawer, Empty, Button, message, Avatar, Typography, Spin, Tag } from "antd";
+import { BellOutlined, CheckOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { getNotificationsByUserId, markNotificationAsRead, getNotificationRecipientsByUserId, type NotificationResponse, type NotificationRecipientResponse } from "@/lib/api/notifications";
-import { notificationSocketClient } from "@/lib/socket/notification-client";
 import NotificationDetailModal from "@/app/components/notifications/NotificationDetailModal";
 import "./NotificationBell.css";
 
@@ -32,17 +31,44 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
     const [mounted, setMounted] = useState(false);
     const [loading, setLoading] = useState(false);
     const isInitialLoadRef = useRef(true);
+    
+    // Request tracking để tránh race condition
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const requestIdRef = useRef(0);
+    const isMountedRef = useRef(true);
 
     // Ensure component only renders after client-side hydration
     useEffect(() => {
         setMounted(true);
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+            // Cancel pending requests on unmount
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
     }, []);
 
-    // Fetch notifications in background
+    // Fetch notifications in background với race condition protection
     const fetchNotifications = useCallback(async (silent = false) => {
-        if (!userId) return;
+        if (!userId || !isMountedRef.current) return;
 
-        if (!silent) setLoading(true);
+        // Cancel previous request nếu đang chạy
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        // Tạo AbortController mới cho request này
+        const abortController = new AbortController();
+        abortControllerRef.current = abortController;
+        
+        // Tăng request ID để track latest request
+        const currentRequestId = ++requestIdRef.current;
+
+        if (!silent && isMountedRef.current) {
+            setLoading(true);
+        }
 
         try {
             // Get all notifications (max 10)
@@ -51,6 +77,11 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
                 limit: 10,
             });
 
+            // Check if request was aborted hoặc component unmounted
+            if (abortController.signal.aborted || !isMountedRef.current || currentRequestId !== requestIdRef.current) {
+                return;
+            }
+
             // Get unread count separately
             const unreadResult = await getNotificationsByUserId(userId, {
                 page: 1,
@@ -58,8 +89,18 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
                 is_read: false,
             });
 
+            // Check again sau mỗi API call
+            if (abortController.signal.aborted || !isMountedRef.current || currentRequestId !== requestIdRef.current) {
+                return;
+            }
+
             // Fetch recipients to get is_read status
             const recipients = await getNotificationRecipientsByUserId(userId);
+
+            // Final check trước khi update state
+            if (abortController.signal.aborted || !isMountedRef.current || currentRequestId !== requestIdRef.current) {
+                return;
+            }
 
             // Create a map of notification_id -> is_read status
             const readStatusMap = new Map<number | string, boolean>();
@@ -81,38 +122,48 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
                 };
             });
 
-            setNotifications(mappedNotifications);
-            setUnreadCount(unreadResult.total);
-            isInitialLoadRef.current = false;
+            // Chỉ update state nếu đây là latest request và component vẫn mounted
+            if (isMountedRef.current && currentRequestId === requestIdRef.current) {
+                setNotifications(mappedNotifications);
+                setUnreadCount(Math.max(0, unreadResult.total || 0));
+                isInitialLoadRef.current = false;
+            }
         } catch (error: any) {
+            // Ignore AbortError (expected khi cancel)
+            if (error?.name === 'AbortError' || abortController.signal.aborted) {
+                return;
+            }
+            
             console.error("Error fetching notifications:", error);
-            if (!silent && (drawerOpen || !isInitialLoadRef.current)) {
+            if (!silent && isMountedRef.current && (drawerOpen || !isInitialLoadRef.current)) {
                 console.warn("Failed to fetch notifications");
             }
         } finally {
-            if (!silent) setLoading(false);
+            // Chỉ update loading nếu đây là latest request
+            if (isMountedRef.current && currentRequestId === requestIdRef.current && !silent) {
+                setLoading(false);
+            }
+            
+            // Cleanup AbortController nếu đây là latest request
+            if (abortControllerRef.current === abortController) {
+                abortControllerRef.current = null;
+            }
         }
     }, [userId, drawerOpen]);
 
-    // Initial load and Socket setup
+    // Initial load and event listener setup
     useEffect(() => {
         if (!userId) return;
 
         // 1. Initial fetch
         fetchNotifications(true);
 
-        // 2. Socket setup
-        notificationSocketClient.connect();
-
-        const handleRefresh = () => {
+        // 2. Listen for refresh events from sidebar
+        const handleRefreshEvent = () => {
             fetchNotifications(true);
         };
 
-        // Listen for all relevant notification events
-        notificationSocketClient.on("notification_created", handleRefresh);
-        notificationSocketClient.on("notification_updated", handleRefresh);
-        notificationSocketClient.on("notification_deleted", handleRefresh);
-        notificationSocketClient.on("notifications_read_updated", handleRefresh);
+        window.addEventListener("refresh-notifications", handleRefreshEvent);
 
         // Auto-refresh every 5 minutes
         const safetyInterval = setInterval(() => {
@@ -120,22 +171,24 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
         }, 300000);
 
         return () => {
-            notificationSocketClient.off("notification_created", handleRefresh);
-            notificationSocketClient.off("notification_updated", handleRefresh);
-            notificationSocketClient.off("notification_deleted", handleRefresh);
-            notificationSocketClient.off("notifications_read_updated", handleRefresh);
+            window.removeEventListener("refresh-notifications", handleRefreshEvent);
             clearInterval(safetyInterval);
         };
     }, [userId, fetchNotifications]);
 
-    // Mark notification as read
+    // Mark notification as read với race condition protection
     const handleMarkAsRead = useCallback(
         async (notificationId: number | string, _silent = false) => {
+            if (!isMountedRef.current) return;
+            
             try {
                 const notification = notifications.find(n => n.notification_id === notificationId);
                 if (notification?.is_read) return;
 
                 await markNotificationAsRead(notificationId, userId);
+
+                // Chỉ update state nếu component vẫn mounted
+                if (!isMountedRef.current) return;
 
                 setNotifications((prev) =>
                     prev.map((notif) =>
@@ -146,17 +199,22 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
                 );
                 setUnreadCount((prev) => Math.max(0, prev - 1));
 
-                if (selectedNotification?.notification_id === notificationId) {
+                if (selectedNotification?.notification_id === notificationId && isMountedRef.current) {
                     setSelectedNotification((prev) =>
                         prev ? { ...prev, is_read: true, read_at: new Date().toISOString() } : null
                     );
                 }
 
+                // Debounce refresh để tránh multiple calls
                 setTimeout(() => {
-                    fetchNotifications(true);
+                    if (isMountedRef.current) {
+                        fetchNotifications(true);
+                    }
                 }, 1000);
             } catch (error: any) {
-                console.error("Error marking notification as read:", error);
+                if (isMountedRef.current) {
+                    console.error("Error marking notification as read:", error);
+                }
             }
         },
         [userId, selectedNotification, notifications, fetchNotifications]
@@ -185,6 +243,13 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
         setModalOpen(false);
         setSelectedNotification(null);
     }, []);
+
+    const handleFastRefresh = useCallback(() => {
+        const hide = message.loading("Đang làm mới thông báo...", 0);
+        fetchNotifications(true).finally(() => {
+            hide();
+        });
+    }, [fetchNotifications]);
 
     const handleViewAll = useCallback(() => {
         setDrawerOpen(false);
@@ -235,17 +300,28 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
     const drawerHeader = (
         <div className="flex items-center justify-between w-full pr-6">
             <span className="text-lg font-bold text-gray-800 dark:text-gray-100">Thông báo</span>
-            {unreadCount > 0 && (
+            <div className="flex items-center gap-2">
                 <Button
                     type="text"
                     size="small"
-                    icon={<CheckOutlined />}
-                    onClick={handleMarkAllAsRead}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-medium"
-                >
-                    Đánh dấu đã đọc
-                </Button>
-            )}
+                    icon={<ReloadOutlined />}
+                    onClick={handleFastRefresh}
+                    className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                    title="Làm mới"
+                    aria-label="Làm mới thông báo"
+                />
+                {unreadCount > 0 && (
+                    <Button
+                        type="text"
+                        size="small"
+                        icon={<CheckOutlined />}
+                        onClick={handleMarkAllAsRead}
+                        className="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                        title="Đánh dấu đã đọc"
+                        aria-label="Đánh dấu tất cả đã đọc"
+                    />
+                )}
+            </div>
         </div>
     );
 
@@ -255,10 +331,30 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
                 className={`notification-bell-wrapper ${className} w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer relative active:scale-95 border-none bg-transparent focus:outline-none text-slate-600 dark:text-white`}
                 aria-label="Thông báo"
                 onClick={() => setDrawerOpen(true)}
+                onMouseEnter={(e) => {
+                    // Đảm bảo badge không bị ảnh hưởng bởi hover của button
+                    const badge = e.currentTarget.querySelector('.notification-badge-custom') as HTMLElement;
+                    if (badge) {
+                        badge.style.color = '#ffffff';
+                        badge.style.webkitTextFillColor = '#ffffff';
+                    }
+                }}
             >
-                <Badge count={unreadCount} overflowCount={99} size="small" offset={[-3, 4]}>
+                <div className="relative">
                     <BellIcon />
-                </Badge>
+                    {unreadCount > 0 ? (
+                        <span 
+                            className="notification-badge-custom" 
+                            style={{ 
+                                color: '#ffffff', 
+                                WebkitTextFillColor: '#ffffff',
+                                display: 'flex'
+                            }}
+                        >
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                    ) : null}
+                </div>
             </button>
 
             <Drawer
@@ -294,13 +390,12 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
                             />
                         </div>
                     ) : (
-                        <List
-                            itemLayout="horizontal"
-                            dataSource={notifications}
-                            renderItem={(item, index) => (
+                        <div className="divide-y divide-gray-100 dark:divide-slate-800/50">
+                            {notifications.map((item, index) => (
                                 <div
+                                    key={item.notification_id || index}
                                     className={`
-                                        px-5 py-4 cursor-pointer transition-all border-b border-gray-100 dark:border-slate-800/50 last:border-0 relative group
+                                        px-5 py-4 cursor-pointer transition-all relative group
                                         ${!item.is_read
                                             ? 'bg-blue-50/60 dark:bg-blue-900/20 hover:bg-blue-100/60 dark:hover:bg-blue-900/30'
                                             : index % 2 === 0
@@ -311,7 +406,7 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
                                     onClick={() => handleNotificationClick(item)}
                                 >
                                     <div className="flex gap-4">
-                                        <div className="flex-shrink-0 mt-1">
+                                        <div className="shrink-0 mt-1">
                                             <Avatar
                                                 size={40}
                                                 icon={<BellOutlined />}
@@ -323,7 +418,7 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
                                                 <Text strong className={`block text-sm mr-2 leading-snug ${item.is_read ? 'text-gray-700 dark:text-gray-300' : 'text-gray-900 dark:text-white'}`}>
                                                     {item.title}
                                                 </Text>
-                                                {!item.is_read && <span className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0 mt-1.5 shadow-sm shadow-blue-200" />}
+                                                {!item.is_read && <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0 mt-1.5 shadow-sm shadow-blue-200" />}
                                             </div>
                                             <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-2 leading-relaxed">
                                                 {item.message}
@@ -341,8 +436,8 @@ export default function NotificationBell({ userId, className = "" }: Notificatio
                                         </div>
                                     </div>
                                 </div>
-                            )}
-                        />
+                            ))}
+                        </div>
                     )}
                 </div>
             </Drawer>

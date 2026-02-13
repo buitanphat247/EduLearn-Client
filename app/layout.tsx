@@ -11,6 +11,9 @@ import { noTransitionsScript } from "./scripts/no-transitions";
 import { Analytics } from "@vercel/analytics/next";
 import DevToolsBlocker from "./components/security/DevToolsBlocker";
 
+// Only enable Vercel Analytics when deployed on Vercel platform
+const isVercel = process.env.VERCEL === "1";
+
 // Optimize font loading - chỉ load weights cần thiết
 const roboto = Roboto({
   weight: ['400', '500', '700'], // Chỉ load 3 weights thay vì toàn bộ
@@ -38,9 +41,6 @@ export default async function RootLayout({
   const theme = cookieStore.get("theme");
   const isDark = theme?.value === "dark";
 
-  const headersList = await headers();
-  const nonce = headersList.get("x-nonce") || "";
-
   return (
     <html lang="vi" className={isDark ? "dark" : ""} suppressHydrationWarning>
       <head>
@@ -53,11 +53,11 @@ export default async function RootLayout({
 
         {/* Font Awesome - Load async để không block render */}
 
-        {/* ✅ Use Next.js Script component instead of dangerouslySetInnerHTML to prevent XSS */}
-        <Script
+        {/* ✅ Use inline script without nonce to prevent hydration mismatch */}
+        {/* CSP allows 'unsafe-inline' so nonce is not required */}
+        {/* Using dangerouslySetInnerHTML directly to avoid Next.js Script nonce handling */}
+        <script
           id="no-transitions-script"
-          strategy="beforeInteractive"
-          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: noTransitionsScript,
           }}
@@ -75,7 +75,7 @@ export default async function RootLayout({
             </Providers>
           </ErrorBoundary>
         </AntdRegistry>
-        <Analytics />
+        {isVercel && <Analytics />}
         <DevToolsBlocker />
       </body>
     </html>

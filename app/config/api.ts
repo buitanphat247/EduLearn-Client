@@ -7,6 +7,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { getCookie, clearCookieCache } from "@/lib/utils/cookies";
 import { getCsrfToken, clearCsrfTokenCache, requiresCsrfToken } from "@/lib/utils/csrf";
+import { dispatchAuthRedirect } from "@/app/components/auth/AuthRedirectListener";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -19,6 +20,12 @@ const isDev = process.env.NODE_ENV === "development";
  * - Validates URL format before returning
  */
 const getBaseURL = (): string => {
+  // ✅ Client-side: Always use relative proxy path to avoid CORS issues and ensure cookies work
+  if (typeof window !== "undefined") {
+    return "/api-proxy";
+  }
+
+  // ✅ Server-side: Use absolute URL from env
   const envURL = process.env.NEXT_PUBLIC_API_URL;
   if (envURL?.trim()) {
     try {
@@ -31,9 +38,8 @@ const getBaseURL = (): string => {
     }
   }
 
-  // ✅ Default fallback (should be overridden by env var in production)
-  // FIXED: Explicitly point to the correct backend API URL with /api suffix
-  return isDev ? "http://localhost:1611/api" : process.env.NEXT_PUBLIC_API_URL || "https://api.edulearning.io.vn/api";
+  // Default fallback for Server-side
+  return isDev ? "http://localhost:1611/api" : "https://api.edulearning.io.vn/api";
 };
 
 /**
@@ -185,6 +191,7 @@ export const clearTokens = (): void => {
   } catch {}
   document.cookie = "_at=; path=/; max-age=0";
   document.cookie = "_u=; path=/; max-age=0";
+  document.cookie = "_rt=; path=/; max-age=0";
   clearAuthCache();
   clearCsrfTokenCache(); // Clear CSRF token cache on logout
 };
@@ -197,14 +204,41 @@ type QueueItem = {
 };
 let failedQueue: Array<QueueItem> = [];
 
+/** Tránh race: nhiều 401 cùng lúc chỉ dispatch redirect một lần; reset sau 2s để lần 401 sau vẫn redirect. */
+const AUTH_REDIRECT_DEBOUNCE_MS = 2000;
+let authRedirectScheduled = false;
+
+/** Gọi backend signout để server gửi Set-Cookie xóa _at, _rt (HttpOnly) — client không xóa được HttpOnly. */
+function clearAuthCookiesViaBackend(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  const url = `${getBaseURL()}/auth/signout`;
+  return fetch(url, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" } })
+    .then(() => {})
+    .catch(() => {});
+}
+
+function scheduleAuthRedirect(path: string) {
+  if (typeof window === "undefined") return;
+  if (authRedirectScheduled) return;
+  authRedirectScheduled = true;
+  clearAuthCookiesViaBackend().finally(() => {
+    dispatchAuthRedirect(path);
+    setTimeout(() => {
+      authRedirectScheduled = false;
+    }, AUTH_REDIRECT_DEBOUNCE_MS);
+  });
+}
+
 /**
  * Process queued requests after token refresh
  * @param {AxiosError | null} error - Error if refresh failed
  * @param {string | null} [token] - New token if refresh succeeded
+ * Clear queue trước rồi mới process để tránh race khi có request mới push vào trong lúc forEach.
  */
 const processQueue = (error: AxiosError | null, token: string | null = null) => {
-  failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token)));
+  const toProcess = failedQueue;
   failedQueue = [];
+  toProcess.forEach((p) => (error ? p.reject(error) : p.resolve(token)));
 };
 
 // ✅ Response cache with improved cleanup
@@ -263,32 +297,6 @@ apiClient.interceptors.request.use(
       if (auth) config.headers.Authorization = auth;
     }
 
-    // Add CSRF token for state-changing requests
-    /* 
-    if (requiresCsrfToken(config.method || "GET") && !isCsrfRetry) {
-      try {
-        // Skip CSRF for csrf-token endpoint itself and refresh token endpoint
-        // Refresh token endpoint is excluded from CSRF validation on backend
-        // and has its own authentication (refresh token in cookie)
-        if (!config.url?.includes("/auth/csrf-token") && !config.url?.includes("/auth/refresh")) {
-          const csrfToken = await getCsrfToken();
-          if (csrfToken && csrfToken.trim()) {
-            // Ensure header is set correctly
-            if (!config.headers) {
-              // @ts-ignore
-              config.headers = {};
-            }
-            config.headers["X-CSRF-Token"] = csrfToken.trim();
-          } else {
-          }
-        }
-      } catch (error) {
-        // If CSRF token fetch fails, continue without it
-        // Backend will reject with 403 if CSRF is required
-      }
-    }
-    */
-
     return config;
   },
   (error) => Promise.reject(error),
@@ -325,25 +333,6 @@ apiClient.interceptors.response.use(
     // Handle 403 Forbidden (CSRF token invalid or missing) or 500 with specific message
     const isCsrfError = status === 403 || (status === 500 && (errorMessage === "invalid csrf token" || errorMessage === "missing csrf token"));
 
-    /* CSRF Retry Logic - Disabled
-    if (isCsrfError && !originalRequest._csrfRetry) {
-      // Clear CSRF token cache and retry with new token
-      clearCsrfTokenCache();
-      originalRequest._csrfRetry = true;
-
-      try {
-        // Get new CSRF token and retry request
-        const csrfToken = await getCsrfToken();
-        if (csrfToken && originalRequest.headers) {
-          originalRequest.headers["X-CSRF-Token"] = csrfToken;
-        }
-        return apiClient(originalRequest);
-      } catch (csrfError) {
-        return Promise.reject({ ...error, message: "CSRF token validation failed", code: "CSRF_ERROR" });
-      }
-    }
-    */
-
     // Check for 401 error
     if (status !== 401) {
       return Promise.reject({ ...error, message: errorMessage, code: errorCode });
@@ -355,14 +344,22 @@ apiClient.interceptors.response.use(
       return Promise.reject({ ...error, message: errorMessage, code: errorCode });
     }
 
-    // Critical errors - logout immediately
-    const criticalErrors = ["REFRESH_TOKEN_EXPIRED", "INVALID_REFRESH_TOKEN", "USER_BANNED"];
+    // Critical errors - logout ngay, không thử refresh (bao gồm phiên đã bị đăng xuất khỏi hệ thống)
+    const criticalErrors = [
+      "REFRESH_TOKEN_EXPIRED",
+      "INVALID_REFRESH_TOKEN",
+      "USER_BANNED",
+      "TOKEN_REVOKED", // Phiên đăng nhập đã bị đăng xuất khỏi mọi thiết bị
+    ];
     if (criticalErrors.includes(errorCode)) {
       clearTokens();
-      processQueue(error, null);
+      // Silently clear queue to prevent multiple error toasts
+      failedQueue = [];
       isRefreshing = false;
-      if (typeof window !== "undefined") window.location.href = "/auth";
-      return Promise.reject({ ...error, code: errorCode, message: errorMessage });
+      const reason = errorCode === "TOKEN_REVOKED" ? "?reason=session_revoked" : "";
+      scheduleAuthRedirect(`/auth${reason}`);
+      // Return pending promise to prevent component error handling (toasts) during redirect
+      return new Promise(() => {});
     }
 
     // ACCESS_TOKEN_EXPIRED or no code - try refresh
@@ -422,15 +419,18 @@ apiClient.interceptors.response.use(
 
           if (!accessToken) throw new Error("No access token received from server");
 
-          // Set cookies from response body (fallback for proxy issues)
+          // Set cookies from response body if available
           const cookies = response.data?.cookies;
-          if (cookies?._at) {
-            const exp = new Date(Date.now() + cookies._at.maxAge);
-            document.cookie = `_at=${encodeURIComponent(cookies._at.value)}; path=/; expires=${exp.toUTCString()}; SameSite=Lax`;
-          }
-          if (cookies?._u) {
-            const exp = new Date(Date.now() + cookies._u.maxAge);
-            document.cookie = `_u=${encodeURIComponent(cookies._u.value)}; path=/; expires=${exp.toUTCString()}; SameSite=Lax`;
+          if (cookies) {
+            const sameSiteAttr = isDev ? "SameSite=Lax" : "SameSite=None; Secure=true";
+            if (cookies._at) {
+              const exp = new Date(Date.now() + cookies._at.maxAge);
+              document.cookie = `_at=${encodeURIComponent(cookies._at.value)}; path=/; expires=${exp.toUTCString()}; ${sameSiteAttr}`;
+            }
+            if (cookies._u) {
+              const exp = new Date(Date.now() + cookies._u.maxAge);
+              document.cookie = `_u=${encodeURIComponent(cookies._u.value)}; path=/; expires=${exp.toUTCString()}; ${sameSiteAttr}`;
+            }
           }
 
           clearAuthCache();
@@ -443,14 +443,14 @@ apiClient.interceptors.response.use(
           clearTokens();
           processQueue(refreshError as AxiosError, null);
           isRefreshing = false;
-          if (typeof window !== "undefined") window.location.href = "/auth";
+          scheduleAuthRedirect("/auth");
           return Promise.reject(refreshError);
         }
       } else {
         // Already retried - check if critical
         if (criticalErrors.includes(errorCode) || errorCode === "ACCESS_TOKEN_EXPIRED") {
           clearTokens();
-          if (typeof window !== "undefined") window.location.href = "/auth";
+          scheduleAuthRedirect("/auth");
         }
         return Promise.reject(error);
       }

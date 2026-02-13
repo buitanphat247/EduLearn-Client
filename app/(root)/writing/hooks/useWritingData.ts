@@ -99,7 +99,8 @@ export function useWritingData(id: string): UseWritingDataReturn {
   }, [id, message, router]);
 
   useEffect(() => {
-    if (!id) {
+    // Validate ID: check for undefined, null, empty string, or string "undefined"
+    if (!id || id === "undefined" || id === "null") {
       message.error("Không tìm thấy ID bài luyện tập");
       router.push("/writing");
       setLoading(false);

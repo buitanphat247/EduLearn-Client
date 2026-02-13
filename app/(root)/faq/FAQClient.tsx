@@ -129,7 +129,7 @@ export default function FAQClient({ faqData }: FAQClientProps) {
                   prefix={<SearchOutlined className="text-xl text-slate-400 mr-2" />}
                   allowClear
                   size="large"
-                  className="!rounded-2xl !border-0 !shadow-none py-3"
+                  className="rounded-2xl! border-0! shadow-none! py-3"
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
@@ -173,11 +173,11 @@ export default function FAQClient({ faqData }: FAQClientProps) {
                   accordion
                   ghost
                   expandIcon={({ isActive }) => (
-                    <>
+                    <span>
                       <CaretRightOutlined rotate={isActive ? 90 : 0} />
-                    </>
+                    </span>
                   )}
-                  className="bg-transparent flex flex-col gap-4 [&_.ant-collapse-header]:!items-center"
+                  className="bg-transparent flex flex-col gap-4 [&_.ant-collapse-header]:items-center!"
                   items={filteredFAQs.map((faq) => ({
                     key: faq.id,
                     label: (
@@ -191,7 +191,7 @@ export default function FAQClient({ faqData }: FAQClientProps) {
                       </div>
                     ),
                     className:
-                      "bg-white dark:bg-[#1e293b] !rounded-2xl border border-slate-200 dark:border-slate-700/50 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300",
+                      "bg-white dark:bg-[#1e293b] rounded-2xl! border border-slate-200 dark:border-slate-700/50 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300",
                   }))}
                 />
               ) : (

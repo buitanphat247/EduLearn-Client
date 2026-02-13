@@ -11,8 +11,10 @@ import {
   PhoneOutlined,
   CameraOutlined,
   LoadingOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 import { getUserInfo, changePassword, updateUser, type UserInfoResponse } from "@/lib/api/users";
+import { signOutAllDevices } from "@/lib/api/auth";
 import { uploadFile } from "@/lib/api/file-upload";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
@@ -35,13 +37,12 @@ export default function AdminSettings() {
   const [passwordForm] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [logoutAllLoading, setLogoutAllLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
   const { theme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const FALLBACK_CAT = getMediaUrl("/avatars/anh3_1770318347807_gt8xnc.jpeg");
 
   // Fetch user info
   useEffect(() => {
@@ -185,24 +186,24 @@ export default function AdminSettings() {
       >
         <div className="flex items-start gap-6 mb-6">
           <div className="relative group/avatar">
-            <div className="relative overflow-hidden rounded-full border-4 border-white dark:border-slate-700 shadow-lg">
+            <div className="relative p-1 rounded-full bg-blue-500 dark:bg-blue-600 shadow-lg">
               <Avatar
                 size={120}
-                src={getCachedImageUrl((!userInfo?.avatar || imgError) ? FALLBACK_CAT : getMediaUrl(userInfo.avatar))}
+                src={userInfo?.avatar && !imgError ? getCachedImageUrl(getMediaUrl(userInfo.avatar)) : undefined}
                 onError={() => {
                   setImgError(true);
                   return true;
                 }}
-                className="flex items-center justify-center bg-slate-100 dark:bg-slate-800"
-                icon={<UserOutlined style={{ fontSize: 50, color: '#94a3b8' }} />}
+                className="flex items-center justify-center bg-blue-600"
+                icon={<UserOutlined style={{ fontSize: 50, color: '#ffffff' }} />}
               />
-
-              {uploading && (
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-10">
-                  <LoadingOutlined className="text-white text-3xl" />
-                </div>
-              )}
             </div>
+
+            {uploading && (
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-10 rounded-full">
+                <LoadingOutlined className="text-white text-3xl" />
+              </div>
+            )}
 
             <button
               onClick={handleAvatarClick}
@@ -400,6 +401,49 @@ export default function AdminSettings() {
             </Button>
           </div>
         </Form>
+      </CustomCard>
+
+      {/* Đăng xuất khỏi mọi thiết bị */}
+      <CustomCard
+        title={
+          <div className="flex items-center gap-3">
+            <LogoutOutlined className="text-orange-500" />
+            <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">Đăng xuất khỏi mọi thiết bị</span>
+          </div>
+        }
+      >
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
+          Thao tác này sẽ đăng xuất tài khoản của bạn trên tất cả thiết bị (điện thoại, máy tính, trình duyệt khác). Bạn sẽ cần đăng nhập lại khi sử dụng lại.
+        </p>
+        <Button
+          type="primary"
+          danger
+          icon={<LogoutOutlined />}
+          loading={logoutAllLoading}
+          size="large"
+          onClick={() => {
+            Swal.fire({
+              title: "Đăng xuất mọi thiết bị?",
+              text: "Bạn sẽ bị đăng xuất ở tất cả thiết bị và cần đăng nhập lại.",
+              icon: "warning",
+              showCancelButton: true,
+              confirmButtonColor: "#dc2626",
+              cancelButtonColor: "#6b7280",
+              confirmButtonText: "Đăng xuất tất cả",
+              cancelButtonText: "Hủy",
+              background: theme === "dark" ? "#1e293b" : "#fff",
+              color: theme === "dark" ? "#fff" : "#000",
+            }).then((result) => {
+              if (result.isConfirmed) {
+                setLogoutAllLoading(true);
+                signOutAllDevices();
+              }
+            });
+          }}
+          className="rounded-lg"
+        >
+          Đăng xuất ra tất cả thiết bị
+        </Button>
       </CustomCard>
     </div>
   );
