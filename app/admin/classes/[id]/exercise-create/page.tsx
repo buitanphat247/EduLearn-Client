@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import apiClient from "@/app/config/api";
+import { getApiBaseUrl } from "@/app/config/api-base-url";
 import { useRouter, useParams } from "next/navigation";
 import { App, Button, Input, Upload, Form, DatePicker, Modal, Spin, Select } from "antd";
 import CustomCard from "@/app/components/common/CustomCard";
@@ -149,10 +150,11 @@ export default function ExerciseCreatePage() {
 
             let uploadResponse: Response;
             try {
-              uploadResponse = await fetch(`/api-proxy/assignment-attachments?userId=${numericUserId}`, {
+              uploadResponse = await fetch(`${getApiBaseUrl()}/assignment-attachments?userId=${numericUserId}`, {
                 method: "POST",
                 body: formData,
                 signal: controller.signal,
+                credentials: "include",
               });
               clearTimeout(timeoutId);
             } catch (fetchError: any) {

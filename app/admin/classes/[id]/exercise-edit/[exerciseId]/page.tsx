@@ -14,6 +14,7 @@ const RichTextEditor = dynamic(() => import("@/app/components/common/RichTextEdi
 import FileUploadSection from "@/app/components/exercises/FileUploadSection";
 import ProgressModal from "@/app/components/exercises/ProgressModal";
 import { useUserId } from "@/app/hooks/useUserId";
+import { getApiBaseUrl } from "@/app/config/api-base-url";
 import { getAssignmentById, updateAssignment } from "@/lib/api/assignments";
 import { formatFileName } from "@/lib/utils/fileName";
 import { useFileHandlers } from "@/app/hooks/useFileUpload";
@@ -234,10 +235,11 @@ export default function ExerciseEditPage() {
                   const timeoutId = setTimeout(() => controller.abort(), 300000);
 
                   try {
-                    uploadResponse = await fetch(`/api-proxy/assignment-attachments?userId=${numericUserId}`, {
+                    uploadResponse = await fetch(`${getApiBaseUrl()}/assignment-attachments?userId=${numericUserId}`, {
                       method: "POST",
                       body: formData,
                       signal: controller.signal,
+                      credentials: "include",
                     });
                     clearTimeout(timeoutId);
                   } catch (fetchError: any) {
@@ -259,11 +261,12 @@ export default function ExerciseEditPage() {
                     const timeoutId = setTimeout(() => controller.abort(), 300000);
 
                     try {
-                      uploadResponse = await fetch(`/api-proxy/assignment-attachments?userId=${numericUserId}`, {
-                        method: "POST",
-                        body: formData,
-                        signal: controller.signal,
-                      });
+uploadResponse = await fetch(`${getApiBaseUrl()}/assignment-attachments?userId=${numericUserId}`, {
+                  method: "POST",
+                  body: formData,
+                  signal: controller.signal,
+                  credentials: "include",
+                });
                       clearTimeout(timeoutId);
                     } catch (fetchError: any) {
                       clearTimeout(timeoutId);
@@ -280,11 +283,12 @@ export default function ExerciseEditPage() {
                     const timeoutId = setTimeout(() => controller.abort(), 300000);
 
                     try {
-                      uploadResponse = await fetch(`/api-proxy/assignment-attachments/${attachmentIdStr}?userId=${numericUserId}`, {
-                        method: "PATCH",
-                        body: formData,
-                        signal: controller.signal,
-                      });
+uploadResponse = await fetch(`${getApiBaseUrl()}/assignment-attachments/${attachmentIdStr}?userId=${numericUserId}`, {
+                      method: "PATCH",
+                      body: formData,
+                      signal: controller.signal,
+                      credentials: "include",
+                    });
                       clearTimeout(timeoutId);
                     } catch (fetchError: any) {
                       clearTimeout(timeoutId);
@@ -305,11 +309,12 @@ export default function ExerciseEditPage() {
                 const timeoutId = setTimeout(() => controller.abort(), 300000);
 
                 try {
-                  uploadResponse = await fetch(`/api-proxy/assignment-attachments?userId=${numericUserId}`, {
-                    method: "POST",
-                    body: formData,
-                    signal: controller.signal,
-                  });
+uploadResponse = await fetch(`${getApiBaseUrl()}/assignment-attachments?userId=${numericUserId}`, {
+                  method: "POST",
+                  body: formData,
+                  signal: controller.signal,
+                  credentials: "include",
+                });
                   clearTimeout(timeoutId);
                 } catch (fetchError: any) {
                   clearTimeout(timeoutId);

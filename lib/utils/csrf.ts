@@ -5,6 +5,7 @@
  */
 
 import axios from "axios";
+import { getApiBaseUrl } from "@/app/config/api-base-url";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -12,14 +13,6 @@ const isDev = process.env.NODE_ENV === "development";
 let csrfTokenCache: string | null = null;
 let csrfTokenTimestamp = 0;
 const CSRF_TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-/**
- * Get base URL for API requests
- */
-const getBaseURL = (): string => {
-  if (typeof window !== "undefined") return "/api-proxy";
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611/api";
-};
 
 /**
  * Fetch CSRF token from backend endpoint
@@ -35,7 +28,7 @@ export const fetchCsrfToken = async (): Promise<string> => {
       status: boolean;
       message: string;
       data: { csrfToken: string };
-    }>(`${getBaseURL()}/auth/csrf-token`, {
+    }>(`${getApiBaseUrl()}/auth/csrf-token`, {
       withCredentials: true,
     });
 

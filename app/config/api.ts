@@ -5,42 +5,14 @@
  */
 
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import { getApiBaseUrl } from "@/app/config/api-base-url";
 import { getCookie, clearCookieCache } from "@/lib/utils/cookies";
 import { getCsrfToken, clearCsrfTokenCache, requiresCsrfToken } from "@/lib/utils/csrf";
 import { dispatchAuthRedirect } from "@/app/components/auth/AuthRedirectListener";
 
 const isDev = process.env.NODE_ENV === "development";
 
-/**
- * Get base URL for API requests
- * @returns {string} Base URL for API client
- * @description
- * - Client-side: Uses '/api-proxy' route
- * - Server-side: Uses NEXT_PUBLIC_API_URL env variable or defaults to localhost
- * - Validates URL format before returning
- */
-const getBaseURL = (): string => {
-  // ✅ Client-side: Always use relative proxy path to avoid CORS issues and ensure cookies work
-  if (typeof window !== "undefined") {
-    return "/api-proxy";
-  }
-
-  // ✅ Server-side: Use absolute URL from env
-  const envURL = process.env.NEXT_PUBLIC_API_URL;
-  if (envURL?.trim()) {
-    try {
-      new URL(envURL);
-      return envURL;
-    } catch {
-      if (isDev) {
-        console.warn(`[API Config] Invalid NEXT_PUBLIC_API_URL: ${envURL}, using default`);
-      }
-    }
-  }
-
-  // Default fallback for Server-side
-  return isDev ? "http://localhost:1611/api" : "https://api.edulearning.io.vn/api";
-};
+const getBaseURL = getApiBaseUrl;
 
 /**
  * API timeout in milliseconds

@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { message, Upload } from "antd";
 import type { UploadFile, UploadProps } from "antd";
+import { getApiBaseUrl } from "@/app/config/api-base-url";
 import { formatFileName } from "@/lib/utils/fileName";
 import { validateFileExtension } from "@/lib/utils/fileUtils";
 
@@ -107,10 +108,11 @@ export function useFileUpload({ assignmentId, userId, existingAttachment, onProg
         }, 300000);
 
         try {
-          const response = await fetch(`/api-proxy/assignment-attachments/${attachmentIdStr}?userId=${userId}`, {
+          const response = await fetch(`${getApiBaseUrl()}/assignment-attachments/${attachmentIdStr}?userId=${userId}`, {
             method: "PATCH",
             body: formData,
             signal: controller.signal,
+            credentials: "include",
           });
           
           if (timeoutId) {
@@ -173,10 +175,11 @@ async function createNewAttachment(
   }, 300000);
 
   try {
-    const response = await fetch(`/api-proxy/assignment-attachments?userId=${userId}`, {
+    const response = await fetch(`${getApiBaseUrl()}/assignment-attachments?userId=${userId}`, {
       method: "POST",
       body: formData,
       signal: controller.signal,
+      credentials: "include",
     });
     
     if (timeoutId) {

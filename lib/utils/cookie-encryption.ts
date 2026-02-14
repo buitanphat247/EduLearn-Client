@@ -3,6 +3,8 @@
  * Sử dụng API endpoint để giải mã (vì Web Crypto API không hỗ trợ AES-CBC)
  */
 
+import { getApiBaseUrl } from "@/app/config/api-base-url";
+
 /**
  * Giải mã dữ liệu đã được mã hóa bằng cách gọi API endpoint
  * @param encryptedText - Chuỗi đã mã hóa (format: iv:encryptedData)
@@ -10,12 +12,11 @@
  */
 export async function decryptCookie(encryptedText: string): Promise<string> {
   try {
-    const response = await fetch('/api-proxy/auth/decrypt-cookie', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    const response = await fetch(`${getApiBaseUrl()}/auth/decrypt-cookie`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ encryptedText }),
+      credentials: "include",
     });
 
     if (!response.ok) {

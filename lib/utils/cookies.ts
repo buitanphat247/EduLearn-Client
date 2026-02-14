@@ -310,8 +310,10 @@ export const getUserIdFromCookieAsync = async (): Promise<number | string | null
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
-      const response = await fetch("/api-proxy/auth/decrypt-user", {
+      const { getApiBaseUrl } = await import("@/app/config/api-base-url");
+      const response = await fetch(`${getApiBaseUrl()}/auth/decrypt-user`, {
         signal: controller.signal,
+        credentials: "include",
       });
 
       clearTimeout(timeoutId);
