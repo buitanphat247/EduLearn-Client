@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import { updateRagQuestion, RagTestDetail } from "@/lib/api/rag-exams";
 import { transactionQueue } from "../utils/transactionQueue";
 
@@ -11,6 +11,7 @@ interface UseQuestionActionsProps {
 }
 
 export function useQuestionActions({ testId, test, setTest, refetch }: UseQuestionActionsProps) {
+  const { message } = App.useApp();
   const [saving, setSaving] = useState(false);
 
   const changeCorrectAnswer = async (questionId: string, newAnswer: string) => {

@@ -189,9 +189,9 @@ export default function UserLayoutClient({ children, initialUserData }: { childr
     };
   }, [initialUserData]);
 
-  // Check if we are in an exam session: /user/classes/[id]/exams/[examId]
-  // We want to hide all sidebar/header for actual exam doing page
-  const isExamSession = pathname.includes("/exams/") && pathname.split("/").length >= 6;
+  // Check if we are in an exam session: /user/classes/[id]/exams/[examId] (không bao gồm /history)
+  // We want to hide all sidebar/header for actual exam doing page only
+  const isExamSession = pathname.includes("/exams/") && pathname.split("/").length >= 6 && !pathname.endsWith("/history");
 
   if (isExamSession) {
     // Also wrap exam session in provider just in case

@@ -57,14 +57,14 @@ export default function QuestionCard({
         {/* Options - 2 columns */}
         <div className="grid grid-cols-2 gap-2">
           {question.options.map((opt: string, optIdx: number) => {
-            const isSelected = selectedAnswer === opt;
             const optionLabel = ["A", "B", "C", "D"][optIdx];
+            const isSelected = selectedAnswer === optionLabel;
 
             return (
               <button
                 key={optIdx}
                 disabled={readOnly}
-                onClick={() => !readOnly && onSelectOption(question.id, opt)}
+                onClick={() => !readOnly && onSelectOption(question.id, optionLabel)}
                 className={`flex items-center gap-2 p-2 rounded-lg border text-left text-sm transition-all ${
                   isSelected
                     ? "border-indigo-500 bg-indigo-50"

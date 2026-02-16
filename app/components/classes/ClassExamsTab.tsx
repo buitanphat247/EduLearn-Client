@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useMemo, useCallback, memo, useEffect } from "react";
+import { useState, useMemo, useCallback, memo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { App, Input, Button, Tag, Dropdown, Pagination, Empty } from "antd";
-import type { MenuProps } from "antd";
-import { SearchOutlined, PlusOutlined, MoreOutlined, CalendarOutlined, RobotOutlined, ExclamationCircleFilled, ReloadOutlined } from "@ant-design/icons";
+import { App, Input, Button, Tag, Pagination, Empty, Skeleton, Space, Tooltip } from "antd";
+import { SearchOutlined, PlusOutlined, CalendarOutlined, RobotOutlined, ExclamationCircleFilled, EyeOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, HistoryOutlined } from "@ant-design/icons";
 import Swal from "sweetalert2";
 import type { ClassExamsTabProps, Exam } from "./types";
 import { getRagTestsByClass, deleteRagTest } from "@/lib/api/rag-exams";
@@ -25,9 +24,12 @@ const ClassExamsTab = memo(function ClassExamsTab({
   const { message, modal } = App.useApp();
   const [ragExams, setRagExams] = useState<Exam[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const fetchIdRef = useRef(0);
+  const isMountedRef = useRef(true);
 
   const fetchRagTests = useCallback(async () => {
     if (!classId) return;
+    const id = ++fetchIdRef.current;
     setIsLoading(true);
     try {
       let studentId = Number(getUserIdFromCookie());
@@ -50,8 +52,7 @@ const ClassExamsTab = memo(function ClassExamsTab({
 
 
       const tests = await getRagTestsByClass(classId, studentId, !readOnly);
-
-
+      if (!isMountedRef.current || id !== fetchIdRef.current) return;
 
       const mappedTests: Exam[] = tests.map((t) => {
         const max = Number(t.max_attempts);
@@ -86,14 +87,19 @@ const ClassExamsTab = memo(function ClassExamsTab({
       });
       setRagExams(mappedTests);
     } catch (error) {
-      console.error(error);
+      if (isMountedRef.current && id === fetchIdRef.current) console.error(error);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current && id === fetchIdRef.current) setIsLoading(false);
     }
   }, [classId, readOnly]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     fetchRagTests();
+    return () => {
+      isMountedRef.current = false;
+      fetchIdRef.current += 1;
+    };
   }, [fetchRagTests]);
 
   // Expose refresh function to parent
@@ -129,45 +135,9 @@ const ClassExamsTab = memo(function ClassExamsTab({
     router.push(`/admin/classes/${classId}/examinate`);
   };
 
-  const handleFastRefresh = useCallback(async () => {
-    await fetchRagTests();
-    message.success({ content: "Đã cập nhật danh sách kỳ thi", key: "exams_refresh", duration: 2 });
-  }, [fetchRagTests, message]);
-
-  const getMenuItems = useCallback(
-    (exam: Exam): MenuProps["items"] => {
-      const items: MenuProps["items"] = [
-        {
-          key: "view",
-          label: "Xem chi tiết",
-          disabled: !exam.id,
-        },
-      ];
-
-      if (!readOnly) {
-        items.push(
-          {
-            key: "edit",
-            label: "Chỉnh sửa",
-          },
-          {
-            type: "divider",
-          },
-          {
-            key: "delete",
-            label: "Xóa",
-            danger: true,
-          }
-        );
-      }
-
-      return items;
-    },
-    [readOnly]
-  );
-
-  const handleMenuClick = useCallback(
-    (key: string, exam: Exam) => {
+  const handleActionClick = useCallback(
+    (action: "view" | "edit" | "delete", exam: Exam) => {
+      const key = action;
       switch (key) {
         case "view":
           if (readOnly) {
@@ -223,15 +193,8 @@ const ClassExamsTab = memo(function ClassExamsTab({
     [router, classId, message, modal, readOnly, fetchRagTests]
   );
 
-  const handleCardClick = useCallback(
-    (exam: any, e: React.MouseEvent) => {
-      // Chỉ xử lý khi click vào card, không xử lý khi click vào dropdown menu (chỉ có ở admin)
-      if (!readOnly && (e.target as HTMLElement).closest(".ant-dropdown-trigger")) {
-        return;
-      }
-
-      // Chỉ hiển thị modal xác nhận khi ở chế độ readOnly (trang user)
-      if (readOnly) {
+  const handleStartExam = useCallback(
+    (exam: Exam) => {
         if (exam.isLocked) {
           Swal.fire({
             icon: "warning",
@@ -352,9 +315,19 @@ const ClassExamsTab = memo(function ClassExamsTab({
             router.push(`/user/classes/${classId}/exams/${exam.id}`);
           }
         });
+    },
+    [router, classId]
+  );
+
+  const handleCardClick = useCallback(
+    (exam: Exam, e: React.MouseEvent) => {
+      if ((e.target as HTMLElement).closest(".exam-card-actions")) return;
+
+      if (readOnly) {
+        handleStartExam(exam);
       }
     },
-    [router, classId, readOnly]
+    [readOnly, handleStartExam]
   );
 
   return (
@@ -371,15 +344,6 @@ const ClassExamsTab = memo(function ClassExamsTab({
           }}
           className="flex-1 dark:bg-gray-700/50 dark:border-slate-600! dark:text-white dark:placeholder-gray-500 hover:dark:border-slate-500! focus:dark:border-blue-500!"
         />
-        <Button
-          size="middle"
-          icon={<ReloadOutlined />}
-          onClick={handleFastRefresh}
-          loading={isLoading}
-          title="Làm mới danh sách kỳ thi"
-        >
-          Làm mới
-        </Button>
         {!readOnly && (
           <Button size="middle" icon={<PlusOutlined />} onClick={handleCreateExam} className="bg-blue-600 hover:bg-blue-700">
             Tạo kỳ thi mới
@@ -388,7 +352,37 @@ const ClassExamsTab = memo(function ClassExamsTab({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {currentExams.length > 0 ? (
+        {isLoading ? (
+          Array.from({ length: pageSize }).map((_, idx) => (
+            <div
+              key={`skeleton-${idx}`}
+              className="bg-white dark:bg-gray-800 rounded-lg border-l-4 border-gray-200 dark:border-gray-700 border-t border-r border-b p-6"
+            >
+              <div className="flex flex-col h-full">
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="flex gap-2">
+                    <Skeleton.Input active size="small" style={{ width: 80, minWidth: 80 }} />
+                    <Skeleton.Input active size="small" style={{ width: 90, minWidth: 90 }} />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <Skeleton.Input active block className="mb-3" style={{ height: 24 }} />
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Skeleton.Avatar active size="small" shape="square" />
+                      <Skeleton.Input active size="small" style={{ width: "70%" }} />
+                    </div>
+                    <div className="space-y-1 mt-2">
+                      <Skeleton.Input active size="small" style={{ width: "60%" }} />
+                      <Skeleton.Input active size="small" style={{ width: "50%" }} />
+                      <Skeleton.Input active size="small" style={{ width: "40%" }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : currentExams.length > 0 ? (
           currentExams.map((exam) => (
             <div
               key={exam.id}
@@ -435,16 +429,59 @@ const ClassExamsTab = memo(function ClassExamsTab({
                       </Tag>
                     )}
                   </div>
-                  {!readOnly && (
-                    <Dropdown
-                      menu={{
-                        items: getMenuItems(exam),
-                        onClick: ({ key }) => handleMenuClick(key, exam),
-                      }}
-                      trigger={["click"]}
-                    >
-                      <Button type="text" icon={<MoreOutlined />} className="shrink-0" />
-                    </Dropdown>
+                  {readOnly ? (
+                    <Space size="small" className="exam-card-actions shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="small"
+                        type="primary"
+                        icon={<PlayCircleOutlined />}
+                        className="bg-indigo-600 hover:!bg-indigo-700 border-none"
+                        disabled={exam.isLocked}
+                        onClick={() => handleStartExam(exam)}
+                      >
+                        Bắt đầu
+                      </Button>
+                      <Button
+                        size="small"
+                        type="default"
+                        icon={<HistoryOutlined />}
+                        className="!border-slate-300"
+                        onClick={() => router.push(`/user/classes/${classId}/exams/${exam.id}/history`)}
+                      >
+                        Lịch sử làm bài
+                      </Button>
+                    </Space>
+                  ) : (
+                    <Space size="small" className="exam-card-actions shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <Tooltip title="Xem chi tiết">
+                        <Button
+                          size="small"
+                          type="default"
+                          icon={<EyeOutlined />}
+                          className="!bg-blue-50 !text-blue-600 !border-slate-300 hover:!bg-blue-100 hover:!border-slate-400 dark:!bg-blue-900/30 dark:!text-blue-400 dark:!border-slate-600"
+                          onClick={() => handleActionClick("view", exam)}
+                        />
+                      </Tooltip>
+                      <Tooltip title="Chỉnh sửa">
+                        <Button
+                          size="small"
+                          type="default"
+                          icon={<EditOutlined />}
+                          className="!bg-amber-50 !text-amber-600 !border-slate-300 hover:!bg-amber-100 hover:!border-slate-400 dark:!bg-amber-900/30 dark:!text-amber-400 dark:!border-slate-600"
+                          onClick={() => handleActionClick("edit", exam)}
+                        />
+                      </Tooltip>
+                      <Tooltip title="Xóa">
+                        <Button
+                          size="small"
+                          danger
+                          type="default"
+                          icon={<DeleteOutlined />}
+                          className="!bg-red-50 !border-slate-300 hover:!bg-red-100 hover:!border-slate-400 dark:!bg-red-900/30 dark:!border-slate-600"
+                          onClick={() => handleActionClick("delete", exam)}
+                        />
+                      </Tooltip>
+                    </Space>
                   )}
                 </div>
                 <div className="flex-1">
@@ -471,11 +508,11 @@ const ClassExamsTab = memo(function ClassExamsTab({
               </div>
             </div>
           ))
-        ) : !isLoading ? (
+        ) : (
           <div className="col-span-full">
             <Empty description={searchQuery ? "Không tìm thấy kỳ thi nào" : "Chưa có kỳ thi nào"} image={Empty.PRESENTED_IMAGE_SIMPLE} />
           </div>
-        ) : null}
+        )}
       </div>
 
       {totalExams > pageSize && (

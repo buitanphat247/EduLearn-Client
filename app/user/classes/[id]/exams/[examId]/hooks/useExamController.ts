@@ -88,11 +88,39 @@ export function useExamController(examId: string, classId: string, studentId: nu
     hasStartedRef.current = hasStarted;
   }, [hasStarted]);
 
-  // Helper to remove prefixes like "A. ", "B. "
+  // Chuẩn hóa answers đã lưu (full text) sang A/B/C/D khi resume
+  const normalizeResumedAnswers = (
+    answers: Record<string, string>,
+    questions: RagQuestion[]
+  ): Record<string, string> => {
+    const qMap = new Map(questions.map((q) => [q.id, q]));
+    const result: Record<string, string> = {};
+    for (const [qId, val] of Object.entries(answers)) {
+      if (!val) continue;
+      const trimmed = val.replace(/^[A-Z][\.\)]\s*/, "").trim();
+      if (["A", "B", "C", "D"].includes(trimmed)) {
+        result[qId] = trimmed;
+        continue;
+      }
+      const q = qMap.get(qId);
+      if (!q?.options) {
+        result[qId] = val;
+        continue;
+      }
+      const idx = q.options.findIndex(
+        (opt) => opt === val || opt.replace(/^[A-Z][\.\)]\s*/, "").trim() === trimmed
+      );
+      result[qId] = idx >= 0 ? String.fromCharCode(65 + idx) : val;
+    }
+    return result;
+  };
+
+  // Giữ sanitizeAnswers cho submit - giờ đã gửi A/B/C/D nên gần như no-op
   const sanitizeAnswers = (answers: Record<string, string>) => {
     const cleaned: Record<string, string> = {};
     Object.entries(answers).forEach(([key, val]) => {
-      cleaned[key] = val.replace(/^[A-Z]\.\s+/, "").trim();
+      const v = val.replace(/^[A-Z][\.\)]\s*/, "").trim();
+      cleaned[key] = ["A", "B", "C", "D"].includes(v) ? v : val;
     });
     return cleaned;
   };
@@ -386,8 +414,9 @@ export function useExamController(examId: string, classId: string, studentId: nu
       setAttemptId(attempt.attempt_id);
       localStorage.setItem(`ATTEMPT_${examId}`, attempt.attempt_id);
 
-      if (attempt.resumed && attempt.answers) {
-        setUserAnswers(attempt.answers);
+      if (attempt.resumed && attempt.answers && test.questions) {
+        const normalized = normalizeResumedAnswers(attempt.answers, test.questions);
+        setUserAnswers(normalized);
       }
 
       setHasStarted(true); // UI Switch to Exam Main

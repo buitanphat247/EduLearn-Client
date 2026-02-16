@@ -68,8 +68,8 @@ export function ExamQuestionBody({
 
         <div className="space-y-3">
           {question.options.map((opt, i) => {
-            const label = String.fromCharCode(65 + i);
-            const selected = selectedValue === opt;
+            const label = String.fromCharCode(65 + i); // A, B, C, D
+            const selected = selectedValue === label;
             return (
               <QuestionOptionItem
                 key={i}
@@ -79,7 +79,7 @@ export function ExamQuestionBody({
                 selected={selected}
                 disabled={isSubmitted}
                 onSelect={() =>
-                  !isSubmitted && onSelectOption(question.id, opt)
+                  !isSubmitted && onSelectOption(question.id, label)
                 }
               />
             );

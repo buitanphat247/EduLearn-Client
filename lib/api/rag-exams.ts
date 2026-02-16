@@ -18,6 +18,7 @@ export interface RagTestOverview {
   end_at: string;
   max_violations: number;
   user_attempt_count: number;
+  creator_name?: string;
 }
 
 export interface RagQuestion {

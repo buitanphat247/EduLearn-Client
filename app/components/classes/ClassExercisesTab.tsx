@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback, memo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { App, Spin, Input, Button, Tag, Dropdown, Pagination, Empty, Modal, Skeleton } from "antd";
-import type { MenuProps } from "antd";
-import { SearchOutlined, PlusOutlined, MoreOutlined, FileOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
+import { App, Spin, Input, Button, Tag, Pagination, Empty, Modal, Skeleton, Space, Tooltip } from "antd";
+import { SearchOutlined, PlusOutlined, FileOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { IoBookOutline } from "react-icons/io5";
 import { getAssignmentsByClass, getAssignmentById, deleteAssignment, getAssignmentStudents, type AssignmentResponse, type AssignmentDetailResponse } from "@/lib/api/assignments";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
@@ -262,40 +261,6 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
     router.push(`/admin/classes/${classId}/exercise-create`);
   };
 
-  const getMenuItems = useCallback(
-    (_exercise: Exercise): MenuProps["items"] => {
-      const items: MenuProps["items"] = [];
-
-      if (readOnly) {
-        items.push({
-          key: "view",
-          label: "Xem chi tiết",
-        });
-      }
-
-      // Only show edit/delete actions if not readOnly
-      if (!readOnly) {
-        items.push(
-          {
-            key: "edit",
-            label: "Chỉnh sửa",
-          },
-          {
-            type: "divider",
-          },
-          {
-            key: "delete",
-            label: "Xóa",
-            danger: true,
-          }
-        );
-      }
-
-      return items;
-    },
-    [readOnly]
-  );
-
   const handleViewDetail = useCallback(
     async (exercise: Exercise) => {
       setSelectedExercise(exercise);
@@ -370,9 +335,9 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
     [message, modal, fetchAssignments, selectedExercise]
   );
 
-  const handleMenuClick = useCallback(
-    (key: string, exercise: Exercise) => {
-      switch (key) {
+  const handleActionClick = useCallback(
+    (action: "view" | "edit" | "delete", exercise: Exercise) => {
+      switch (action) {
         case "view":
           handleViewDetail(exercise);
           break;
@@ -389,8 +354,8 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
 
   const handleCardClick = useCallback(
     (exercise: Exercise, e: React.MouseEvent) => {
-      // Chỉ xử lý khi click vào card, không xử lý khi click vào dropdown menu (chỉ có ở admin)
-      if (!readOnly && (e.target as HTMLElement).closest(".ant-dropdown-trigger")) {
+      // Chỉ xử lý khi click vào card, không xử lý khi click vào nút hành động (chỉ có ở admin)
+      if (!readOnly && (e.target as HTMLElement).closest(".exercise-card-actions")) {
         return;
       }
 
@@ -560,19 +525,36 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
                       </div>
                     </div>
                     {!readOnly && (
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <Dropdown
-                          menu={{
-                            items: getMenuItems(exercise),
-                            onClick: ({ key }) => {
-                              handleMenuClick(key, exercise);
-                            },
-                          }}
-                          trigger={["click"]}
-                        >
-                          <Button type="text" icon={<MoreOutlined />} className="shrink-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" />
-                        </Dropdown>
-                      </div>
+                      <Space size="small" className="exercise-card-actions shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Tooltip title="Xem chi tiết">
+                          <Button
+                            size="small"
+                            type="default"
+                            icon={<EyeOutlined />}
+                            className="!bg-blue-50 !text-blue-600 !border-slate-300 hover:!bg-blue-100 hover:!border-slate-400 dark:!bg-blue-900/30 dark:!text-blue-400 dark:!border-slate-600"
+                            onClick={() => handleActionClick("view", exercise)}
+                          />
+                        </Tooltip>
+                        <Tooltip title="Chỉnh sửa">
+                          <Button
+                            size="small"
+                            type="default"
+                            icon={<EditOutlined />}
+                            className="!bg-amber-50 !text-amber-600 !border-slate-300 hover:!bg-amber-100 hover:!border-slate-400 dark:!bg-amber-900/30 dark:!text-amber-400 dark:!border-slate-600"
+                            onClick={() => handleActionClick("edit", exercise)}
+                          />
+                        </Tooltip>
+                        <Tooltip title="Xóa">
+                          <Button
+                            size="small"
+                            danger
+                            type="default"
+                            icon={<DeleteOutlined />}
+                            className="!bg-red-50 !border-slate-300 hover:!bg-red-100 hover:!border-slate-400 dark:!bg-red-900/30 dark:!border-slate-600"
+                            onClick={() => handleActionClick("delete", exercise)}
+                          />
+                        </Tooltip>
+                      </Space>
                     )}
                   </div>
 

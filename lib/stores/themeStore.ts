@@ -13,18 +13,25 @@ interface ThemeActions {
   setTheme: (theme: Theme) => void;
   setIsToggling: (toggling: boolean) => void;
   hydrate: (serverTheme?: Theme) => void;
+  /** Dev only: reset store để tránh state cũ sau HMR (gọi từ console: __resetZustand__()) */
+  resetForDev: () => void;
 }
+
+const initialState = {
+  theme: "light" as Theme,
+  isToggling: false,
+  isHydrated: false,
+};
 
 /**
  * Zustand store for Theme state
  * Used alongside ThemeContext for View Transition API support
+ * Note: Nếu dùng persist middleware, nên tắt trong dev: storage: process.env.NODE_ENV === "development" ? undefined : ...
  */
 export const useThemeStore = create<ThemeState & ThemeActions>()(
   devtools(
     (set, get) => ({
-      theme: "light", // Will be synced on client hydration
-      isToggling: false,
-      isHydrated: false,
+      ...initialState,
 
       setTheme: (theme) => {
         set({ theme });
@@ -35,6 +42,12 @@ export const useThemeStore = create<ThemeState & ThemeActions>()(
       },
 
       setIsToggling: (toggling) => set({ isToggling: toggling }),
+
+      resetForDev: () => {
+        if (process.env.NODE_ENV === "development") {
+          set(initialState);
+        }
+      },
 
       hydrate: (serverTheme) => {
         if (get().isHydrated) return;
@@ -60,3 +73,15 @@ export const useThemeStore = create<ThemeState & ThemeActions>()(
 // Selectors
 export const selectTheme = (state: ThemeState & ThemeActions) => state.theme;
 export const selectIsToggling = (state: ThemeState & ThemeActions) => state.isToggling;
+
+/**
+ * Dev only: Reset tất cả Zustand stores để tránh state cũ sau HMR.
+ * Gọi từ Console: __resetZustand__() rồi refresh trang (hoặc chờ HMR tự cập nhật).
+ * Thay cho hard refresh (Ctrl+Shift+R) khi UI bị lỗi do state cũ.
+ */
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+  (window as any).__resetZustand__ = () => {
+    useThemeStore.getState().resetForDev();
+    console.log("[Zustand Dev] Stores reset. Nếu UI vẫn lỗi, thử hard refresh (Ctrl+Shift+R).");
+  };
+}

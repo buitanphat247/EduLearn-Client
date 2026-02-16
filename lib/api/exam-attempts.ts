@@ -98,3 +98,67 @@ export const getTestAttempts = async (testId: string): Promise<StudentAttempt[]>
     return [];
   }
 };
+
+export const recalculateTestScores = async (
+  testId: string,
+): Promise<{ updated_count: number; message: string }> => {
+  const response = await apiClient.post(`/exams/test/${testId}/recalculate-scores`);
+  return response.data?.data ?? response.data;
+};
+
+export interface AttemptDetailQuestion {
+  id: string;
+  content: string;
+  answer_a: string;
+  answer_b: string;
+  answer_c: string;
+  answer_d: string;
+  correct_answer: string;
+  explanation: string;
+  score: number;
+  question_order: number;
+  student_answer: string | null;
+  is_correct: boolean;
+  earned_score: number;
+}
+
+export interface AttemptDetail {
+  attempt: {
+    id: string;
+    rag_test_id: string;
+    student_id: number;
+    student_name: string;
+    status: string;
+    score: number;
+    started_at: string | null;
+    submitted_at: string | null;
+    answers: Record<string, string>;
+  };
+  test: {
+    id: string;
+    title: string;
+    num_questions: number;
+    total_score: number;
+    duration_minutes: number;
+  };
+  questions: AttemptDetailQuestion[];
+  security: {
+    reload_count: number;
+    tab_hidden_count: number;
+    disconnect_count: number;
+    logs: { type: string; timestamp: string; details: string | null }[];
+  };
+}
+
+export const getAttemptDetail = async (attemptId: string): Promise<AttemptDetail | null> => {
+  try {
+    const response = await apiClient.get(`/exams/attempt/${attemptId}`);
+    // NestJS có thể wrap: { data: result } hoặc trả trực tiếp
+    const data = response.data?.data ?? response.data;
+    if (!data?.attempt) throw new Error("Dữ liệu không hợp lệ");
+    return data as AttemptDetail;
+  } catch (error: any) {
+    console.error("Error fetching attempt detail:", error);
+    throw new Error(error?.response?.data?.error || error?.message || "Không thể tải chi tiết bài làm");
+  }
+};

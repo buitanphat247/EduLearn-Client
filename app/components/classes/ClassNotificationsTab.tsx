@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, memo, useRef } from "react";
-import { App, Input, Button, Dropdown, Pagination, Modal, Empty, Skeleton, Tag } from "antd";
-import type { MenuProps } from "antd";
-import { SearchOutlined, PlusOutlined, MoreOutlined, CalendarOutlined } from "@ant-design/icons";
+import { App, Input, Button, Pagination, Modal, Empty, Skeleton, Tag, Space, Tooltip } from "antd";
+import { SearchOutlined, PlusOutlined, CalendarOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { deleteNotification, getNotificationsByScopeId, getNotificationById, type NotificationResponse } from "@/lib/api/notifications";
 import CreateClassNotificationModal from "./CreateClassNotificationModal";
 import EditClassNotificationModal from "./EditClassNotificationModal";
@@ -239,14 +238,6 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
     }
   };
 
-  const menuItems = useCallback((): MenuProps["items"] => {
-    const items: MenuProps["items"] = [{ key: "view", label: "Xem chi tiết" }];
-    if (!readOnly) {
-      items.push({ key: "edit", label: "Chỉnh sửa" }, { type: "divider" }, { key: "delete", label: "Xóa", danger: true });
-    }
-    return items;
-  }, [readOnly]);
-
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
@@ -281,11 +272,29 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
                 <div className="flex flex-col h-full">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-xs text-gray-500">{n.time ? `${n.time} - ${n.date}` : n.date}</span>
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <Dropdown menu={{ items: menuItems(), onClick: ({ key }) => handleMenuClick(key, n) }} trigger={["click"]}>
-                        <Button type="text" icon={<MoreOutlined />} size="small" />
-                      </Dropdown>
-                    </div>
+                    {!readOnly && (
+                      <Space size="small" className="notification-card-actions shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Tooltip title="Chỉnh sửa">
+                          <Button
+                            size="small"
+                            type="default"
+                            icon={<EditOutlined />}
+                            className="!bg-amber-50 !text-amber-600 !border-slate-300 hover:!bg-amber-100 hover:!border-slate-400 dark:!bg-amber-900/30 dark:!text-amber-400 dark:!border-slate-600"
+                            onClick={() => handleMenuClick("edit", n)}
+                          />
+                        </Tooltip>
+                        <Tooltip title="Xóa">
+                          <Button
+                            size="small"
+                            danger
+                            type="default"
+                            icon={<DeleteOutlined />}
+                            className="!bg-red-50 !border-slate-300 hover:!bg-red-100 hover:!border-slate-400 dark:!bg-red-900/30 dark:!border-slate-600"
+                            onClick={() => handleMenuClick("delete", n)}
+                          />
+                        </Tooltip>
+                      </Space>
+                    )}
                   </div>
                   <h3 className="font-semibold text-lg line-clamp-2 mb-2">{n.title}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-3">{n.content}</p>
