@@ -252,8 +252,6 @@ const nextConfig: NextConfig = {
     fetches: {
       fullUrl: false,
     },
-    // Disable incoming request logging to suppress body size warnings
-    incomingRequests: false,
   },
 
   experimental: {

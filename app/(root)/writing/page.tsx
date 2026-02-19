@@ -15,7 +15,7 @@ const WritingFeature = dynamic(
 export default function WritingPage() {
     return (
         <main className="h-full bg-slate-50 dark:bg-[#0f172a] transition-colors duration-300">
-            <div className="mx-auto px-4 py-8 md:py-12">
+            <div className="mx-auto px-4 py-8">
                 <FeaturesHeader
                     title="Luyện viết"
                     description="Luyện viết với AI trợ giúp"

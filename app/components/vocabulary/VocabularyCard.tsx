@@ -7,18 +7,22 @@ import { useRouter } from "next/navigation";
 interface VocabularyCardProps {
   folderId: number;
   folderName: string;
+  learned_count?: number;
+  total_count?: number;
   href?: string;
 }
 
 export default function VocabularyCard({
   folderId,
   folderName,
+  learned_count = 0,
+  total_count = 0,
   href = "#",
 }: VocabularyCardProps) {
   const router = useRouter();
   return (
-    <Link 
-      href={href} 
+    <Link
+      href={href}
       prefetch={false}
       onMouseEnter={() => router.prefetch(href)}
       className="block h-full group"
@@ -48,9 +52,35 @@ export default function VocabularyCard({
           </h3>
 
           {/* Subtext */}
-          <p className="text-sm text-slate-500 dark:text-slate-500 line-clamp-2 mb-6 leading-relaxed">
+          <p className="text-sm text-slate-500 dark:text-slate-500 line-clamp-2 mb-4 leading-relaxed">
             Học và ôn tập bộ từ vựng chủ đề <span className="text-slate-700 dark:text-slate-400 font-medium">{folderName}</span> cùng các bài tập trắc nghiệm.
           </p>
+
+          {/* Progress Section - Always visible */}
+          <div className="mb-6 p-3 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-300 dark:border-slate-600 shadow-sm">
+            <div className="flex justify-between items-end mb-2.5">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em]">
+                  Tiến độ hoàn thành
+                </span>
+                <span className="text-sm font-black text-slate-800 dark:text-slate-200">
+                  {learned_count} <span className="text-slate-500 dark:text-slate-500 font-medium text-xs">/ {total_count} từ</span>
+                </span>
+              </div>
+              <div className="flex flex-col items-end">
+                <div className="text-lg font-black text-slate-800 dark:text-slate-200 leading-none">
+                  {total_count > 0 ? Math.round((learned_count / total_count) * 100) : 0}<span className="text-[10px] ml-0.5">%</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="h-3 w-full bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden p-[2px] border border-slate-200 dark:border-slate-700">
+              <div
+                className="h-full rounded-full bg-blue-500 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 animate-shine relative shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+                style={{ width: `${total_count > 0 ? Math.min(100, Math.round((learned_count / total_count) * 100)) : 0}%` }}
+              />
+            </div>
+          </div>
 
           {/* Button */}
           <div className="mt-auto">

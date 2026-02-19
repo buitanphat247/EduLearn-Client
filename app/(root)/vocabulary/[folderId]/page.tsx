@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { App, Button, ConfigProvider, theme } from "antd";
-import { SoundOutlined, FileTextOutlined, CheckCircleOutlined, EditOutlined, BookOutlined } from "@ant-design/icons";
+import { SoundOutlined, FileTextOutlined, CheckCircleOutlined, EditOutlined, BookOutlined, BarChartOutlined } from "@ant-design/icons";
 import { getVocabulariesByFolder, type VocabularyResponse } from "@/lib/api/vocabulary";
 import Image from "next/image";
 import { IoArrowBackOutline } from "react-icons/io5";
@@ -103,9 +103,9 @@ export default function VocabularyDetail() {
       color: "purple",
     },
     {
-      title: "Luyện câu",
-      description: "Tạo câu với AI hỗ trợ",
-      icon: BookOutlined,
+      title: "Thống kê",
+      description: "Xem tiến độ học tập",
+      icon: BarChartOutlined,
       color: "orange",
     },
   ];
@@ -135,7 +135,7 @@ export default function VocabularyDetail() {
         },
       }}
     >
-      <main className="min-h-screen bg-slate-50 dark:bg-[#0f172a] py-8 md:py-12 font-sans text-slate-800 dark:text-slate-200 transition-colors duration-500">
+      <main className="min-h-screen bg-slate-50 dark:bg-[#0f172a] py-8 eloafont-sans text-slate-800 dark:text-slate-200 transition-colors duration-500">
         <div className="container mx-auto px-4">
           {/* Header */}
           <div className="mb-12">
@@ -204,6 +204,8 @@ export default function VocabularyDetail() {
                       router.push(`/vocabulary/quiz/${folderId}`);
                     } else if (mode.title === "Gõ từ") {
                       router.push(`/vocabulary/typing/${folderId}`);
+                    } else if (mode.title === "Thống kê") {
+                      router.push(`/vocabulary/review`);
                     } else {
                       message.info("Tính năng này đang được phát triển");
                     }

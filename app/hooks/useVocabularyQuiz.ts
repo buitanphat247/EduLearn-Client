@@ -26,7 +26,7 @@ export function useVocabularyQuiz(vocabularies: VocabularyResponse[]) {
 
   // Generate random quiz questions
   const generateQuestions = useCallback((vocabs: VocabularyResponse[]) => {
-    const questionCount = Math.min(10, vocabs.length);
+    const questionCount = vocabs.length;
     const shuffled = [...vocabs].sort(() => Math.random() - 0.5);
     const selectedVocabs = shuffled.slice(0, questionCount);
 
@@ -50,10 +50,7 @@ export function useVocabularyQuiz(vocabularies: VocabularyResponse[]) {
     setQuestions(newQuestions);
   }, []);
 
-  const currentQuestion = useMemo(
-    () => questions[currentQuestionIndex] || null,
-    [questions, currentQuestionIndex]
-  );
+  const currentQuestion = useMemo(() => questions[currentQuestionIndex] || null, [questions, currentQuestionIndex]);
 
   const playAudio = useCallback((audioUrl?: string) => {
     if (!audioUrl) {
@@ -100,6 +97,29 @@ export function useVocabularyQuiz(vocabularies: VocabularyResponse[]) {
       const isCorrect = optionIndex === currentQuestion?.correctAnswer;
       playResultAudio(isCorrect);
 
+      // Gửi kết quả về Server để tính toán SM-2
+      const syncReview = async () => {
+        try {
+          const { getProfile } = await import("@/lib/api/auth");
+          const { reviewWord, createUserVocabulary } = await import("@/lib/api/vocabulary");
+          const profile = await getProfile();
+          if (profile?.user_id && currentQuestion) {
+            const userIdNum = Number(profile.user_id);
+            const wordId = currentQuestion.word.sourceWordId;
+
+            // Gửi review
+            await reviewWord({
+              user_id: userIdNum,
+              sourceWordId: wordId,
+              grade: isCorrect ? 3 : 1, // Đúng = Grade 3 (Good), Sai = Grade 1 (Again)
+            });
+          }
+        } catch (error) {
+          console.error("Failed to sync review result:", error);
+        }
+      };
+      syncReview();
+
       if (isCorrect) {
         message.success("Chính xác! 🎉");
       } else {
@@ -120,7 +140,7 @@ export function useVocabularyQuiz(vocabularies: VocabularyResponse[]) {
         }
       }, 1500);
     },
-    [selectedAnswer, currentQuestionIndex, showResult, currentQuestion, questions, userAnswers, playResultAudio]
+    [selectedAnswer, currentQuestionIndex, showResult, currentQuestion, questions, userAnswers, playResultAudio],
   );
 
   const handleNext = useCallback(() => {

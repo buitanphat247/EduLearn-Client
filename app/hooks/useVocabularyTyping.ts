@@ -39,7 +39,7 @@ export function useVocabularyTyping(vocabularies: VocabularyResponse[]) {
   // Generate typing questions
   const generateQuestions = useCallback(
     (vocabs: VocabularyResponse[]) => {
-      const questionCount = Math.min(10, vocabs.length);
+      const questionCount = vocabs.length;
       const shuffled = [...vocabs].sort(() => Math.random() - 0.5);
       const selectedVocabs = shuffled.slice(0, questionCount);
 
@@ -57,7 +57,7 @@ export function useVocabularyTyping(vocabularies: VocabularyResponse[]) {
       setQuestions(newQuestions);
       lastQuestionIdRef.current = null;
     },
-    [parseExample]
+    [parseExample],
   );
 
   const currentQuestion = useMemo(() => questions[currentQuestionIndex] || null, [questions, currentQuestionIndex]);
@@ -127,6 +127,29 @@ export function useVocabularyTyping(vocabularies: VocabularyResponse[]) {
     }));
 
     playResultAudio(isCorrect);
+
+    // Gửi kết quả về Server để tính toán SM-2
+    const syncReview = async () => {
+      try {
+        const { getProfile } = await import("@/lib/api/auth");
+        const { reviewWord, createUserVocabulary } = await import("@/lib/api/vocabulary");
+        const profile = await getProfile();
+        if (profile?.user_id && currentQuestion) {
+          const userIdNum = Number(profile.user_id);
+          const wordId = currentQuestion.word.sourceWordId;
+
+          // Gửi review
+          await reviewWord({
+            user_id: userIdNum,
+            sourceWordId: wordId,
+            grade: isCorrect ? 5 : 1,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to sync review result:", error);
+      }
+    };
+    syncReview();
 
     if (isCorrect) {
       message.success("Chính xác! 🎉");

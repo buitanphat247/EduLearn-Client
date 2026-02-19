@@ -3,15 +3,15 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { App, Spin, Button, Tag, ConfigProvider, theme } from "antd";
-import { LeftOutlined, RightOutlined, RollbackOutlined, SoundOutlined, SwapOutlined, ReloadOutlined } from "@ant-design/icons";
+import { App, ConfigProvider, theme } from "antd";
+import { LeftOutlined, RightOutlined, SoundOutlined, SwapOutlined } from "@ant-design/icons";
 import { getVocabulariesByFolder, type VocabularyResponse } from "@/lib/api/vocabulary";
 import { IoArrowBackOutline } from "react-icons/io5";
 import VocabularyFlashcardSkeleton from "@/app/components/features/vocabulary/VocabularyFlashcardSkeleton";
 import { useTheme } from "@/app/context/ThemeContext";
 import { sanitizeForDisplay } from "@/lib/utils/sanitize";
 
-type Difficulty = "easy" | "medium" | "hard";
+type ReviewLevel = "again" | "hard" | "good" | "easy";
 
 export default function VocabularyFlashcard() {
   const { message } = App.useApp();
@@ -23,10 +23,36 @@ export default function VocabularyFlashcard() {
   const [vocabularies, setVocabularies] = useState<VocabularyResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [difficulties, setDifficulties] = useState<Record<number, Difficulty>>({});
+  const [reviewLevels, setReviewLevels] = useState<Record<number, ReviewLevel>>({});
   const [isFlipped, setIsFlipped] = useState(false);
-  const [autoFlip, setAutoFlip] = useState(false);
-  const [autoFlipDelay] = useState(3000); // 3 giây
+  const [userId, setUserId] = useState<number | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Lấy thông tin User Profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const { getProfile } = await import("@/lib/api/auth");
+        const profile = await getProfile();
+        if (profile?.user_id) {
+          setUserId(Number(profile.user_id));
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  // Map last_grade -> ReviewLevel: 1->again, 2->hard, 3->good, 5->easy
+  const gradeToLevel = useCallback((grade: number | null): ReviewLevel | undefined => {
+    if (grade == null) return undefined;
+    if (grade === 1) return "again";
+    if (grade === 2) return "hard";
+    if (grade === 3) return "good";
+    if (grade >= 4) return "easy";
+    return "again";
+  }, []);
 
   const fetchVocabularies = useCallback(async () => {
     if (!folderId) return;
@@ -34,45 +60,46 @@ export default function VocabularyFlashcard() {
     setLoading(true);
     try {
       const data = await getVocabulariesByFolder(folderId);
-
       setVocabularies(data);
       setCurrentIndex(0);
-      setDifficulties({});
       setIsFlipped(false);
+      setReviewLevels({});
     } catch (error: any) {
       console.error("Error fetching vocabularies:", error);
       message.error(error?.message || "Không thể tải danh sách từ vựng");
       setVocabularies([]);
+      setReviewLevels({});
     } finally {
       setLoading(false);
     }
   }, [folderId, message]);
 
   useEffect(() => {
-    if (folderId) {
-      fetchVocabularies();
-    }
+    if (folderId) fetchVocabularies();
   }, [folderId, fetchVocabularies]);
+
+  // Load trạng thái đã học của user để hiển thị đúng nút đã chọn
+  useEffect(() => {
+    if (!userId || vocabularies.length === 0) return;
+
+    const loadBatch = async () => {
+      const { getBatchUserVocabulary } = await import("@/lib/api/vocabulary");
+      const batch = await getBatchUserVocabulary(
+        userId,
+        vocabularies.map((v) => v.sourceWordId),
+      );
+      const loaded: Record<number, ReviewLevel> = {};
+      batch.forEach((item) => {
+        const level = gradeToLevel(item.last_grade);
+        if (level) loaded[item.sourceWordId] = level;
+      });
+      setReviewLevels(loaded);
+    };
+    loadBatch();
+  }, [userId, vocabularies, gradeToLevel]);
 
   const folderName = useMemo(() => vocabularies[0]?.folder?.folderName || "", [vocabularies]);
   const currentVocab = useMemo(() => (vocabularies.length > 0 ? vocabularies[currentIndex] : null), [vocabularies, currentIndex]);
-
-  // Auto-flip effect
-  useEffect(() => {
-    if (!autoFlip || !currentVocab || vocabularies.length === 0) return;
-
-    // Reset về mặt trước khi chuyển thẻ mới
-    setIsFlipped(false);
-
-    // Tự động lật sau delay
-    const timer = setTimeout(() => {
-      setIsFlipped(true);
-    }, autoFlipDelay);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [autoFlip, currentIndex, currentVocab, vocabularies.length, autoFlipDelay]);
 
   // Reset flip khi chuyển thẻ
   useEffect(() => {
@@ -110,21 +137,65 @@ export default function VocabularyFlashcard() {
     setIsFlipped((prev) => !prev);
   }, []);
 
-  const toggleAutoFlip = useCallback(() => {
-    setAutoFlip((prev) => !prev);
-    // Reset về mặt trước khi bật/tắt auto-flip
-    setIsFlipped(false);
-  }, []);
+  // Map ReviewLevel -> grade: again->1, hard->2, good->3, easy->5
+  const levelToGrade: Record<ReviewLevel, number> = {
+    again: 1,
+    hard: 2,
+    good: 3,
+    easy: 5,
+  };
 
-  const handleSetDifficulty = useCallback(
-    (level: Difficulty) => {
-      if (!currentVocab) return;
-      setDifficulties((prev) => ({
-        ...prev,
-        [currentVocab.sourceWordId]: level,
-      }));
+  const levelLabels: Record<ReviewLevel, string> = {
+    again: "Học lại",
+    hard: "Khó",
+    good: "Tốt",
+    easy: "Dễ",
+  };
+
+  const handleSetReviewLevel = useCallback(
+    async (level: ReviewLevel) => {
+      if (!currentVocab || !userId || isProcessing) return;
+
+      setIsProcessing(true);
+
+      // Play ping sound
+      try {
+        const pingAudio = new Audio("/audio/ping.mp3");
+        pingAudio.volume = 0.2;
+        pingAudio.currentTime = 0;
+        await pingAudio.play();
+      } catch (err) {
+        console.error("Error playing ping sound:", err);
+      }
+
+      try {
+        const { reviewWord, createUserVocabulary } = await import("@/lib/api/vocabulary");
+        setReviewLevels((prev) => ({ ...prev, [currentVocab.sourceWordId]: level }));
+
+        await createUserVocabulary({
+          user_id: userId,
+          sourceWordId: currentVocab.sourceWordId,
+        });
+
+        await reviewWord({
+          user_id: userId,
+          sourceWordId: currentVocab.sourceWordId,
+          grade: levelToGrade[level],
+        });
+
+        message.success(`Đã ghi nhận: ${levelLabels[level]}`);
+
+        if (currentIndex < vocabularies.length - 1) {
+          setTimeout(() => handleNext(), 500);
+        }
+      } catch (error) {
+        console.error("Error reviewing word:", error);
+        message.error("Không thể lưu kết quả ôn tập");
+      } finally {
+        setTimeout(() => setIsProcessing(false), 500); // Debounce duration
+      }
     },
-    [currentVocab]
+    [currentVocab, userId, currentIndex, vocabularies.length, handleNext, message]
   );
 
   const parseExample = useCallback((exampleStr: string) => {
@@ -203,23 +274,27 @@ export default function VocabularyFlashcard() {
                 </p>
               </div>
 
-              <Button
-                icon={<IoArrowBackOutline />}
+              <button
+                type="button"
                 onClick={() => router.push(`/vocabulary/${folderId}`)}
-                size="middle"
-                className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 border-0 text-white font-medium shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 border-0 text-white font-medium shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105"
               >
+                <IoArrowBackOutline className="text-lg" />
                 Quay lại danh sách
-              </Button>
+              </button>
             </div>
           </div>
 
           {vocabularies.length === 0 ? (
             <div className="text-center py-24 bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-700 transition-colors">
               <p className="text-slate-500 dark:text-slate-400 mb-4">Chưa có từ vựng nào trong folder này.</p>
-              <Button type="primary" onClick={() => router.push(`/vocabulary/${folderId}`)}>
+              <button
+                type="button"
+                onClick={() => router.push(`/vocabulary/${folderId}`)}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+              >
                 Thêm từ vựng ngay
-              </Button>
+              </button>
             </div>
           ) : (
             <div className="flex flex-col items-center">
@@ -254,17 +329,16 @@ export default function VocabularyFlashcard() {
                       <div className="flex items-center gap-4 mb-4">
                         <h2 className="text-5xl font-extrabold text-slate-800 dark:text-white tracking-tight transition-colors">{currentVocab.content}</h2>
                         {currentVocab.audioUrl?.[0]?.url && (
-                          <Button
-                            type="text"
-                            shape="circle"
-                            icon={<SoundOutlined className="text-xl" />}
-                            size="large"
+                          <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               playAudio(currentVocab.audioUrl![0].url);
                             }}
-                            className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center justify-center transition-colors"
-                          />
+                            className="w-12 h-12 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <SoundOutlined className="text-xl" />
+                          </button>
                         )}
                       </div>
 
@@ -289,15 +363,16 @@ export default function VocabularyFlashcard() {
                       <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-slate-700 transition-colors">
                         <h2 className="text-3xl font-bold text-slate-800 dark:text-white transition-colors">{currentVocab.content}</h2>
                         {currentVocab.audioUrl?.[0]?.url && (
-                          <Button
-                            type="text"
-                            icon={<SoundOutlined />}
+                          <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               playAudio(currentVocab.audioUrl![0].url);
                             }}
-                            className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"
-                          />
+                            className="p-2 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <SoundOutlined />
+                          </button>
                         )}
                       </div>
 
@@ -330,77 +405,82 @@ export default function VocabularyFlashcard() {
 
               {/* Controls */}
               <div className="w-full max-w-3xl">
-                <div className="flex justify-around items-center mb-8 ">
-                  <div>
-                    <Button
-                      icon={<LeftOutlined />}
-                      onClick={handlePrev}
-                      size="middle"
-                      disabled={vocabularies.length <= 1}
-                      className="h-12 w-12 rounded-full flex items-center justify-center bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-400 shadow-sm transition-all"
-                    />
-                  </div>
-                  <div>
-                    <span className="text-base font-semibold text-slate-600 dark:text-slate-400 tabular-nums tracking-widest bg-white dark:bg-[#1e293b] px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
-                      {String(currentIndex + 1).padStart(2, "0")} / {String(vocabularies.length).padStart(2, "0")}
-                    </span>
-                  </div>
-                  <div>
-                    <Button
-                      icon={<RightOutlined />}
-                      iconPosition="end"
-                      onClick={handleNext}
-                      size="middle"
-                      disabled={vocabularies.length <= 1}
-                      className="h-12 w-12 rounded-full flex items-center justify-center bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-400 shadow-sm transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Auto-flip Toggle */}
-                <div className="flex justify-center mb-6">
-                  <Button
-                    icon={<ReloadOutlined />}
-                    onClick={toggleAutoFlip}
-                    size="middle"
-                    className={`h-10 px-6 rounded-full font-medium transition-all ${autoFlip
-                      ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700 shadow-lg shadow-blue-500/30"
-                      : "bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-400"
+                <div className="flex justify-around items-center mb-8 gap-4">
+                  <button
+                    type="button"
+                    onClick={handlePrev}
+                    disabled={vocabularies.length <= 1 || isProcessing}
+                    className={`h-14 w-14 min-w-14 rounded-2xl flex items-center justify-center bg-linear-to-br from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 border-0 text-white shadow-md transition-all ${isProcessing ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
                       }`}
                   >
-                    {autoFlip ? "Tắt tự động lật" : "Bật tự động lật"}
-                  </Button>
+                    <LeftOutlined className="text-lg" />
+                  </button>
+                  <div className="px-6 py-3 rounded-2xl bg-linear-to-r from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30">
+                    <span className="text-lg font-bold text-white tabular-nums tracking-widest">
+                      {String(currentIndex + 1).padStart(2, "0")} <span className="text-white/70 font-medium">/</span> {String(vocabularies.length).padStart(2, "0")}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={vocabularies.length <= 1 || isProcessing}
+                    className={`h-14 w-14 min-w-14 rounded-2xl flex items-center justify-center bg-linear-to-br from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 border-0 text-white shadow-md transition-all ${isProcessing ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                      }`}
+                  >
+                    <RightOutlined className="text-lg" />
+                  </button>
                 </div>
 
-                {/* Difficulty Rating */}
-                <div className="flex flex-col items-center gap-3">
-                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Đánh giá độ khó</p>
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={() => handleSetDifficulty("easy")}
-                      size="middle"
-                      className={`h-10 px-6 bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:border-emerald-300 dark:hover:border-emerald-500/50 font-medium transition-all ${difficulties[currentVocab!.sourceWordId] === "easy" ? "bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500 shadow-md ring-2 ring-emerald-500/20" : ""
-                        }`}
-                    >
-                      Dễ
-                    </Button>
-                    <Button
-                      onClick={() => handleSetDifficulty("medium")}
-                      size="middle"
-                      className={`h-10 px-6 bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:border-blue-300 dark:hover:border-blue-500/50 font-medium transition-all ${difficulties[currentVocab!.sourceWordId] === "medium" ? "bg-blue-50 dark:bg-blue-500/20 border-blue-500 shadow-md ring-2 ring-blue-500/20" : ""
-                        }`}
-                    >
-                      Trung bình
-                    </Button>
-                    <Button
-                      onClick={() => handleSetDifficulty("hard")}
-                      size="middle"
-                      className={`h-10 px-6 bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-700 text-rose-600 dark:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-300 dark:hover:border-rose-500/50 font-medium transition-all ${difficulties[currentVocab!.sourceWordId] === "hard" ? "bg-rose-50 dark:bg-rose-500/20 border-rose-500 shadow-md ring-2 ring-rose-500/20" : ""
-                        }`}
-                    >
-                      Khó
-                    </Button>
-                  </div>
+                {/* Review Level Buttons - Học lại, Khó, Tốt, Dễ */}
+                <div className="flex flex-wrap justify-center gap-6">
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => handleSetReviewLevel("again")}
+                    className={`flex flex-col items-center justify-center w-24 py-3 rounded-xl font-semibold border transition-all duration-200 ${currentVocab && reviewLevels[currentVocab.sourceWordId] === "again"
+                      ? "bg-red-100 border-red-500 text-red-600 dark:bg-red-900/30 dark:border-red-500/50 dark:text-red-400 shadow-md transform scale-105"
+                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      } ${isProcessing ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    <span>Học lại</span>
+                    <span className="text-xs font-medium opacity-70">30m</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => handleSetReviewLevel("hard")}
+                    className={`flex flex-col items-center justify-center w-24 py-3 rounded-xl font-semibold border transition-all duration-200 ${currentVocab && reviewLevels[currentVocab.sourceWordId] === "hard"
+                      ? "bg-orange-100 border-orange-500 text-orange-600 dark:bg-orange-900/30 dark:border-orange-500/50 dark:text-orange-400 shadow-md transform scale-105"
+                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                      } ${isProcessing ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    <span>Khó</span>
+                    <span className="text-xs font-medium opacity-70">12h</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => handleSetReviewLevel("good")}
+                    className={`flex flex-col items-center justify-center w-24 py-3 rounded-xl font-semibold border transition-all duration-200 ${currentVocab && reviewLevels[currentVocab.sourceWordId] === "good"
+                      ? "bg-blue-100 border-blue-500 text-blue-600 dark:bg-blue-900/30 dark:border-blue-500/50 dark:text-blue-400 shadow-md transform scale-105"
+                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      } ${isProcessing ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    <span>Tốt</span>
+                    <span className="text-xs font-medium opacity-70">1d</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => handleSetReviewLevel("easy")}
+                    className={`flex flex-col items-center justify-center w-24 py-3 rounded-xl font-semibold border transition-all duration-200 ${currentVocab && reviewLevels[currentVocab.sourceWordId] === "easy"
+                      ? "bg-green-100 border-green-500 text-green-600 dark:bg-green-900/30 dark:border-green-500/50 dark:text-green-400 shadow-md transform scale-105"
+                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"
+                      } ${isProcessing ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    <span>Dễ</span>
+                    <span className="text-xs font-medium opacity-70">3d</span>
+                  </button>
                 </div>
               </div>
             </div>

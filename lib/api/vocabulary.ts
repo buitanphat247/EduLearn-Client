@@ -3,12 +3,15 @@ import apiClient from "@/app/config/api";
 export interface FolderResponse {
   folderId: number;
   folderName: string;
+  learned_count?: number;
+  total_count?: number;
 }
 
 export interface GetFoldersParams {
   page?: number;
   limit?: number;
   search?: string;
+  userId?: number;
 }
 
 export interface GetFoldersResult {
@@ -29,28 +32,26 @@ export interface GetFoldersResponse {
 /**
  * Lấy danh sách folders với pagination
  */
-export async function getFolders(
-  params?: GetFoldersParams
-): Promise<GetFoldersResult> {
+export async function getFolders(params?: GetFoldersParams): Promise<GetFoldersResult> {
   try {
     const requestParams: Record<string, any> = {
       page: params?.page || 1,
       limit: params?.limit || 10,
     };
-    
+
     // Chỉ thêm search nếu có giá trị
     if (params?.search && params.search.trim()) {
       requestParams.search = params.search.trim();
     }
-    
+
     const response = await apiClient.get<GetFoldersResponse>("/folders", {
       params: requestParams,
     });
-    
+
     if (response.data.status && response.data.data) {
       return response.data.data;
     }
-    
+
     throw new Error(response.data.message || "Không thể lấy danh sách folders");
   } catch (error: any) {
     throw new Error(error?.response?.data?.message || error?.message || "Không thể lấy danh sách folders");
@@ -112,21 +113,285 @@ export interface GetVocabulariesByFolderResponse {
 /**
  * Lấy danh sách từ vựng theo folderId
  */
-export async function getVocabulariesByFolder(
-  folderId: number
-): Promise<VocabularyResponse[]> {
+export async function getVocabulariesByFolder(folderId: number): Promise<VocabularyResponse[]> {
   try {
-    const response = await apiClient.get<GetVocabulariesByFolderResponse>(
-      `/vocabularies/by-folder/${folderId}`
-    );
-    
+    const response = await apiClient.get<GetVocabulariesByFolderResponse>(`/vocabularies/by-folder/${folderId}`);
+
     if (response.data.status && response.data.data) {
       return response.data.data;
     }
-    
+
     throw new Error(response.data.message || "Không thể lấy danh sách từ vựng");
   } catch (error: any) {
     throw new Error(error?.response?.data?.message || error?.message || "Không thể lấy danh sách từ vựng");
   }
 }
 
+// --- SM-2 Spaced Repetition Integrations ---
+
+export interface UserVocabularyResponse {
+  user_id: number;
+  sourceWordId: number;
+  is_mastered: boolean;
+  practice_count?: number;
+  last_reviewed_at?: string | null;
+  next_review_at?: string | null;
+  interval_days?: number;
+  ease_factor?: number;
+  repetition?: number;
+  last_grade?: number;
+  created_at: string;
+  vocabulary?: {
+    sourceWordId: number;
+    content?: string;
+    pronunciation?: string;
+    translation?: string;
+    pos?: string;
+  };
+}
+
+export interface ReviewWordParams {
+  user_id: number;
+  sourceWordId: number;
+  grade: number;
+}
+
+export async function getDueWords(userId: number, limit: number = 20): Promise<UserVocabularyResponse[]> {
+  try {
+    const response = await apiClient.get<any>(`/user-vocabulary/due/${userId}`, {
+      params: { limit },
+    });
+    // Server wraps: { status, data: [...], ... }
+    const raw = response.data;
+    const result = raw?.data ?? raw;
+    return Array.isArray(result) ? result : [];
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.message || error?.message || "Không thể lấy danh sách từ cần học");
+  }
+}
+
+export async function reviewWord(params: ReviewWordParams): Promise<UserVocabularyResponse> {
+  try {
+    const response = await apiClient.post<any>("/user-vocabulary/review", params);
+    const raw = response.data;
+    return raw?.data ?? raw;
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.message || error?.message || "Không thể gửi kết quả ôn tập");
+  }
+}
+
+export interface CreateUserVocabularyParams {
+  user_id: number;
+  sourceWordId: number;
+  is_mastered?: boolean;
+}
+
+export async function createUserVocabulary(params: CreateUserVocabularyParams): Promise<UserVocabularyResponse> {
+  try {
+    const response = await apiClient.post<any>("/user-vocabulary", params);
+    const raw = response.data;
+    return raw?.data ?? raw;
+  } catch (error: any) {
+    // Nếu đã tồn tại (409 Conflict), coi như thành công
+    if (error?.response?.status === 409) {
+      const errData = error.response.data;
+      return errData?.data ?? errData;
+    }
+    throw new Error(error?.response?.data?.message || error?.message || "Không thể đăng ký từ vựng");
+  }
+}
+
+export interface UserVocabularyStats {
+  total: number;
+  mastered: number;
+  notMastered: number;
+  reviewedToday: number;
+}
+
+export interface GetUserVocabularyByUserParams {
+  page?: number;
+  limit?: number;
+  isMastered?: boolean;
+}
+
+export interface GetUserVocabularyByUserResult {
+  data: UserVocabularyResponse[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function getUserVocabularyByUser(userId: number, params?: GetUserVocabularyByUserParams): Promise<GetUserVocabularyByUserResult> {
+  try {
+    const response = await apiClient.get<GetUserVocabularyByUserResult | { data: GetUserVocabularyByUserResult }>(
+      `/user-vocabulary/by-user/${userId}`,
+      { params: { page: params?.page ?? 1, limit: params?.limit ?? 10, isMastered: params?.isMastered } },
+    );
+    const raw = response.data as GetUserVocabularyByUserResult | { data: GetUserVocabularyByUserResult };
+    const result: GetUserVocabularyByUserResult =
+      "data" in raw && raw.data && typeof raw.data === "object" && "total" in (raw.data as object)
+        ? (raw.data as GetUserVocabularyByUserResult)
+        : (raw as GetUserVocabularyByUserResult);
+    const data = Array.isArray(result.data) ? result.data : [];
+    return { data, total: result.total ?? 0, page: result.page ?? 1, limit: result.limit ?? 10 };
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } }; message?: string };
+    throw new Error(err?.response?.data?.message || err?.message || "Không thể lấy danh sách từ vựng đã học");
+  }
+}
+
+export async function getUserVocabularyStats(userId: number): Promise<UserVocabularyStats> {
+  try {
+    const response = await apiClient.get<any>(`/user-vocabulary/stats/${userId}`);
+    // Server wraps: { status, data: { total, mastered, notMastered }, ... }
+    const raw = response.data;
+    const result = raw?.data ?? raw;
+    return {
+      total: Number(result?.total) || 0,
+      mastered: Number(result?.mastered) || 0,
+      notMastered: Number(result?.notMastered) || 0,
+      reviewedToday: Number(result?.reviewedToday) || 0,
+    };
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.message || error?.message || "Không thể lấy thống kê");
+  }
+}
+export interface ActivityStat {
+  date: string;
+  count: number;
+  level: number;
+}
+
+export interface GetActivityStatsResponse {
+  status: boolean;
+  message: string;
+  data: ActivityStat[];
+  statusCode: number;
+  timestamp: string;
+}
+
+export async function getUserActivityStats(userId: number): Promise<ActivityStat[]> {
+  try {
+    const response = await apiClient.get<GetActivityStatsResponse>(`/user-vocabulary/activity/${userId}`);
+    return response.data?.data || [];
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.message || error?.message || "Không thể lấy thống kê hoạt động");
+  }
+}
+
+export interface ForgettingCurveDataset {
+  label: string;
+  data: number[];
+}
+
+export interface GetForgettingCurveResponse {
+  status: boolean;
+  message: string;
+  data: ForgettingCurveDataset[];
+  statusCode: number;
+  timestamp: string;
+}
+
+export interface BatchUserVocabularyItem {
+  sourceWordId: number;
+  last_grade: number | null;
+}
+
+export async function getBatchUserVocabulary(userId: number, sourceWordIds: number[]): Promise<BatchUserVocabularyItem[]> {
+  if (!sourceWordIds.length) return [];
+  try {
+    const response = await apiClient.post<any>("/user-vocabulary/batch-by-words", { user_id: userId, sourceWordIds });
+    const raw = response.data;
+    const result = raw?.data ?? raw;
+    return Array.isArray(result) ? result : [];
+  } catch (error: unknown) {
+    console.warn("Could not fetch batch user vocabulary", error);
+    return [];
+  }
+}
+
+export async function getForgettingCurveData(userId: number): Promise<ForgettingCurveDataset[]> {
+  try {
+    const response = await apiClient.get<GetForgettingCurveResponse>(`/user-vocabulary/forgetting-curve/${userId}`);
+    return response.data?.data || [];
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.message || error?.message || "Không thể lấy dữ liệu đường cong quên lãng");
+  }
+}
+
+// --- Vocabulary Filters ---
+
+export interface ParentGroup {
+  parentGroupId: number;
+  groupName: string;
+}
+
+export interface VocabularyGroupItem {
+  vocabularyGroupId: number;
+  parentGroupId: number;
+  groupName: string;
+}
+
+export interface GetVocabulariesParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  vocabularyGroupId?: number;
+  parentGroupId?: number;
+}
+
+export interface GetVocabulariesResult {
+  data: VocabularyResponse[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function getParentGroups(): Promise<ParentGroup[]> {
+  try {
+    const response = await apiClient.get<any>("/parent-groups");
+    const raw = response.data;
+    const result = raw?.data ?? raw;
+    return Array.isArray(result) ? result : [];
+  } catch (error: any) {
+    console.warn("getParentGroups error", error);
+    return [];
+  }
+}
+
+export async function getVocabularyGroupsByParent(parentGroupId: number): Promise<VocabularyGroupItem[]> {
+  try {
+    const response = await apiClient.get<any>(`/vocabulary-groups/by-parent/${parentGroupId}`);
+    const raw = response.data;
+    const result = raw?.data ?? raw;
+    return Array.isArray(result) ? result : [];
+  } catch (error: any) {
+    console.warn("getVocabularyGroupsByParent error", error);
+    return [];
+  }
+}
+
+export async function getVocabularies(params?: GetVocabulariesParams): Promise<GetVocabulariesResult> {
+  try {
+    const requestParams: Record<string, any> = {
+      page: params?.page || 1,
+      limit: params?.limit || 10,
+    };
+    if (params?.search) requestParams.search = params.search;
+    if (params?.vocabularyGroupId) requestParams.vocabularyGroupId = params.vocabularyGroupId;
+    if (params?.parentGroupId) requestParams.parentGroupId = params.parentGroupId;
+
+    const response = await apiClient.get<any>("/vocabularies", { params: requestParams });
+    const raw = response.data;
+    const inner = raw?.data ?? raw;
+    if (inner && typeof inner === "object" && "total" in inner) {
+      return inner as GetVocabulariesResult;
+    }
+    if (Array.isArray(inner)) {
+      return { data: inner, total: inner.length, page: 1, limit: inner.length };
+    }
+    return { data: [], total: 0, page: 1, limit: 10 };
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.message || "Không thể lấy danh sách từ vựng");
+  }
+}

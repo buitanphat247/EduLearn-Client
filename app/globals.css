@@ -797,6 +797,15 @@ html.dark .user-dropdown-menu .ant-dropdown-menu-item-divider {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: #475569;
 }
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 /* Force Rebuild */
 
 /* 

@@ -1,6 +1,7 @@
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig = {
+    reactStrictMode: false,
     async rewrites() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:1611/api";
 
@@ -280,8 +281,6 @@ const nextConfig = {
         fetches: {
             fullUrl: false,
         },
-        // Disable incoming request logging to suppress body size warnings
-        incomingRequests: false,
     },
 
     experimental: {

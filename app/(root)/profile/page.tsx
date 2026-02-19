@@ -21,6 +21,8 @@ import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import { useTheme } from "@/app/context/ThemeContext";
 
 import ProfileSkeleton from "@/app/components/profile/ProfileSkeleton";
+import LearningActivityCalendar from "@/app/components/profile/LearningActivityCalendar";
+import ForgettingCurveChart from "@/app/components/profile/ForgettingCurveChart";
 
 export default function Profile() {
   const [user, setUser] = useState<UserInfoResponse | null>(null);
@@ -37,6 +39,14 @@ export default function Profile() {
       try {
         // Lấy thông tin profile từ API (đọc từ cookie đã mã hóa)
         const userInfo = await getProfile();
+
+        // Activity stats API call temporarily disabled - using mock data instead
+        /*
+        if (userInfo && userInfo.user_id) {
+          const stats = await getUserActivityStats(Number(userInfo.user_id));
+          if (isMounted) setActivityData(stats);
+        }
+        */
 
         if (isMounted) {
           setUser(userInfo as UserInfoResponse);
@@ -418,9 +428,13 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Activity or other sections could be added here */}
           </div>
         </div>
+
+        {/* Learning Activity Calendar Section */}
+        <LearningActivityCalendar theme={theme} />
+        <ForgettingCurveChart theme={theme} />
+
       </div>
     </div>
   );
