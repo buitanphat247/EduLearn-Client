@@ -27,20 +27,6 @@ export default function Hero() {
             Đồng hành cùng bạn trên con đường chinh phục tri thức.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/news"
-              prefetch={false}
-              onMouseEnter={() => router.prefetch("/news")}
-            >
-              <button className="h-14 px-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg shadow-lg shadow-blue-600/25 transition-all hover:scale-105 active:scale-95">
-                Bắt đầu ngay
-              </button>
-            </Link>
-            <button className="h-14 px-8 rounded-full bg-white dark:bg-[#1e293b] hover:bg-slate-50 dark:hover:bg-[#334155] border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold text-lg transition-all hover:scale-105 active:scale-95">
-              Tìm hiểu thêm
-            </button>
-          </div>
 
           {/* Floating UI Elements Mockup */}
           <div className="mt-20 relative animate-float">

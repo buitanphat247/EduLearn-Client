@@ -6,8 +6,6 @@ import { IoBookOutline } from "react-icons/io5";
 import { App } from "antd";
 import { useRouter } from "next/navigation";
 import UserWelcomeBanner from "@/app/components/user/dashboard/UserWelcomeBanner";
-import UserStatisticsCards from "@/app/components/user/dashboard/UserStatisticsCards";
-import { getStats, type StatsResponse } from "@/lib/api/stats";
 
 const userDashboardItems = [
   {
@@ -111,80 +109,12 @@ function QuickActionsGrid({ items }: { items: DashboardItem[] }) {
 
 
 export default function UserDashboard() {
-  const { message } = App.useApp();
-  const [stats, setStats] = useState<StatsResponse | null>(null);
-
-  useEffect(() => {
-    // ✅ Add isMounted check to prevent state updates after unmount
-    let isMounted = true;
-    const abortController = new AbortController();
-
-    const fetchStats = async () => {
-      try {
-        const data = await getStats();
-        // ✅ Only update state if component is still mounted
-        if (isMounted && !abortController.signal.aborted) {
-          setStats(data);
-        }
-      } catch (error: any) {
-        // ✅ Only show error if component is still mounted
-        if (isMounted && !abortController.signal.aborted) {
-          message.error(error?.message || "Không thể tải thống kê");
-        }
-      }
-    };
-
-    fetchStats();
-
-    // ✅ Cleanup function
-    return () => {
-      isMounted = false;
-      abortController.abort();
-    };
-  }, []); // ✅ Removed message dependency - message is stable from App.useApp()
-
-  const userStats = [
-    {
-      label: "Tài liệu",
-      value: stats?.documents?.toString() || "0",
-      icon: FileTextOutlined,
-      color: "text-purple-600 dark:text-purple-400",
-      bgColor: "bg-purple-50 dark:bg-purple-900/30",
-      hexColor: "#9333ea",
-    },
-    {
-      label: "Người dùng",
-      value: stats?.users?.toString() || "0",
-      icon: UserOutlined,
-      color: "text-cyan-600 dark:text-cyan-400",
-      bgColor: "bg-cyan-50 dark:bg-cyan-900/30",
-      hexColor: "#0891b2",
-    },
-    {
-      label: "Tin tức",
-      value: stats?.news?.toString() || "0",
-      icon: AppstoreOutlined,
-      color: "text-green-600 dark:text-green-400",
-      bgColor: "bg-green-50 dark:bg-green-900/30",
-      hexColor: "#16a34a",
-    },
-    {
-      label: "Sự kiện",
-      value: stats?.events?.toString() || "0",
-      icon: CloudDownloadOutlined,
-      color: "text-indigo-600 dark:text-indigo-400",
-      bgColor: "bg-indigo-50 dark:bg-indigo-900/30",
-      hexColor: "#4f46e5",
-    },
-  ];
-
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
       <UserWelcomeBanner />
 
-      {/* Statistics Cards */}
-      <UserStatisticsCards stats={userStats} />
+
 
       {/* Quick Actions Section */}
       <div>

@@ -7,8 +7,9 @@ import TranscriptPanel from "@/app/components/features/listening/TranscriptPanel
 import InputArea from "@/app/components/features/listening/InputArea";
 import { useListeningAudio } from "@/app/hooks/useListeningAudio";
 import { useListeningChallenge } from "@/app/hooks/useListeningChallenge";
+import { useListeningProgress } from "@/app/hooks/useListeningProgress";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { FaKeyboard } from "react-icons/fa";
 import { IoArrowBackOutline } from "react-icons/io5";
 import { useParams, useRouter } from "next/navigation";
@@ -47,51 +48,72 @@ export default function ListeningPage() {
   const params = useParams();
   const router = useRouter();
 
+  // Extract lessonId once - stable value
+  const lessonId = useMemo(() => {
+    const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
+    return id ? parseInt(id, 10) : null;
+  }, [params?.id]);
+
+  const lessonIdStr = useMemo(() => {
+    return Array.isArray(params?.id) ? params.id[0] : params?.id;
+  }, [params?.id]);
+
   // Data State
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [lessonInfo, setLessonInfo] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dataReady, setDataReady] = useState(false);
 
   // UI State
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [showAppTranscript, setShowAppTranscript] = useState(false);
   const [showAppTranslation, setShowAppTranslation] = useState(false);
 
-  // Fetch Data
+  // Progress Restore State
+  const [pendingRestoreTime, setPendingRestoreTime] = useState<number | null>(null);
+
+  // Fetch Data - depends on stable lessonIdStr, not params object
   useEffect(() => {
+    if (!lessonIdStr) return;
+
+    let cancelled = false;
+
     const fetchData = async () => {
-      const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
-
-      if (!id) return;
-
       try {
         setLoading(true);
+        setDataReady(false);
         setChallenges([]);
         setLessonInfo(null);
-        const response = await apiClient.get<ApiResponse>(`/challenges/by-lesson/${id}`);
+        const response = await apiClient.get<ApiResponse>(`/challenges/by-lesson/${lessonIdStr}`);
 
-        if (response.data?.status && response.data?.data) {
+        if (cancelled) return;
+
+        if (response.data?.status && response.data?.data && response.data.data.length > 0) {
           const sortedData = response.data.data.sort((a, b) => a.position_challenges - b.position_challenges);
           setChallenges(sortedData);
-          if (sortedData.length > 0 && sortedData[0].lesson) {
+          if (sortedData[0].lesson) {
             setLessonInfo(sortedData[0].lesson);
           }
+          setDataReady(true);
         } else {
-          message.error("Không thể tải bài học");
+          message.error("Không thể tải bài học hoặc bài học chưa có nội dung");
         }
       } catch (error) {
+        if (cancelled) return;
         console.error("Error fetching lesson:", error);
         message.error("Có lỗi xảy ra khi tải bài học");
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
-  }, [params]);
+    return () => { cancelled = true; };
+  }, [lessonIdStr]);
 
-  // Use custom hooks
-  const currentChallenge = challenges[0]; // Will be updated by challenge hook
+  // Challenge hook
   const {
     currentIdx,
     setCurrentIdx,
@@ -117,7 +139,7 @@ export default function ListeningPage() {
     duration,
     togglePlay,
     handleTimeUpdate,
-    handleLoadedMetadata,
+    handleLoadedMetadata: originalHandleLoadedMetadata,
     handleAudioEnded,
     changeSpeed,
     formatTime,
@@ -126,32 +148,59 @@ export default function ListeningPage() {
     playbackSpeed,
   });
 
+  // Stable callback for restoring time via audio metadata
+  const handleLoadedMetadata = useCallback(() => {
+    originalHandleLoadedMetadata();
+    if (pendingRestoreTime !== null) {
+      if (audioRef.current) {
+        audioRef.current.currentTime = pendingRestoreTime;
+      }
+      setCurrentTime(pendingRestoreTime);
+      setPendingRestoreTime(null);
+    }
+  }, [originalHandleLoadedMetadata, pendingRestoreTime, audioRef, setCurrentTime]);
+
+  // Stable callback for setCurrentTime used by progress hook
+  const handleRestoreTime = useCallback((time: number) => {
+    setPendingRestoreTime(time);
+  }, []);
+
+  // Progress Hook - only activate after data is ready
+  useListeningProgress({
+    lessonId: dataReady ? lessonId : null,
+    currentIdx,
+    currentTime,
+    setCurrentIdx,
+    setCurrentTime: handleRestoreTime,
+    totalChallenges: challenges.length,
+  });
+
   // Reset state when index changes
   useEffect(() => {
     resetStateForIndex(currentIdx);
     setIsPlaying(false);
     setCurrentTime(0);
-    // Pause audio when changing challenge
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
-  }, [currentIdx, resetStateForIndex, setCurrentTime, setIsPlaying, audioRef]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIdx]);
 
   // Handle speed change
-  const handleSpeedChange = () => {
+  const handleSpeedChange = useCallback(() => {
     const speeds = [0.5, 0.75, 1, 1.25, 1.5];
     const newSpeed = changeSpeed(speeds);
     setPlaybackSpeed(newSpeed);
-  };
+  }, [changeSpeed]);
 
   // Handle audio seek
-  const handleSeek = (time: number) => {
+  const handleSeek = useCallback((time: number) => {
     setCurrentTime(time);
     if (audioRef.current) {
       audioRef.current.currentTime = time;
     }
-  };
+  }, [setCurrentTime, audioRef]);
 
   // --- Render Loading ---
   if (loading) {

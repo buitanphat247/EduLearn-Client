@@ -12,6 +12,11 @@ interface LessonCardProps {
   challengeCount: number;
   practiceCount: number | null;
   audioSrc: string;
+  progressInfo?: {
+    currentChallengeIndex: number;
+    percent: number;
+    isCompleted: boolean;
+  };
 }
 
 export default function LessonCard({
@@ -22,6 +27,7 @@ export default function LessonCard({
   challengeCount,
   practiceCount,
   audioSrc,
+  progressInfo,
 }: LessonCardProps) {
   const router = useRouter();
   const getLevelColor = (level: string) => {
@@ -98,9 +104,34 @@ export default function LessonCard({
             </div>
           </div>
 
+
+
+          {/* Progress Bar - Always show if progressInfo exists (meaning user is logged in) */}
+          {progressInfo && (
+            <div className="mb-4">
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-slate-500 dark:text-slate-400">Tiến độ</span>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                  {progressInfo.percent}%
+                </span>
+              </div>
+              <div className="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${progressInfo.percent > 0
+                      ? "bg-gradient-to-r from-blue-500 to-indigo-500"
+                      : "bg-transparent"
+                    }`}
+                  style={{ width: `${Math.max(progressInfo.percent, 0)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Footer Action */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-sm font-semibold text-slate-900 dark:text-white mt-auto">
-            <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Bắt đầu luyện nghe</span>
+            <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              {progressInfo ? (progressInfo.percent > 0 ? "Tiếp tục học" : "Bắt đầu học") : "Bắt đầu luyện nghe"}
+            </span>
             <svg
               className="w-5 h-5 text-slate-400 dark:text-slate-600 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:translate-x-1 transition-all duration-300"
               fill="none"

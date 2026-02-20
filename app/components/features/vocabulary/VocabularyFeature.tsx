@@ -3,9 +3,12 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { App, Empty } from "antd";
-import { BarChartOutlined } from "@ant-design/icons";
+import { BarChartOutlined, ReloadOutlined } from "@ant-design/icons";
+import Swal from "sweetalert2";
+import { useTheme } from "@/app/context/ThemeContext";
 import {
   getFolders,
+  resetVocabularyProgress,
   type FolderResponse,
 } from "@/lib/api/vocabulary";
 import { useDebounce } from "@/app/hooks/useDebounce";
@@ -13,10 +16,10 @@ import { useServerAuthedUser } from "@/app/context/ServerAuthedUserProvider";
 import VocabularyCard from "@/app/components/vocabulary/VocabularyCard";
 import DarkPagination from "@/app/components/common/DarkPagination";
 import CustomInput from "@/app/components/common/CustomInput";
-
 import VocabularyFeatureSkeleton from "./VocabularyFeatureSkeleton";
 
 const MIN_LOADING_MS = 250;
+const PAGE_SIZE = 20;
 
 async function withMinDelay<T>(fn: () => Promise<T>, minMs = MIN_LOADING_MS): Promise<T> {
   const start = Date.now();
@@ -34,20 +37,25 @@ async function withMinDelay<T>(fn: () => Promise<T>, minMs = MIN_LOADING_MS): Pr
 
 export default function VocabularyFeature() {
   const { message } = App.useApp();
+  const { theme } = useTheme();
   const user = useServerAuthedUser();
   const userId = user?.userId ? Number(user.userId) : undefined;
 
-  // Folder state
   const [folders, setFolders] = useState<FolderResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resetting, setResetting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [pageSize] = useState(20);
   const [searchText, setSearchText] = useState("");
   const debouncedSearchQuery = useDebounce(searchText, 500);
   const prevSearchRef = useRef(debouncedSearchQuery);
+  const isMountedRef = useRef(true);
 
-  // Fetch folders
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
   const fetchFolders = useCallback(
     async (page?: number) => {
       const searchChanged = prevSearchRef.current !== debouncedSearchQuery;
@@ -63,34 +71,99 @@ export default function VocabularyFeature() {
         const result = await withMinDelay(() =>
           getFolders({
             page: pageToFetch,
-            limit: pageSize,
+            limit: PAGE_SIZE,
             search: debouncedSearchQuery || undefined,
             userId,
           })
         );
+
+        if (!isMountedRef.current) return;
+
         setFolders(result.data);
         setTotal(result.total);
       } catch (error: unknown) {
+        if (!isMountedRef.current) return;
+
         const msg = error instanceof Error ? error.message : "Không thể tải danh sách folders";
         message.error(msg);
         setFolders([]);
         setTotal(0);
       } finally {
-        setLoading(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
       }
     },
-    [currentPage, pageSize, debouncedSearchQuery, message, userId]
+    [currentPage, debouncedSearchQuery, message, userId]
   );
 
-  // Auto-fetch on dependency change
   useEffect(() => {
     fetchFolders();
   }, [fetchFolders]);
 
+  const handleReset = useCallback(async () => {
+    const isDark = theme === "dark";
+
+    const result = await Swal.fire({
+      title: "Đặt lại tiến trình?",
+      text: "Toàn bộ tiến trình học từ vựng sẽ bị xóa, bao gồm lịch sử ôn tập và tiến trình folder. Hành động này không thể hoàn tác.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: isDark ? "#475569" : "#94a3b8",
+      confirmButtonText: "Đặt lại ngay",
+      cancelButtonText: "Hủy bỏ",
+      reverseButtons: true,
+      background: isDark ? "#0f172a" : "#ffffff",
+      color: isDark ? "#f8fafc" : "#1e293b",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setResetting(true);
+      await resetVocabularyProgress();
+
+      if (!isMountedRef.current) return;
+
+      await Swal.fire({
+        title: "Thành công!",
+        text: "Tiến trình học từ vựng đã được đặt lại.",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+        background: isDark ? "#0f172a" : "#ffffff",
+        color: isDark ? "#f8fafc" : "#1e293b",
+      });
+
+      fetchFolders();
+    } catch (error) {
+      if (!isMountedRef.current) return;
+
+      Swal.fire({
+        title: "Lỗi!",
+        text: "Không thể đặt lại tiến trình. Vui lòng thử lại.",
+        icon: "error",
+        confirmButtonColor: isDark ? "#3b82f6" : "#2563eb",
+        background: isDark ? "#0f172a" : "#ffffff",
+        color: isDark ? "#f8fafc" : "#1e293b",
+      });
+    } finally {
+      if (isMountedRef.current) {
+        setResetting(false);
+      }
+    }
+  }, [fetchFolders, theme]);
+
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
   return (
-    <div className="container mx-auto px-4">
-      {/* Search + Stats */}
-      <div className="max-w-4xl mx-auto mb-12">
+    <div className="container mx-auto">
+      {/* Search + Actions */}
+      <div className="mx-auto mb-12">
         <div className="flex flex-col md:flex-row gap-4 items-center">
           <CustomInput
             placeholder="Tìm kiếm chủ đề từ vựng..."
@@ -101,12 +174,44 @@ export default function VocabularyFeature() {
           <div className="w-full md:w-auto shrink-0">
             <Link
               href="/vocabulary/review"
-              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all font-medium w-full md:w-auto"
+              className={`
+                h-10 px-4 rounded-lg
+                bg-white dark:bg-[#1e293b]
+                border border-slate-200 dark:border-slate-700/50
+                text-slate-700 dark:text-slate-200 
+                hover:text-blue-600 dark:hover:text-blue-400
+                hover:bg-slate-50 dark:hover:bg-slate-700/50
+                shadow-sm shadow-blue-500/5 dark:shadow-black/20
+                focus:outline-none focus:ring-2 focus:ring-blue-500/20
+                transition-all duration-200
+                flex items-center justify-center gap-2
+                font-medium w-full md:w-auto text-sm
+              `}
             >
               <BarChartOutlined className="text-blue-500" />
               <span>Thống kê</span>
             </Link>
           </div>
+          <button
+            onClick={handleReset}
+            disabled={resetting}
+            className={`
+              h-10 px-4 rounded-lg
+              bg-white dark:bg-[#1e293b]
+              border border-red-200 dark:border-red-900/50
+              text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300
+              hover:bg-red-50 dark:hover:bg-red-900/20
+              shadow-sm shadow-red-500/5 dark:shadow-black/20
+              focus:outline-none focus:ring-2 focus:ring-red-500/20
+              transition-all duration-200
+              flex items-center justify-center gap-2
+              shrink-0 font-medium text-sm
+              disabled:opacity-50 disabled:cursor-not-allowed
+            `}
+          >
+            <ReloadOutlined className={resetting ? "animate-spin" : ""} />
+            <span>Đặt lại tiến trình</span>
+          </button>
         </div>
       </div>
 
@@ -127,15 +232,12 @@ export default function VocabularyFeature() {
             ))}
           </div>
 
-          {total > pageSize && (
+          {total > PAGE_SIZE && (
             <DarkPagination
               current={currentPage}
               total={total}
-              pageSize={pageSize}
-              onChange={(page) => {
-                setCurrentPage(page);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
+              pageSize={PAGE_SIZE}
+              onChange={handlePageChange}
               showTotal={(total, range) => (
                 <span className="text-slate-600 dark:text-slate-300">
                   {range[0]}-{range[1]} của {total} folders

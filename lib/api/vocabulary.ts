@@ -395,3 +395,16 @@ export async function getVocabularies(params?: GetVocabulariesParams): Promise<G
     throw new Error(error?.response?.data?.message || "Không thể lấy danh sách từ vựng");
   }
 }
+
+/**
+ * Reset toàn bộ tiến trình từ vựng của user hiện tại
+ */
+export async function resetVocabularyProgress() {
+  try {
+    const response = await apiClient.post("/user-vocabulary/reset-all", {});
+    return response.data?.data ?? response.data;
+  } catch (error: any) {
+    console.error("Error resetting vocabulary progress:", error);
+    throw new Error(error?.response?.data?.message || "Không thể đặt lại tiến trình từ vựng");
+  }
+}

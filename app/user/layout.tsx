@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,11 @@ async function getInitialUserData() {
 
 export default async function UserLayout({ children }: { children: React.ReactNode }) {
   const initialUserData = await getInitialUserData();
+
+  // Redirect to login if not authenticated
+  if (!initialUserData) {
+    redirect("/auth");
+  }
 
   return (
     <RouteErrorBoundary routeName="user">

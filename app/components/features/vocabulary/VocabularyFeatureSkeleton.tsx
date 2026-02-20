@@ -1,6 +1,20 @@
-export default function VocabularyFeatureSkeleton() {
+export default function VocabularyFeatureSkeleton({ withSearch = false }: { withSearch?: boolean }) {
     return (
         <div className="w-full flex flex-col items-center">
+            {withSearch && (
+                <div className="w-full mx-auto mb-12">
+                    <div className="flex flex-col md:flex-row gap-4 items-center">
+                        {/* Search Input Skeleton */}
+                        <div className="flex-1 w-full h-11 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 animate-pulse"></div>
+
+                        {/* Stats Button Skeleton */}
+                        <div className="w-full md:w-[130px] h-11 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 animate-pulse"></div>
+
+                        {/* Reset Button Skeleton */}
+                        <div className="w-full md:w-[160px] h-11 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 animate-pulse"></div>
+                    </div>
+                </div>
+            )}
 
             <div className="w-full">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch">

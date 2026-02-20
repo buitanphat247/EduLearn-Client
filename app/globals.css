@@ -168,6 +168,14 @@ video {
 }
 
 /* Style cho admin sidebar active state */
+:root {
+  --sidebar-active-bg: #dbeafe;
+}
+
+html.dark {
+  --sidebar-active-bg: rgba(30, 58, 138, 0.4);
+}
+
 .admin-sidebar-active {
   background-color: #f9fafb !important;
   position: relative;

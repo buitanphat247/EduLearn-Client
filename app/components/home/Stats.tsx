@@ -1,11 +1,15 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState, useRef } from "react";
+
+import CountUp from "react-countup";
 
 const stats = [
   {
     id: 1,
-    value: "10K+",
+    endValue: 10,
+    suffix: "K+",
+    decimals: 0,
     label: "Học viên tiêu biểu",
     icon: (
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -15,7 +19,9 @@ const stats = [
   },
   {
     id: 2,
-    value: "500+",
+    endValue: 500,
+    suffix: "+",
+    decimals: 0,
     label: "Khóa học & Tài liệu",
     icon: (
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -25,7 +31,9 @@ const stats = [
   },
   {
     id: 3,
-    value: "100+",
+    endValue: 100,
+    suffix: "+",
+    decimals: 0,
     label: "Chuyên gia hàng đầu",
     icon: (
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -35,7 +43,9 @@ const stats = [
   },
   {
     id: 4,
-    value: "4.9",
+    endValue: 4.9,
+    suffix: "",
+    decimals: 1,
     label: "Đánh giá trung bình",
     icon: (
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,7 +66,7 @@ export default function Stats() {
                 {React.cloneElement(stat.icon as any, { className: "w-10 h-10 opacity-70 group-hover:opacity-100 group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-300" })}
               </div>
               <div className="text-3xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-linear-to-r group-hover:from-blue-600 group-hover:to-indigo-600 dark:group-hover:from-blue-400 dark:group-hover:to-indigo-400 transition-all duration-300">
-                {stat.value}
+                <CountUp end={stat.endValue} suffix={stat.suffix} decimals={stat.decimals} duration={2.5} enableScrollSpy scrollSpyOnce />
               </div>
               <div className="text-sm font-semibold text-slate-500 dark:text-slate-500 uppercase tracking-widest group-hover:text-slate-600 dark:group-hover:text-slate-400 transition-colors">{stat.label}</div>
             </div>

@@ -1,16 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import FeaturesHeader from "@/app/components/features/FeaturesHeader";
-import VocabularyFeatureSkeleton from "@/app/components/features/vocabulary/VocabularyFeatureSkeleton";
-
-const VocabularyFeature = dynamic(
-    () => import("@/app/components/features/vocabulary/VocabularyFeature"),
-    {
-        ssr: true,
-        loading: () => <VocabularyFeatureSkeleton />
-    }
-);
+import VocabularyFeature from "@/app/components/features/vocabulary/VocabularyFeature";
 
 export default function VocabularyPage() {
     return (

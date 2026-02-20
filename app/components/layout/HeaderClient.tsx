@@ -42,15 +42,7 @@ const fixUtf8 = (str: string | undefined | null): string => {
 
 const NAV_LINKS = [
   { to: "/", label: "Trang chủ" },
-  // { to: "/news", label: "Tin tức" },
-  { to: "/events", label: "Sự kiện" },
 ] as const;
-
-const FEATURE_ITEMS: MenuProps["items"] = [
-  { key: "vocabulary", label: "Học từ vựng" },
-  { key: "writing", label: "Luyện viết" },
-  { key: "listening", label: "Luyện nghe" },
-];
 
 const ABOUT_ITEMS: MenuProps["items"] = [
   { key: "about", label: "Giới thiệu" },
@@ -75,7 +67,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
 
-  const [isFeatureDropdownOpen, setIsFeatureDropdownOpen] = useState(false);
   const [isAboutDropdownOpen, setIsAboutDropdownOpen] = useState(false);
   const [user, setUser] = useState<any>(() => {
     return initialAuth.authenticated && initialAuth.userData ? initialAuth.userData : null;
@@ -135,11 +126,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [user]);
 
-  const handleFeatureClick: MenuProps["onClick"] = useCallback(({ key }: { key: string }) => {
-    router.push(`/${key}`);
-    setIsFeatureDropdownOpen(false);
-  }, [router]);
-
   const handleAboutClick: MenuProps["onClick"] = useCallback(({ key }: { key: string }) => {
     const route = ABOUT_ROUTES[key];
     if (route) {
@@ -173,9 +159,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
     }
   }, [router, theme]);
 
-  const isFeatureActive = useMemo(() => {
-    return pathname === "/vocabulary" || pathname === "/writing" || pathname === "/listening" || pathname?.startsWith("/vocabulary/") || pathname?.startsWith("/writing/") || pathname?.startsWith("/listening/");
-  }, [pathname]);
   const isAboutActive = useMemo(
     () => pathname === "/about" || pathname === "/system" || pathname === "/guide" || pathname === "/faq",
     [pathname]
@@ -354,6 +337,21 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
         ]
         : []),
       {
+        key: "notifications",
+        icon: <span className="flex items-center"><NotificationBell userId={user.user_id || user.userId} isMenuItem={true} /></span>,
+        label: (
+          <Link
+            href="/notifications"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/notifications")}
+            className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white flex-grow"
+          >
+            Thông báo
+          </Link>
+        ),
+        style: { padding: "10px 16px", display: "flex", alignItems: "center" },
+      },
+      {
         key: "logout",
         icon: (
           <svg className="w-4 h-4 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -403,19 +401,12 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
           <div className="hidden md:flex items-center space-x-8">
             <NavLink to="/" label="Trang chủ" />
 
-            {/* Chỉ hiện Sự kiện, Tính năng khi đã đăng nhập */}
+            {/* Chỉ hiện Tính năng khi đã đăng nhập */}
             {user && (
               <>
-                <NavLink to="/events" label="Sự kiện" />
-
-                <DropdownNavButton
-                  label="Tính năng"
-                  isActive={isFeatureActive}
-                  isOpen={isFeatureDropdownOpen}
-                  onOpenChange={setIsFeatureDropdownOpen}
-                  items={FEATURE_ITEMS}
-                  onClick={handleFeatureClick}
-                />
+                <NavLink to="/vocabulary" label="Học từ vựng" />
+                <NavLink to="/writing" label="Luyện viết" />
+                <NavLink to="/listening" label="Luyện nghe" />
               </>
             )}
 
@@ -444,7 +435,6 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
             </button>
             {user ? (
               <>
-                <NotificationBell userId={user.user_id || user.userId} />
                 <Dropdown
                   menu={{
                     items: userMenuItems,

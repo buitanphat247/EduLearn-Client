@@ -223,6 +223,16 @@ const nextConfig: NextConfig = {
         hostname: "hoc24.vn",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "dongphucgiadinh.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "i2-vnexpress.vnecdn.net",
+        pathname: "/**",
+      },
     ],
   },
 

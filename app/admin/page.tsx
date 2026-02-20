@@ -5,27 +5,8 @@ import { AppstoreOutlined, UserOutlined, ArrowRightOutlined, CloudDownloadOutlin
 import { IoBookOutline } from "react-icons/io5";
 import { App } from "antd";
 import { useRouter } from "next/navigation";
-import { getStats, type StatsResponse } from "@/lib/api/stats";
-import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
-
-// Dynamic import for CountUp - only load when needed (below the fold)
-const CountUp = dynamic(() => import("react-countup"), {
-  ssr: false, // CountUp is animation library, not needed for SSR
-  loading: () => <span>0</span>,
-});
-
 // Type definitions
-interface StatCard {
-  label: string;
-  value: string;
-  icon: ComponentType<any>;
-  color: string;
-  bgColor: string;
-  hexColor: string;
-  numericValue?: number;
-}
-
 interface QuickActionItem {
   icon: ComponentType<any>;
   title: string;
@@ -106,43 +87,6 @@ function WelcomeBanner() {
   );
 }
 
-function StatisticsCards({ stats }: { stats: StatCard[] }) {
-  const statsCards = useMemo(() =>
-    stats.map((stat) => ({
-      ...stat,
-      numericValue: parseInt(stat.value.replace(/,/g, "")) || 0,
-    })),
-    [stats]
-  );
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-      {statsCards.map((stat) => {
-        const Icon = stat.icon;
-        return (
-          <div
-            key={stat.label}
-            className="border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm cursor-default bg-white dark:bg-gray-800 rounded-lg p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{stat.label}</p>
-                <p className="text-3xl font-bold" style={{ color: stat.hexColor }}>
-                  <Suspense fallback={<span>0</span>}>
-                    <CountUp start={0} end={stat.numericValue} duration={2} separator="," decimals={0} />
-                  </Suspense>
-                </p>
-              </div>
-              <div className={`${stat.bgColor} p-4 rounded-xl`}>
-                <Icon className="text-2xl" style={{ color: stat.hexColor }} />
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 function QuickActionsGrid({ items }: { items: QuickActionItem[] }) {
   const router = useRouter();
@@ -193,74 +137,12 @@ function QuickActionsGrid({ items }: { items: QuickActionItem[] }) {
 }
 
 export default function AdminDashboard() {
-  const { message } = App.useApp();
-  const [stats, setStats] = useState<StatsResponse | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchStats = async () => {
-      try {
-        const data = await getStats();
-        if (isMounted) {
-          setStats(data);
-        }
-      } catch (error: any) {
-        if (isMounted) {
-          message.error(error?.message || "Không thể tải thống kê");
-        }
-      }
-    };
-
-    fetchStats();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []); // Remove message dependency
-
-  const statsCards = [
-    {
-      label: "Tài liệu",
-      value: stats?.documents?.toString() || "0",
-      icon: FileTextOutlined,
-      color: "text-purple-600 dark:text-purple-400",
-      bgColor: "bg-purple-50 dark:bg-purple-900/30",
-      hexColor: "#9333ea",
-    },
-    {
-      label: "Người dùng",
-      value: stats?.users?.toString() || "0",
-      icon: UserOutlined,
-      color: "text-cyan-600 dark:text-cyan-400",
-      bgColor: "bg-cyan-50 dark:bg-cyan-900/30",
-      hexColor: "#0891b2",
-    },
-    {
-      label: "Tin tức",
-      value: stats?.news?.toString() || "0",
-      icon: AppstoreOutlined,
-      color: "text-green-600 dark:text-green-400",
-      bgColor: "bg-green-50 dark:bg-green-900/30",
-      hexColor: "#16a34a",
-    },
-    {
-      label: "Sự kiện",
-      value: stats?.events?.toString() || "0",
-      icon: CloudDownloadOutlined,
-      color: "text-indigo-600 dark:text-indigo-400",
-      bgColor: "bg-indigo-50 dark:bg-indigo-900/30",
-      hexColor: "#4f46e5",
-    },
-  ];
-
   return (
     <div className="space-y-5">
       {/* Welcome Section */}
       <WelcomeBanner />
 
-      {/* Statistics Cards */}
-      <StatisticsCards stats={statsCards} />
+
 
       {/* Quick Actions Section */}
       <div>

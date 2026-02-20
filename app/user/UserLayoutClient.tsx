@@ -9,7 +9,6 @@ import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { useUserId } from "@/app/hooks/useUserId";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
-import NotificationBell from "@/app/components/notifications/NotificationBell";
 import { ServerAuthedUserProvider } from "../context/ServerAuthedUserProvider";
 import { useUserProfile } from "@/app/hooks/useUserProfile";
 
@@ -84,7 +83,6 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
         </div>
 
         <div className="flex items-center gap-4">
-          <NotificationBell userId={userInfo?.user_id!} />
           <div
             key="user-profile-section"
             onClick={() => setIsProfileModalOpen(true)}
@@ -97,8 +95,8 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
                   userInfo?.avatar && !imgError
                     ? getMediaUrl(userInfo.avatar)
                     : initialUserData?.avatar && !imgError
-                    ? getMediaUrl(initialUserData.avatar)
-                    : undefined
+                      ? getMediaUrl(initialUserData.avatar)
+                      : undefined
                 }
                 onError={() => {
                   setImgError(true);

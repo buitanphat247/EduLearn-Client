@@ -1,16 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import FeaturesHeader from "@/app/components/features/FeaturesHeader";
-import ListeningFeatureSkeleton from "@/app/components/features/listening/ListeningFeatureSkeleton";
-
-const ListeningFeature = dynamic(
-    () => import("@/app/components/features/listening/ListeningFeature"),
-    {
-        ssr: true,
-        loading: () => <ListeningFeatureSkeleton />
-    }
-);
+import ListeningFeature from "@/app/components/features/listening/ListeningFeature";
 
 export default function ListeningPage() {
     return (

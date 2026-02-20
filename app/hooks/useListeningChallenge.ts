@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { message } from "antd";
 
 interface Challenge {
@@ -15,15 +15,25 @@ interface ChallengeHistory {
 
 /**
  * Custom hook for managing listening challenge logic
- * @param challenges - Array of challenges
- * @returns Challenge state and handlers
+ * Uses refs for latest values to avoid stale closures in callbacks
  */
 export function useListeningChallenge(challenges: Challenge[]) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [userInput, setUserInput] = useState("");
   const [feedback, setFeedback] = useState<"none" | "correct" | "incorrect">("none");
-  const [furthestIdx, setFurthestIdx] = useState(0);
   const [history, setHistory] = useState<Record<number, ChallengeHistory>>({});
+
+  // Refs for latest values - prevents stale closures
+  const currentIdxRef = useRef(currentIdx);
+  const userInputRef = useRef(userInput);
+  const challengesRef = useRef(challenges);
+  const historyRef = useRef(history);
+  const isAdvancingRef = useRef(false);
+
+  currentIdxRef.current = currentIdx;
+  userInputRef.current = userInput;
+  challengesRef.current = challenges;
+  historyRef.current = history;
 
   const currentChallenge = challenges[currentIdx];
   const currentHistory = history[currentIdx] || { input: "", feedback: "none", submittedInput: "" };
@@ -31,28 +41,40 @@ export function useListeningChallenge(challenges: Challenge[]) {
   // Update history when typing
   const handleInputChange = useCallback((val: string) => {
     setUserInput(val);
+    const idx = currentIdxRef.current;
     setHistory((prev) => ({
       ...prev,
-      [currentIdx]: {
+      [idx]: {
         input: val,
-        feedback: prev[currentIdx]?.feedback || "none",
-        submittedInput: prev[currentIdx]?.submittedInput || "",
+        feedback: prev[idx]?.feedback || "none",
+        submittedInput: prev[idx]?.submittedInput || "",
       },
     }));
-  }, [currentIdx]);
+  }, []);
 
   const checkAnswer = useCallback(() => {
-    if (!currentChallenge) return;
+    const idx = currentIdxRef.current;
+    const input = userInputRef.current;
+    const chals = challengesRef.current;
+    const challenge = chals[idx];
 
-    // Normalization logic
-    const normalizedInput = userInput
-      .trim()
-      .toLowerCase()
-      .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
-    const normalizedTarget = currentChallenge.content_challenges
-      .trim()
-      .toLowerCase()
-      .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+    if (!challenge || isAdvancingRef.current) return;
+
+    // Normalization
+    const normalize = (text: string) =>
+      text
+        .trim()
+        .toLowerCase()
+        .replace(/[.,/#!$%^&*;:{}=\-_`~()'?"]/g, "")
+        .replace(/\s+/g, " ");
+
+    const normalizedInput = normalize(input);
+    const normalizedTarget = normalize(challenge.content_challenges);
+
+    if (!normalizedInput) {
+      message.warning("Vui lòng nhập câu trả lời");
+      return;
+    }
 
     let newFeedback: "correct" | "incorrect" = "incorrect";
 
@@ -61,9 +83,17 @@ export function useListeningChallenge(challenges: Challenge[]) {
       message.success("Chính xác!");
 
       // Auto advance after 1.5 seconds
-      if (currentIdx < challenges.length - 1) {
+      if (idx < chals.length - 1) {
+        isAdvancingRef.current = true;
         setTimeout(() => {
-          setCurrentIdx((prev) => prev + 1);
+          setCurrentIdx((prev) => {
+            const next = prev + 1;
+            if (next < challengesRef.current.length) {
+              return next;
+            }
+            return prev;
+          });
+          isAdvancingRef.current = false;
         }, 1500);
       } else {
         setTimeout(() => {
@@ -71,30 +101,36 @@ export function useListeningChallenge(challenges: Challenge[]) {
         }, 1000);
       }
     } else {
-      newFeedback = "incorrect";
       message.error("Chưa chính xác, hãy thử lại!");
     }
 
     setFeedback(newFeedback);
     setHistory((prev) => ({
       ...prev,
-      [currentIdx]: {
-        input: userInput,
+      [idx]: {
+        input,
         feedback: newFeedback,
-        submittedInput: userInput,
+        submittedInput: input,
       },
     }));
-  }, [currentChallenge, userInput, currentIdx, challenges.length]);
+  }, []);
 
   const skipSentence = useCallback(() => {
-    if (currentIdx < challenges.length - 1) {
-      setCurrentIdx(currentIdx + 1);
-    }
-  }, [currentIdx, challenges.length]);
+    const idx = currentIdxRef.current;
+    const chals = challengesRef.current;
 
-  // Reset state when index changes
+    if (isAdvancingRef.current) return;
+
+    if (idx < chals.length - 1) {
+      setCurrentIdx(idx + 1);
+    } else {
+      message.info("Đây là câu cuối cùng");
+    }
+  }, []);
+
+  // Reset state when index changes - uses ref so this callback is stable
   const resetStateForIndex = useCallback((idx: number) => {
-    const savedState = history[idx];
+    const savedState = historyRef.current[idx];
     if (savedState) {
       setUserInput(savedState.input);
       setFeedback(savedState.feedback);
@@ -102,11 +138,7 @@ export function useListeningChallenge(challenges: Challenge[]) {
       setUserInput("");
       setFeedback("none");
     }
-
-    if (idx > furthestIdx) {
-      setFurthestIdx(idx);
-    }
-  }, [history, furthestIdx]);
+  }, []);
 
   return {
     currentIdx,

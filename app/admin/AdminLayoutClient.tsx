@@ -9,7 +9,6 @@ import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import { useUserId } from "@/app/hooks/useUserId";
-import NotificationBell from "@/app/components/notifications/NotificationBell";
 import { ServerAuthedUserProvider } from "../context/ServerAuthedUserProvider";
 import { useUserProfile } from "@/app/hooks/useUserProfile";
 
@@ -114,7 +113,6 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
         </div>
 
         <div className="flex items-center gap-4">
-          <NotificationBell userId={userId!} />
           <div
             onClick={() => setIsProfileModalOpen(true)}
             className="flex items-center gap-3 pl-4 cursor-pointer hover:opacity-80 transition-opacity"

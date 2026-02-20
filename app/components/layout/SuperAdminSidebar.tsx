@@ -61,38 +61,36 @@ export default function SuperAdminSidebar() {
           const isActive = isExactMatch ? pathname === "/super-admin" : pathname?.startsWith(item.path);
           const isNotificationItem = item.path === "/super-admin/notification";
 
+          const baseClasses = `group flex items-center gap-4 px-5 py-3 rounded-xl cursor-pointer w-full`;
+          const inactiveClasses = `hover:bg-blue-50/80 dark:hover:bg-blue-900/15 opacity-90 hover:opacity-100`;
+
+          const activeStyle: React.CSSProperties = isActive
+            ? { backgroundColor: 'var(--sidebar-active-bg, #dbeafe)' }
+            : {};
+
           return (
-            <div
+            <Link
               key={item.path}
-              className={`group flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-300 ease-in-out ${
-                isActive 
-                  ? "bg-blue-200 dark:bg-blue-900/40" 
-                  : "hover:bg-blue-50/80 dark:hover:bg-blue-900/15 hover:opacity-100 opacity-90 cursor-pointer"
-              }`}
+              href={item.path}
+              prefetch={false}
+              onMouseEnter={() => router.prefetch(item.path)}
+              className={`${baseClasses} ${isActive ? '' : inactiveClasses}`}
+              style={activeStyle}
             >
-              <Link 
-                href={item.path} 
-                prefetch={false}
-                onMouseEnter={() => router.prefetch(item.path)}
-                className="flex items-center gap-4 flex-1"
+              <Icon
+                className={`text-xl ${isActive
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                  }`}
+              />
+              <span
+                className={`text-[14px] flex-1 ${isActive
+                    ? "font-bold text-blue-600 dark:text-blue-400"
+                    : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
+                  }`}
               >
-                <Icon
-                  className={`text-xl transition-all duration-300 ${
-                    isActive
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                  }`}
-                />
-                <span
-                  className={`text-[14px] transition-all duration-300 ${
-                    isActive
-                      ? "font-bold text-blue-600 dark:text-blue-400"
-                      : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
-                  }`}
-                >
-                  {item.label}
-                </span>
-              </Link>
+                {item.label}
+              </span>
               {isNotificationItem && isNotificationPage && (
                 <Button
                   type="text"
@@ -103,11 +101,11 @@ export default function SuperAdminSidebar() {
                     e.stopPropagation();
                     handleFastRefresh();
                   }}
-                  className="ml-auto opacity-70 hover:opacity-100 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200"
+                  className="ml-auto opacity-70 hover:opacity-100 hover:text-blue-600 dark:hover:text-blue-400"
                   title="Làm mới thông báo"
                 />
               )}
-            </div>
+            </Link>
           );
         })}
       </nav>

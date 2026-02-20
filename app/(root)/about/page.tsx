@@ -29,11 +29,11 @@ export default function About() {
                 <div className="flex flex-col gap-6">
                   <div className="flex flex-col gap-4">
                     <h1 className="text-4xl md:text-5xl lg:text-6xl font-black leading-tight tracking-tight text-slate-900 dark:text-white transition-colors duration-300">
-                      Chúng tôi xây dựng nền tảng giáo dục số với{" "}
+                      Nền tảng đào tạo & kiểm định thông minh với{" "}
                       <span className="text-blue-600 dark:text-blue-400">AI</span>
                     </h1>
                     <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl mx-auto md:mx-0 transition-colors duration-300">
-                      Trao quyền cho trường học, giáo viên và học sinh với LMS hàng đầu cho chuyển đổi số tại Việt Nam. Trải nghiệm tương lai của giáo dục ngay hôm nay.
+                      Đảm bảo tính công bằng trong thi cử với AI giám sát thông minh và tối ưu hóa quá trình học tập nhờ mô hình cá nhân hoá chuyên sâu.
                     </p>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
@@ -104,7 +104,7 @@ export default function About() {
                   <div className="flex flex-col gap-2">
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white transition-colors duration-300">Tầm nhìn của chúng tôi</h3>
                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed transition-colors duration-300">
-                      Trở thành đối tác LMS được hỗ trợ bởi AI hàng đầu cho chuyển đổi số trong các trường học và trung tâm đào tạo trên khắp Việt Nam.
+                      Trở thành giải pháp kiểm định giáo dục và học tập trực tuyến chuẩn mực nhất, xây dựng một môi trường đào tạo công bằng, minh bạch và cá nhân hoá tại Việt Nam.
                     </p>
                   </div>
                 </div>
@@ -116,7 +116,7 @@ export default function About() {
                   <div className="flex flex-col gap-2">
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white transition-colors duration-300">Sứ mệnh của chúng tôi</h3>
                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed transition-colors duration-300">
-                      Trao quyền cho các tổ chức giáo dục với công nghệ minh bạch, hiệu quả và lấy người học làm trung tâm, kết nối khoảng cách giữa giảng dạy truyền thống và tương lai số.
+                      Cung cấp hệ thống chống gian lận thi cử minh bạch tuyệt đối kết hợp cùng hệ sinh thái học tập thông minh, giúp người dạy đánh giá chính xác và người học phát huy tối đa năng lực.
                     </p>
                   </div>
                 </div>
@@ -158,9 +158,9 @@ export default function About() {
                     <ApiOutlined className="text-4xl" />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white transition-colors duration-300">Tích hợp liền mạch</h3>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white transition-colors duration-300">Hệ sinh thái toàn diện</h3>
                     <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed transition-colors duration-300">
-                      Kết nối dễ dàng với các công cụ phổ biến như Azota, Google Meet và Zoom để tạo hệ sinh thái học tập thống nhất.
+                      Kết nối dữ liệu từ báo cáo rèn luyện tiếng Anh, làm bài tập thủ công đến kết quả thi thử đánh giá một cách đồng nhất và liền mạch.
                     </p>
                   </div>
                 </div>

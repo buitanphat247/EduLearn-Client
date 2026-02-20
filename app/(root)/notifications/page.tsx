@@ -225,7 +225,7 @@ export default function NotificationsPage() {
                     </div>
 
                     {/* Filters: Like Events Page */}
-                    <div className="mb-12 max-w-4xl mx-auto">
+                    <div className="mb-12 mx-auto">
                         <div className="flex flex-col md:flex-row gap-4 items-center">
                             <CustomInput
                                 placeholder="Tìm kiếm thông báo..."

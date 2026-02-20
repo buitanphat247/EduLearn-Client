@@ -29,23 +29,23 @@ const HeadphoneIcon = () => (
 const features = [
   {
     icon: <MoneyIcon />,
-    title: "Chi phí tối ưu",
-    description: "Chỉ 35k/tháng cho tất cả tính năng premium. Học không giới hạn 4 ngôn ngữ: Anh, Trung, Nhật, Hàn.",
+    title: "Tối ưu hóa thời gian",
+    description: "Hệ thống tự động sắp xếp lịch học và nhắc nhở ôn tập, giúp bạn theo dõi tiến độ dễ dàng mà không tốn công sức thiết lập.",
   },
   {
     icon: <BrainIcon />,
-    title: "Học tập thông minh",
-    description: "AI phân tích lộ trình học và tạo bài tập cá nhân hóa. Ghi nhớ từ vựng lâu hơn với Flashcards.",
+    title: "Cá nhân hóa lộ trình",
+    description: "Thuật toán liên tục đánh giá năng lực và tự động điều chỉnh bài học cho phù hợp với tốc độ tiếp thu của riêng từng học viên.",
   },
   {
     icon: <WriteIcon />,
-    title: "Luyện viết cùng AI",
-    description: "Dịch và sửa lỗi ngữ pháp tức thì. Nhận phản hồi chi tiết từ trợ lý ảo để cải thiện kỹ năng viết.",
+    title: "Kiểm tra năng lực chuẩn xác",
+    description: "Hệ thống kho đề thi đa dạng, tự động mô phỏng kỳ thi thật và chấm điểm chi tiết giúp bạn tự tin đạt mục tiêu.",
   },
   {
     icon: <HeadphoneIcon />,
-    title: "Luyện nghe & Tin tức",
-    description: "Kho Audio đa dạng chủ đề kèm transcript. Luyện kỹ năng Shadowing chuẩn người bản xứ.",
+    title: "Học mọi lúc mọi nơi",
+    description: "Đồng bộ hóa dữ liệu tức thì trên đa nền tảng. Dễ dàng tiếp tục bài học trên cả điện thoại, máy tính bảng hoặc trên web.",
   },
 ];
 
@@ -70,15 +70,17 @@ export default function Features() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="bg-white dark:bg-[#1e293b]/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700/50 hover:border-blue-500/50 hover:bg-slate-50 dark:hover:bg-[#1e293b] transition-all duration-300 group hover:-translate-y-2 hover:shadow-2xl hover:shadow-blue-900/20"
+              className="bg-white dark:bg-[#1e293b]/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 dark:border-slate-700/50 hover:border-blue-200 dark:hover:border-blue-800/50 hover:bg-white dark:hover:bg-[#1e293b]/80 transition-all duration-500 ease-out group hover:-translate-y-2 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:hover:shadow-[0_8px_30px_rgba(59,130,246,0.1)]"
             >
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-500 mb-6 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-inner border border-blue-100 dark:border-white/5">
-                {feature.icon}
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-500/10 dark:to-blue-500/5 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 transition-all duration-500 ease-out group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.2)] border border-blue-100/50 dark:border-blue-500/10">
+                <div className="transition-transform duration-500 ease-out group-hover:-translate-y-0.5">
+                  {feature.icon}
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 transition-colors duration-500">
                 {feature.title}
               </h3>
-              <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">
+              <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed transition-colors duration-500">
                 {feature.description}
               </p>
             </div>

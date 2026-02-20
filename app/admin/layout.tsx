@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,18 @@ async function getInitialUserData() {
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const initialUserData = await getInitialUserData();
+
+  // Redirect to login if not authenticated
+  if (!initialUserData) {
+    redirect("/auth");
+  }
+
+  // Ensure only admins can access this route
+  const roleName = initialUserData.role_name?.toLowerCase();
+  // We check for 'admin' (you could potentially check 'super_admin' or others based on your need)
+  if (roleName !== "admin" && roleName !== "superadmin" && roleName !== "super_admin") {
+    redirect("/");
+  }
 
   return (
     <RouteErrorBoundary routeName="admin">

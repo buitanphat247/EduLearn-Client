@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -48,5 +49,23 @@ async function getInitialUserData() {
 export default async function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const initialUserData = await getInitialUserData();
 
+  // Redirect to login if not authenticated
+  if (!initialUserData) {
+    redirect("/auth");
+  }
+
+  // Ensure only super_admins can access this route
+  const roleName = initialUserData.role_name?.toLowerCase();
+
+  if (roleName !== "super_admin" && roleName !== "superadmin") {
+    // If they are an admin, redirect to admin, else default to root
+    if (roleName === "admin") {
+      redirect("/admin");
+    } else {
+      redirect("/");
+    }
+  }
+
   return <SuperAdminLayoutClient initialUserData={initialUserData}>{children}</SuperAdminLayoutClient>;
 }
+

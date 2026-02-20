@@ -40,58 +40,66 @@ export default function UserSidebar() {
     const isExactMatch = item.path === "/user";
     const isActive = isExactMatch ? pathname === "/user" : pathname?.startsWith(item.path);
 
-    return (
-      <div
-        key={item.path}
-        className={`group flex items-center gap-4 px-5 py-3 rounded-xl transition-all duration-300 ease-in-out ${isActive
-          ? "bg-blue-100 dark:bg-blue-900/40"
-          : "hover:bg-blue-50/80 dark:hover:bg-blue-900/15 hover:opacity-100 opacity-90 cursor-pointer"
-          }`}
-      >
-        {item.isComingSoon ? (
-          <div onClick={(e) => handleMenuItemClick(item, e)} className="flex items-center gap-4 w-full cursor-pointer">
-            <Icon
-              className={`text-xl transition-all duration-300 ${isActive
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                }`}
-            />
-            <span
-              className={`text-[14px] transition-all duration-300 ${isActive
-                ? "font-bold text-blue-600 dark:text-blue-400"
-                : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
-                }`}
-            >
-              {item.label}
-            </span>
-          </div>
-        ) : (
-          <Link
-            href={item.path}
-            prefetch={false}
-            onMouseEnter={() => {
+    const baseClasses = `group flex items-center gap-4 px-5 py-3 rounded-xl cursor-pointer w-full`;
+    const inactiveClasses = `hover:bg-blue-50/80 dark:hover:bg-blue-900/15 opacity-90 hover:opacity-100`;
 
-              router.prefetch(item.path);
-            }}
-            className="flex items-center gap-4 w-full"
+    const activeStyle: React.CSSProperties = isActive
+      ? { backgroundColor: 'var(--sidebar-active-bg, #dbeafe)' }
+      : {};
+
+    if (item.isComingSoon) {
+      return (
+        <div
+          key={item.path}
+          onClick={(e) => handleMenuItemClick(item, e)}
+          role="button"
+          tabIndex={0}
+          aria-label={`${item.label} (Sắp ra mắt)`}
+          className={`${baseClasses} ${isActive ? '' : inactiveClasses}`}
+          style={activeStyle}
+        >
+          <Icon
+            className={`text-xl ${isActive
+              ? "text-blue-600 dark:text-blue-400"
+              : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+              }`}
+          />
+          <span
+            className={`text-[14px] ${isActive
+              ? "font-bold text-blue-600 dark:text-blue-400"
+              : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
+              }`}
           >
-            <Icon
-              className={`text-xl transition-all duration-300 ${isActive
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                }`}
-            />
-            <span
-              className={`text-[14px] transition-all duration-300 ${isActive
-                ? "font-bold text-blue-600 dark:text-blue-400"
-                : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
-                }`}
-            >
-              {item.label}
-            </span>
-          </Link>
-        )}
-      </div>
+            {item.label}
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        key={item.path}
+        href={item.path}
+        prefetch={false}
+        onMouseEnter={() => router.prefetch(item.path)}
+        className={`${baseClasses} ${isActive ? '' : inactiveClasses}`}
+        style={activeStyle}
+      >
+        <Icon
+          className={`text-xl ${isActive
+            ? "text-blue-600 dark:text-blue-400"
+            : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+            }`}
+        />
+        <span
+          className={`text-[14px] ${isActive
+            ? "font-bold text-blue-600 dark:text-blue-400"
+            : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
+            }`}
+        >
+          {item.label}
+        </span>
+      </Link>
     );
   };
 
