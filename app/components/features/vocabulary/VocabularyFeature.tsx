@@ -18,22 +18,7 @@ import DarkPagination from "@/app/components/common/DarkPagination";
 import CustomInput from "@/app/components/common/CustomInput";
 import VocabularyFeatureSkeleton from "./VocabularyFeatureSkeleton";
 
-const MIN_LOADING_MS = 250;
 const PAGE_SIZE = 20;
-
-async function withMinDelay<T>(fn: () => Promise<T>, minMs = MIN_LOADING_MS): Promise<T> {
-  const start = Date.now();
-  try {
-    const result = await fn();
-    const remaining = Math.max(0, minMs - (Date.now() - start));
-    if (remaining) await new Promise((r) => setTimeout(r, remaining));
-    return result;
-  } catch (e) {
-    const remaining = Math.max(0, minMs - (Date.now() - start));
-    if (remaining) await new Promise((r) => setTimeout(r, remaining));
-    throw e;
-  }
-}
 
 export default function VocabularyFeature() {
   const { message } = App.useApp();
@@ -68,14 +53,12 @@ export default function VocabularyFeature() {
       setLoading(true);
       setFolders([]);
       try {
-        const result = await withMinDelay(() =>
-          getFolders({
-            page: pageToFetch,
-            limit: PAGE_SIZE,
-            search: debouncedSearchQuery || undefined,
-            userId,
-          })
-        );
+        const result = await getFolders({
+          page: pageToFetch,
+          limit: PAGE_SIZE,
+          search: debouncedSearchQuery || undefined,
+          userId,
+        });
 
         if (!isMountedRef.current) return;
 

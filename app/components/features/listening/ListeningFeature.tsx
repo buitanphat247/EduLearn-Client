@@ -58,7 +58,6 @@ export default function ListeningFeature() {
 
   const fetchLessons = useCallback(async () => {
     const id = ++fetchIdRef.current;
-    const startTime = Date.now();
     setLoading(true);
 
     try {
@@ -69,12 +68,6 @@ export default function ListeningFeature() {
         level: selectedLevel,
         language: selectedLanguage,
       });
-
-      if (fetchIdRef.current !== id || !isMountedRef.current) return;
-
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, 300 - elapsedTime);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
       if (fetchIdRef.current !== id || !isMountedRef.current) return;
 
