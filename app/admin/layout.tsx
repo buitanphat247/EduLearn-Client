@@ -65,11 +65,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/auth");
   }
 
-  // Ensure only admins can access this route
+  // Ensure only teachers can access this route ("admin" route is actually the Teacher portal)
   const roleName = initialUserData.role_name?.toLowerCase();
-  // We check for 'admin' (you could potentially check 'super_admin' or others based on your need)
-  if (roleName !== "admin" && roleName !== "superadmin" && roleName !== "super_admin") {
-    redirect("/");
+
+  if (roleName !== "teacher" && roleName !== "admin") {
+    if (roleName === "super_admin" || roleName === "superadmin") {
+      redirect("/super-admin");
+    } else {
+      redirect("/user");
+    }
   }
 
   return (
