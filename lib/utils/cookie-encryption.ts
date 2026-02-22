@@ -24,7 +24,8 @@ export async function decryptCookie(encryptedText: string): Promise<string> {
     }
 
     const data = await response.json();
-    return data.decrypted;
+    // Backend wraps response: { data: { decrypted } } hoặc trả thẳng { decrypted }
+    return data.data?.decrypted ?? data.decrypted;
   } catch (error: any) {
     throw new Error(`Decryption failed: ${error.message}`);
   }
