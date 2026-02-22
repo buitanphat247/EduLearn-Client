@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Form, Input, Button, Checkbox, App, ConfigProvider, theme, Select } from "antd";
+import { Form, Input, Button, Checkbox, App, ConfigProvider, theme, Select, Spin } from "antd";
 import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from "@ant-design/icons";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import { signIn, signUp } from "@/lib/api/auth";
+
+import { signIn, signUp, googleLogin as googleLoginApi } from "@/lib/api/auth";
 import { getCurrentUser } from "@/lib/api/users";
 import { useTheme } from "@/app/context/ThemeContext";
 import { getPasswordValidationRules } from "@/lib/utils/validation";
+import { getCookie } from "@/lib/utils/cookies";
 import ForgotPasswordModal from "@/app/components/auth/ForgotPasswordModal";
+import { FEATURES } from "@/app/config/features";
 
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -18,6 +20,7 @@ export default function AuthPage() {
   const [signUpForm] = Form.useForm();
   const [signInLoading, setSignInLoading] = useState(false);
   const [signUpLoading, setSignUpLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -25,6 +28,8 @@ export default function AuthPage() {
 
   const [shouldAnimate, setShouldAnimate] = useState(false); // Control animation state
   const sessionRevokedShownRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const googleCodeProcessedRef = useRef(false);
 
   // Chỉ một toast khi bị chuyển về đăng nhập do phiên đã bị đăng xuất (tránh trùng với toast từ layout)
   useEffect(() => {
@@ -37,25 +42,69 @@ export default function AuthPage() {
   }, [searchParams, message]);
 
   useEffect(() => {
-    let isMounted = true;
+    isMountedRef.current = true;
 
     const checkAuth = async () => {
-      if (!isMounted) return;
+      if (!isMountedRef.current) return;
 
       const user = getCurrentUser();
-      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+      const hasToken = typeof window !== "undefined" ? !!getCookie("_at") : false;
 
-      if (user && token) {
+      if (user && hasToken) {
         router.push("/profile");
+        return;
+      }
+
+      // Handle Google OAuth redirect callback — chỉ xử lý 1 lần (tránh race khi Strict Mode / double effect)
+      const code = searchParams.get("code");
+      if (code && !googleCodeProcessedRef.current) {
+        googleCodeProcessedRef.current = true;
+        if (typeof window !== "undefined") {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("code");
+          url.searchParams.delete("scope");
+          url.searchParams.delete("authuser");
+          url.searchParams.delete("prompt");
+          window.history.replaceState({}, "", url.toString());
+        }
+        handleGoogleCallback(code);
       }
     };
 
     checkAuth();
 
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
     };
-  }, [router]);
+  }, [router, searchParams]);
+
+  const handleGoogleCallback = async (code: string) => {
+    setGoogleLoading(true);
+    try {
+      const redirectUri = typeof window !== "undefined" ? `${window.location.origin}/auth` : "";
+      const res = await googleLoginApi({
+        code,
+        redirect_uri: redirectUri,
+        device_name: navigator.userAgent,
+      });
+
+      if (!isMountedRef.current) return;
+
+      const isSuccess = (res as any)?.status === true || (res as any)?.statusCode === 200 || !!(res as any)?.data?.user || !!(res as any)?.user;
+
+      if (isSuccess) {
+        message.success("Đăng nhập Google thành công!");
+        window.location.href = "/profile";
+        return;
+      }
+      message.error((res as any)?.message || "Đăng nhập Google thất bại");
+    } catch (error: any) {
+      if (!isMountedRef.current) return;
+      message.error(error?.message || "Kết nối đến server thất bại");
+    } finally {
+      if (isMountedRef.current) setGoogleLoading(false);
+    }
+  };
 
   // Reset animation state when form changes (after animation completes)
   useEffect(() => {
@@ -173,7 +222,7 @@ export default function AuthPage() {
         email: values.email,
         phone: values.phone || "",
         password: values.password,
-        role_id: values.role_id || 3,
+        role_id: FEATURES.admin ? (values.role_id ?? 3) : 3,
         device_name: deviceName,
       });
 
@@ -197,6 +246,64 @@ export default function AuthPage() {
   };
 
   const { theme: currentTheme } = useTheme();
+
+  const googleClientId =
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+    "746067825418-lmac07j3m3ke382njren8u0775tbhqk2.apps.googleusercontent.com";
+
+  const handleGoogleRedirect = () => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const redirectUri = encodeURIComponent(`${origin}/auth`);
+    const scope = encodeURIComponent("email profile openid");
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
+    if (typeof window !== "undefined") window.location.href = url;
+  };
+
+  return (
+    <>
+      <AuthContent
+        isSignUp={isSignUp}
+        setIsSignUp={setIsSignUp}
+        signInForm={signInForm}
+        signUpForm={signUpForm}
+        signInLoading={signInLoading}
+        signUpLoading={signUpLoading}
+        googleLoading={googleLoading}
+        setGoogleLoading={setGoogleLoading}
+        handleSignIn={handleSignIn}
+        handleSignUp={handleSignUp}
+        setIsForgotPasswordOpen={setIsForgotPasswordOpen}
+        shouldAnimate={shouldAnimate}
+        setShouldAnimate={setShouldAnimate}
+        currentTheme={currentTheme}
+        onGoogleLogin={handleGoogleRedirect}
+      />
+      <ForgotPasswordModal
+        open={isForgotPasswordOpen}
+        onCancel={() => setIsForgotPasswordOpen(false)}
+      />
+    </>
+  );
+}
+
+function AuthContent({
+  isSignUp,
+  setIsSignUp,
+  signInForm,
+  signUpForm,
+  signInLoading,
+  signUpLoading,
+  googleLoading,
+  setGoogleLoading,
+  handleSignIn,
+  handleSignUp,
+  setIsForgotPasswordOpen,
+  shouldAnimate,
+  setShouldAnimate,
+  currentTheme,
+  onGoogleLogin,
+}: any) {
+  const { message } = App.useApp();
 
   return (
     <div className="min-h-screen relative w-full overflow-hidden bg-slate-50 dark:bg-[#0f172a] flex items-center justify-center transition-colors duration-500">
@@ -240,17 +347,15 @@ export default function AuthPage() {
 
           <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-sm font-medium transition-colors">
             <div className="flex -space-x-3">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="w-10 h-10 relative rounded-full border-2 border-slate-50 dark:border-[#0f172a] bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center text-xs text-slate-600 dark:text-white transition-colors">
-                  <Image
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i}`}
-                    alt="user"
-                    fill
-                    className="object-cover"
-                    sizes="40px"
-                  />
-                </div>
-              ))}
+              {[1, 2, 3, 4].map(i => {
+                const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500'];
+                const initials = ['A', 'T', 'M', 'H'];
+                return (
+                  <div key={i} className={`w-10 h-10 rounded-full border-2 border-slate-50 dark:border-[#0f172a] ${colors[i - 1]} flex items-center justify-center text-white text-sm font-bold transition-colors`}>
+                    {initials[i - 1]}
+                  </div>
+                );
+              })}
               <div className="w-10 h-10 rounded-full border-2 border-slate-50 dark:border-[#0f172a] bg-blue-600 flex items-center justify-center text-white text-xs font-bold z-10 transition-colors">
                 10k+
               </div>
@@ -354,15 +459,20 @@ export default function AuthPage() {
                       <Form.Item name="role_id" initialValue={3} className="mb-0 col-span-1 md:col-span-2">
                         <Select
                           size="large"
+                          disabled={!FEATURES.admin}
                           classNames={{
                             popup: {
                               root: "dark:bg-slate-800 dark:border-slate-700"
                             }
                           }}
-                          options={[
-                            { value: 3, label: 'Học sinh' },
-                            { value: 2, label: 'Giảng viên' },
-                          ]}
+                          options={
+                            FEATURES.admin
+                              ? [
+                                  { value: 3, label: "Học sinh" },
+                                  { value: 2, label: "Giảng viên" },
+                                ]
+                              : [{ value: 3, label: "Học sinh" }]
+                          }
                         />
                       </Form.Item>
 
@@ -444,14 +554,41 @@ export default function AuthPage() {
                 )}
               </div>
             </ConfigProvider>
+
+            <div className="mt-8">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-3 py-1 bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 font-medium rounded-full border border-slate-100 dark:border-slate-800">Hoặc tiếp tục với</span>
+                </div>
+              </div>
+
+              {googleLoading ? (
+                <div className="flex items-center justify-center gap-3 py-3">
+                  <Spin size="small" />
+                  <span className="text-slate-500 dark:text-slate-400">Đang xử lý...</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onGoogleLogin}
+                  className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200 cursor-pointer text-slate-700 dark:text-slate-200 font-medium text-sm"
+                >
+                  <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4" />
+                    <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9.003 18z" fill="#34A853" />
+                    <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.96H.957A8.996 8.996 0 000 9.002a8.996 8.996 0 00.957 4.042l3.007-2.332z" fill="#FBBC05" />
+                    <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.428 0 9.002 0 5.48 0 2.438 2.017.957 4.958L3.964 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335" />
+                  </svg>
+                  Đăng nhập bằng Google
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
-
-      <ForgotPasswordModal
-        open={isForgotPasswordOpen}
-        onCancel={() => setIsForgotPasswordOpen(false)}
-      />
     </div>
   );
 }

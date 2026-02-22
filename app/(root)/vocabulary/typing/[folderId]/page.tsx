@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { App, Button, ConfigProvider, theme, Progress, Spin } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { getVocabulariesByFolder, type VocabularyResponse } from "@/lib/api/vocabulary";
+import { getVocabulariesByFolder, getDueWords, getVocabularyDetail, getVocabularyBatch, type VocabularyResponse } from "@/lib/api/vocabulary";
+import { getSubscriptionStatus } from "@/lib/api/subscription";
 import { useTheme } from "@/app/context/ThemeContext";
 import { useVocabularyTyping } from "@/app/hooks/useVocabularyTyping";
 import TypingHeader from "@/app/components/features/vocabulary/TypingHeader";
@@ -15,11 +16,14 @@ export default function VocabularyTyping() {
   const { message } = App.useApp();
   const router = useRouter();
   const params = useParams();
-  const folderId = params?.folderId ? parseInt(params.folderId as string, 10) : null;
+  const folderIdString = params?.folderId as string;
+  const folderId = folderIdString === "review" ? "review" : (folderIdString ? parseInt(folderIdString, 10) : null);
   const { theme: currentTheme } = useTheme();
 
   const [vocabularies, setVocabularies] = useState<VocabularyResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<number | null>(null);
+  const isMountedRef = useRef(true);
 
   const {
     questions,
@@ -42,33 +46,101 @@ export default function VocabularyTyping() {
     handleRestart,
   } = useVocabularyTyping(vocabularies);
 
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const { getProfile } = await import("@/lib/api/auth");
+        const profile = await getProfile();
+        if (isMountedRef.current && profile?.user_id) {
+          setUserId(Number(profile.user_id));
+        }
+      } catch (error) {
+        if (isMountedRef.current) console.error("Error fetching profile:", error);
+      }
+    };
+    fetchProfile();
+  }, []);
+
   const fetchVocabularies = async () => {
     if (!folderId) return;
 
     setLoading(true);
     try {
-      const data = await getVocabulariesByFolder(folderId);
-      setVocabularies(data);
+      let data: any[];
+      if (folderId === "review") {
+        if (!userId) {
+          if (isMountedRef.current) setLoading(false);
+          return;
+        }
+        const [sub, res] = await Promise.all([
+          getSubscriptionStatus().catch(() => ({ isPro: false })),
+          getDueWords(userId, { limit: 20 }),
+        ]);
+        const allowed = sub?.isPro ? res.data : (res.data || []).filter((x: any) => !x.folder_pro);
 
+        if (allowed.length > 0) {
+          const sourceWordIds = allowed.map((item: any) => item.sourceWordId);
+          const details = await getVocabularyBatch(sourceWordIds);
+
+          data = allowed.map((item: any) => {
+            const detail = details.find((d: any) => d.sourceWordId === item.sourceWordId);
+            return {
+              ...(detail || item.vocabulary),
+              sourceWordId: item.sourceWordId,
+              nextReviewAt: item.next_review_at,
+              last_grade: item.last_grade,
+              repetition: item.repetition
+            };
+          });
+        } else {
+          data = [];
+        }
+      } else {
+        data = await getVocabulariesByFolder(folderId as number);
+      }
+      if (!isMountedRef.current) return;
+      setVocabularies(data);
       if (data.length > 0) {
         generateQuestions(data);
       }
     } catch (error: any) {
-      console.error("Error fetching vocabularies:", error);
-      message.error(error?.message || "Không thể tải danh sách từ vựng");
-      setVocabularies([]);
+      const status = error?.response?.status;
+      if (status === 403 || status === 404) {
+        if (status === 404) {
+          message.warning("Không tìm thấy thư mục từ vựng.");
+        } else {
+          message.warning(error?.response?.data?.message || "Bạn cần gói Pro để truy cập từ vựng.");
+        }
+        router.replace("/vocabulary");
+        return;
+      }
+      if (isMountedRef.current) {
+        console.error("Error fetching vocabularies:", error);
+        message.error(error?.message || "Không thể tải danh sách từ vựng");
+        setVocabularies([]);
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (folderId) {
+    if (folderId === "review") {
+      if (userId) fetchVocabularies();
+    } else if (folderId) {
       fetchVocabularies();
     }
-  }, [folderId]);
+  }, [folderId, userId]);
 
-  const folderName = useMemo(() => vocabularies[0]?.folder?.folderName || "", [vocabularies]);
+  const folderName = useMemo(() => {
+    if (folderId === "review") return "Ôn tập tổng hợp";
+    return vocabularies[0]?.folder?.folderName || "";
+  }, [vocabularies, folderId]);
 
   if (!folderId) {
     return (
@@ -100,8 +172,8 @@ export default function VocabularyTyping() {
         <div className="container mx-auto px-4">
           <div className="text-center py-24 bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-700">
             <p className="text-slate-500 dark:text-slate-400 mb-4">Chưa có đủ từ vựng để luyện tập.</p>
-            <Button type="primary" onClick={() => router.push(`/vocabulary/${folderId}`)}>
-              Quay lại danh sách
+            <Button type="primary" onClick={() => router.push(folderId === "review" ? "/vocabulary/review/detail" : `/vocabulary/${folderId}`)}>
+              Quay lại {folderId === "review" ? "ôn tập" : "danh sách"}
             </Button>
           </div>
         </div>
@@ -159,7 +231,7 @@ export default function VocabularyTyping() {
               score={score}
               totalQuestions={questions.length}
               onRestart={handleRestart}
-              onBack={() => router.push(`/vocabulary/${folderId}`)}
+              onBack={() => router.push(folderId === "review" ? "/vocabulary/review/detail" : `/vocabulary/${folderId}`)}
             />
           ) : currentQuestion ? (
             <div className="space-y-6">

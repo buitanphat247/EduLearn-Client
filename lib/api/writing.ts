@@ -15,12 +15,14 @@ export interface WritingTopicsResponse {
 /**
  * Lấy danh sách topics theo category
  * @param category - Category name (general, ielts, work). Nếu không có thì trả về tất cả
+ * @param signal - AbortSignal for request cancellation
  */
-export async function getWritingTopics(category?: "general" | "ielts" | "work"): Promise<WritingTopicsResponse> {
+export async function getWritingTopics(category?: "general" | "ielts" | "work", signal?: AbortSignal): Promise<WritingTopicsResponse> {
   try {
     const params = category ? { category } : {};
     const response = await apiClient.get<WritingTopicsResponse>("/writing-chat-bot/topics", {
       params,
+      signal,
     });
 
     // Normalize status: true -> 200 for UI compatibility
@@ -30,24 +32,21 @@ export async function getWritingTopics(category?: "general" | "ielts" | "work"):
 
     return response.data;
   } catch (error: any) {
+    if (error?.name === "AbortError" || error?.code === "ERR_CANCELED") throw error;
     throw new Error(error?.response?.data?.message || error?.message || "Không thể tải danh sách chủ đề");
   }
 }
 
 export interface WritingGenerateConfig {
-  contentType: "DIALOGUE";
-  customTopic: boolean;
-  customTopicText?: string;
   difficulty: number;
-  language: "English";
   learningPurpose: "COMMUNICATION" | "IELTS" | "WORK";
-  mode: "AI_GENERATED" | "CUSTOM";
   topic: string;
   user_id: number;
+  targetLanguage?: string;
 }
 
 export interface WritingGenerateResponse {
-  contentType: "DIALOGUE";
+  contentType: "DIALOGUE" | "PARAGRAPH";
   difficulty: number;
   englishSentences: string[];
   id: string;
@@ -57,6 +56,7 @@ export interface WritingGenerateResponse {
   totalSentences: number;
   userPoints: number;
   vietnameseSentences: string[];
+  createdAt?: string;
 }
 
 /**
@@ -69,9 +69,9 @@ export async function generateWritingContent(config: WritingGenerateConfig): Pro
     // Handle nested response structure: {status, message, data: {...}}
     // ResponseInterceptor wraps responses, so we need to unwrap if needed
     let data = response.data;
-    
+
     // If response is wrapped in {status, message, data}, unwrap it
-    if (data && typeof data === 'object' && 'data' in data && data.status !== undefined) {
+    if (data && typeof data === "object" && "data" in data && data.status !== undefined) {
       data = data.data;
     }
 
@@ -128,14 +128,19 @@ export interface WritingHistoryResponse {
 
 /**
  * Lấy danh sách writing histories của user
+ * @param params - API params
+ * @param signal - AbortSignal for request cancellation
  */
-export async function getWritingHistory(params: {
-  user_id: number;
-  limit?: number;
-  page?: number;
-  order_by?: "created_at" | "updated_at";
-  order_desc?: boolean;
-}): Promise<WritingHistoryResponse> {
+export async function getWritingHistory(
+  params: {
+    user_id: number;
+    limit?: number;
+    page?: number;
+    order_by?: "created_at" | "updated_at";
+    order_desc?: boolean;
+  },
+  signal?: AbortSignal,
+): Promise<WritingHistoryResponse> {
   try {
     const response = await apiClient.get<WritingHistoryResponse>("/writing-chat-bot/history", {
       params: {
@@ -145,6 +150,7 @@ export async function getWritingHistory(params: {
         order_by: params.order_by || "created_at",
         order_desc: params.order_desc !== undefined ? params.order_desc : true,
       },
+      signal,
     });
 
     // Normalize status: true -> 200
@@ -154,6 +160,7 @@ export async function getWritingHistory(params: {
 
     return response.data;
   } catch (error: any) {
+    if (error?.name === "AbortError" || error?.code === "ERR_CANCELED") throw error;
     throw new Error(error?.response?.data?.message || error?.message || "Không thể tải lịch sử luyện tập");
   }
 }
@@ -173,10 +180,14 @@ export interface WritingHistoryByIdResponse {
 
 /**
  * Lấy writing history theo ID
+ * @param historyId - ID of history record
+ * @param signal - AbortSignal for request cancellation
  */
-export async function getWritingHistoryById(historyId: number): Promise<WritingHistoryByIdResponse> {
+export async function getWritingHistoryById(historyId: number, signal?: AbortSignal): Promise<WritingHistoryByIdResponse> {
   try {
-    const response = await apiClient.get<WritingHistoryByIdResponse>(`/writing-chat-bot/history/${historyId}`);
+    const response = await apiClient.get<WritingHistoryByIdResponse>(`/writing-chat-bot/history/${historyId}`, {
+      signal,
+    });
 
     // Normalize status: true -> 200
     if (response.data && response.data.status === true) {
@@ -185,6 +196,7 @@ export async function getWritingHistoryById(historyId: number): Promise<WritingH
 
     return response.data;
   } catch (error: any) {
+    if (error?.name === "AbortError" || error?.code === "ERR_CANCELED") throw error;
     throw new Error(error?.response?.data?.message || error?.message || "Không thể tải thông tin lịch sử luyện tập");
   }
 }
@@ -215,5 +227,55 @@ export async function updateWritingHistoryIndex(historyId: number, currentIndex:
     return response.data;
   } catch (error: any) {
     throw new Error(error?.response?.data?.message || error?.message || "Không thể cập nhật tiến độ bài luyện tập");
+  }
+}
+
+export interface WritingHintResponse {
+  vocabulary: Array<{ word: string; meaning: string }>;
+  structure: string;
+  practiceId: string;
+  sentenceIndex: number;
+}
+
+/**
+ * Gọi AI phân tích từ vựng & ngữ pháp cho 1 câu (Hint)
+ */
+export async function getWritingHint(
+  params: {
+    practiceId: string;
+    sentenceIndex: number;
+    originalSentence: string;
+    targetSentence?: string;
+    targetLanguage?: string;
+  },
+  signal?: AbortSignal,
+): Promise<WritingHintResponse> {
+  try {
+    const response = await apiClient.post<WritingHintResponse & { status?: any; data?: any }>(
+      "/writing-chat-bot/hint",
+      {
+        practiceId: params.practiceId,
+        sentenceIndex: params.sentenceIndex,
+        originalSentence: params.originalSentence,
+        targetSentence: params.targetSentence,
+        targetLanguage: params.targetLanguage || "English",
+      },
+      { signal },
+    );
+
+    // Handle NestJS ResponseInterceptor wrapping: { status, message, data: { vocabulary, structure, ... } }
+    let data = response.data;
+    if (data && typeof data === "object" && "data" in data && data.status !== undefined) {
+      data = data.data;
+    }
+
+    if (!data || !data.vocabulary) {
+      throw new Error("Không nhận được dữ liệu gợi ý từ server");
+    }
+
+    return data;
+  } catch (error: any) {
+    if (error?.name === "AbortError" || error?.code === "ERR_CANCELED") throw error;
+    throw new Error(error?.response?.data?.message || error?.message || "Không thể tạo gợi ý");
   }
 }

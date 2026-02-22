@@ -21,6 +21,7 @@ import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import { useUserId } from "@/app/hooks/useUserId";
 import SettingsSkeleton from "@/app/components/settings/SettingsSkeleton";
 import { getNewPasswordValidationRules } from "@/lib/utils/validation";
+import { saveUserDataToSession } from "@/lib/utils/cookies";
 import { useTheme } from "@/app/context/ThemeContext";
 
 interface SettingsFormData {
@@ -44,20 +45,22 @@ export default function AdminSettings() {
   const { theme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch user info
+  const isMountedRef = useRef(true);
   useEffect(() => {
+    isMountedRef.current = true;
     if (userIdLoading || !userId) {
       if (!userIdLoading && !userId) {
         messageApi.error("Không tìm thấy thông tin người dùng");
-        setLoading(false);
+        if (isMountedRef.current) setLoading(false);
       }
-      return;
+      return () => { isMountedRef.current = false; };
     }
 
     const fetchUserInfo = async () => {
       try {
-        setLoading(true);
+        if (isMountedRef.current) setLoading(true);
         const user = await getUserInfo(userId);
+        if (!isMountedRef.current) return;
         setUserInfo(user);
         profileForm.setFieldsValue({
           fullname: user.fullname,
@@ -66,13 +69,16 @@ export default function AdminSettings() {
           username: user.username,
         });
       } catch (error: any) {
-        messageApi.error(error?.message || "Không thể tải thông tin người dùng");
+        if (isMountedRef.current) {
+          messageApi.error(error?.message || "Không thể tải thông tin người dùng");
+        }
       } finally {
-        setLoading(false);
+        if (isMountedRef.current) setLoading(false);
       }
     };
 
     fetchUserInfo();
+    return () => { isMountedRef.current = false; };
   }, [userId, userIdLoading, profileForm, messageApi]);
 
   const handleAvatarClick = () => {
@@ -119,7 +125,7 @@ export default function AdminSettings() {
 
       setUserInfo(updatedUser);
       setImgError(false);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      saveUserDataToSession(updatedUser);
       window.dispatchEvent(new Event("user-updated"));
 
       hideProgress();
@@ -150,7 +156,7 @@ export default function AdminSettings() {
       if (userId) {
         const updated = await updateUser(userId, values);
         setUserInfo(updated);
-        localStorage.setItem("user", JSON.stringify(updated));
+        saveUserDataToSession(updated);
         window.dispatchEvent(new Event("user-updated"));
       }
       messageApi.success("Đã cập nhật thông tin thành công");

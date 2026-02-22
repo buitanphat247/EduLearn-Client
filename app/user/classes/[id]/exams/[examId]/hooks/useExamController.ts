@@ -228,6 +228,9 @@ export function useExamController(examId: string, classId: string, studentId: nu
 
   const handleSubmit = useCallback(async () => {
     if (!attemptId || !test) return;
+    if (isSubmittedRef.current) return;
+    isSubmittedRef.current = true;
+    setIsSubmitted(true);
 
     // Validation
     const answeredCount = Object.keys(userAnswers).length;
@@ -240,7 +243,11 @@ export function useExamController(examId: string, classId: string, studentId: nu
         confirmButtonText: "Nộp luôn",
         cancelButtonText: "Làm tiếp",
       });
-      if (!confirm.isConfirmed) return;
+      if (!confirm.isConfirmed) {
+        isSubmittedRef.current = false;
+        setIsSubmitted(false);
+        return;
+      }
     } else {
       const confirm = await Swal.fire({
         title: "Xác nhận nộp bài",
@@ -250,11 +257,13 @@ export function useExamController(examId: string, classId: string, studentId: nu
         confirmButtonText: "Nộp bài",
         cancelButtonText: "Hủy",
       });
-      if (!confirm.isConfirmed) return;
+      if (!confirm.isConfirmed) {
+        isSubmittedRef.current = false;
+        setIsSubmitted(false);
+        return;
+      }
     }
 
-    // Submit Process
-    setIsSubmitted(true);
     Swal.fire({ title: "Đang nộp bài...", didOpen: () => Swal.showLoading() });
 
     try {
@@ -275,6 +284,7 @@ export function useExamController(examId: string, classId: string, studentId: nu
       exitFullScreen();
       router.push(`/user/classes/${classId}`);
     } catch (error: any) {
+      isSubmittedRef.current = false;
       setIsSubmitted(false);
       Swal.fire("Lỗi", error.message || "Nộp bài thất bại", "error");
     }

@@ -9,14 +9,22 @@ interface WritingPracticeHeaderProps {
   formattedTime: string;
   currentSentenceIndex: number;
   totalSentences: number;
+  contentType: "DIALOGUE" | "PARAGRAPH";
 }
+
+const CONTENT_TYPE_LABELS: Record<string, string> = {
+  DIALOGUE: "Hội thoại song ngữ",
+  PARAGRAPH: "Đoạn văn song ngữ",
+};
 
 export default function WritingPracticeHeader({
   formattedTime,
   currentSentenceIndex,
   totalSentences,
+  contentType,
 }: WritingPracticeHeaderProps) {
   const router = useRouter();
+  const label = CONTENT_TYPE_LABELS[contentType] || CONTENT_TYPE_LABELS.DIALOGUE;
 
   return (
     <div className="mb-8">
@@ -29,12 +37,12 @@ export default function WritingPracticeHeader({
           Luyện viết
         </Link>
         <span className="text-slate-400 dark:text-slate-600">/</span>
-        <span className="text-slate-600 dark:text-slate-300 font-medium">Hội thoại song ngữ</span>
+        <span className="text-slate-600 dark:text-slate-300 font-medium">{label}</span>
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2 transition-colors">Hội thoại song ngữ</h1>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2 transition-colors">{label}</h1>
           <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 font-medium">
             <div className="flex items-center gap-2">
               <ClockCircleOutlined />

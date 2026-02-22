@@ -1,6 +1,6 @@
 import apiClient from "@/app/config/api";
 import type { SignUpUser } from "@/interface/auth";
-import { getUserDataFromSession } from "@/lib/utils/cookies";
+import { getUserDataFromSession, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
 
 export interface UserInfoResponse {
   user_id: number | string;
@@ -49,19 +49,19 @@ export const getCurrentUser = (): SignUpUser | null => {
   if (typeof window === "undefined") return null;
 
   try {
-    // 1. Try LocalStorage (Legacy)
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      return JSON.parse(userStr);
-    }
-
-    // 2. Try SessionStorage (New Auth Flow)
+    // 1. Try SessionStorage (fast, tab-scoped, secure)
     const sessionUser = getUserDataFromSession();
     if (sessionUser) {
       return sessionUser;
     }
+
+    // 2. Trigger async cookie decryption (if cookie _u exists)
+    // This will populate sessionStorage for next call
+    getUserIdFromCookieAsync().catch(() => {
+      /* ignore */
+    });
   } catch (error) {
-    console.error("Error parsing user from storage:", error);
+    console.error("Error getting current user:", error);
   }
 
   return null;

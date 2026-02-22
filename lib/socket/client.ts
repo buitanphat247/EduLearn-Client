@@ -77,11 +77,12 @@ class SocketClient {
     if (typeof window === "undefined") return null;
 
     try {
-      const userStr = localStorage.getItem("user");
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        return user.user_id || null;
-      }
+      const { getUserIdFromSession, getUserDataFromSession } = require("@/lib/utils/cookies");
+      const userId = getUserIdFromSession();
+      if (userId) return userId;
+
+      const userData = getUserDataFromSession();
+      if (userData) return userData.user_id || null;
     } catch (error) {
       console.error("Error getting user ID:", error);
     }
@@ -96,9 +97,7 @@ class SocketClient {
     if (typeof window === "undefined") return null;
     try {
       const { getCookie } = require("@/lib/utils/cookies");
-      const token = getCookie("_at") || getCookie("access_token") || getCookie("token");
-      if (token) return token;
-      return localStorage.getItem("token") || localStorage.getItem("access_token");
+      return getCookie("_at") || getCookie("access_token") || getCookie("token") || null;
     } catch (e) {
       return null;
     }

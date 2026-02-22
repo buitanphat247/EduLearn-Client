@@ -12,13 +12,15 @@ import {
   CrownOutlined,
   CameraOutlined,
   LoadingOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
-import { getProfile } from "@/lib/api/auth";
+import { getProfile, signOutAllDevices } from "@/lib/api/auth";
 import { updateUser, type UserInfoResponse } from "@/lib/api/users";
 import { uploadFile } from "@/lib/api/file-upload";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import { useTheme } from "@/app/context/ThemeContext";
+import { saveUserDataToSession } from "@/lib/utils/cookies";
 
 import ProfileSkeleton from "@/app/components/profile/ProfileSkeleton";
 import LearningActivityCalendar from "@/app/components/profile/LearningActivityCalendar";
@@ -50,12 +52,12 @@ export default function Profile() {
 
         if (isMounted) {
           setUser(userInfo as UserInfoResponse);
-          // Sync với localStorage
+          // Cache user data in sessionStorage
           if (typeof window !== "undefined") {
             try {
-              localStorage.setItem("user", JSON.stringify(userInfo));
+              saveUserDataToSession(userInfo);
             } catch (error) {
-              console.error("Error saving user to localStorage:", error);
+              console.error("Error saving user to session:", error);
             }
           }
         }
@@ -128,8 +130,8 @@ export default function Profile() {
       setUser(updatedUser);
       setImgError(false);
 
-      // 4. Update localStorage
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      // 4. Update sessionStorage
+      saveUserDataToSession(updatedUser);
 
       // 5. Trigger event for Header sync
       window.dispatchEvent(new Event("user-updated"));
@@ -156,6 +158,30 @@ export default function Profile() {
         fileInputRef.current.value = "";
       }
     }
+  };
+
+  const handleSignOutAllDevices = () => {
+    Swal.fire({
+      title: "Đăng xuất khỏi mọi thiết bị?",
+      text: "Bạn sẽ bị đăng xuất khỏi tất cả các thiết bị hiện đang đăng nhập.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#3b82f6",
+      confirmButtonText: "Đăng xuất tất cả",
+      cancelButtonText: "Hủy",
+      background: theme === 'dark' ? '#1e293b' : '#fff',
+      color: theme === 'dark' ? '#fff' : '#000',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          message.loading("Đang đăng xuất khỏi mọi thiết bị...");
+          await signOutAllDevices();
+        } catch (error: any) {
+          message.error(error.message || "Lỗi khi đăng xuất");
+        }
+      }
+    });
   };
 
   // ✅ Move useMemo hooks to top level (before early returns)
@@ -189,7 +215,8 @@ export default function Profile() {
     );
   }
 
-  const isAdmin = user.role?.role_name?.toLowerCase() === "admin";
+  const roleName = user.role?.role_name?.toLowerCase() || "";
+  const isAdmin = roleName === "admin" || roleName === "super_admin" || roleName === "superadmin";
   const cardClass =
     "bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700/50 overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50 transition-colors duration-300";
 
@@ -356,6 +383,17 @@ export default function Profile() {
                 </div>
               </div>
             </div>
+
+            {/* Logout All Devices Button */}
+            <button
+              onClick={handleSignOutAllDevices}
+              className="w-full mt-2 p-4 bg-white dark:bg-[#1e293b] rounded-2xl border border-red-200 dark:border-red-900/30 text-red-500 dark:text-red-400 font-bold flex items-center justify-center gap-3 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all duration-300 shadow-lg shadow-red-200/50 dark:shadow-none group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+                <LogoutOutlined />
+              </div>
+              Đăng xuất khỏi mọi thiết bị
+            </button>
           </div>
 
           {/* Right Column: Detailed Personal Info */}
@@ -432,7 +470,7 @@ export default function Profile() {
         </div>
 
         {/* Learning Activity Calendar Section */}
-        <LearningActivityCalendar theme={theme} />
+        {/* <LearningActivityCalendar theme={theme} /> */}
         <ForgettingCurveChart theme={theme} />
 
       </div>

@@ -59,7 +59,7 @@ export interface DocumentsApiResponse {
 export const getDocuments = async (params?: GetDocumentsParams): Promise<GetDocumentsResult> => {
   try {
     const requestParams: Record<string, any> = {};
-    
+
     if (params?.page) {
       requestParams.page = params.page;
     }
@@ -90,10 +90,7 @@ export const getDocuments = async (params?: GetDocumentsParams): Promise<GetDocu
   }
 };
 
-export const getDocumentsByUser = async (
-  userId: number | string,
-  params?: GetDocumentsByUserParams
-): Promise<GetDocumentsByUserResult> => {
+export const getDocumentsByUser = async (userId: number | string, params?: GetDocumentsByUserParams): Promise<GetDocumentsByUserResult> => {
   try {
     const requestParams: Record<string, any> = {};
 
@@ -131,6 +128,7 @@ export interface CreateDocumentParams {
   title: string;
   file: File;
   uploaded_by: number;
+  status?: string;
 }
 
 export interface CreateDocumentResponse {
@@ -163,6 +161,9 @@ export const createDocument = async (params: CreateDocumentParams): Promise<Crea
     formData.append("title", params.title);
     formData.append("file", params.file);
     formData.append("uploaded_by", params.uploaded_by.toString());
+    if (params.status) {
+      formData.append("status", params.status);
+    }
 
     const response = await apiClient.post<CreateDocumentApiResponse>("/documents", formData, {
       headers: {
@@ -235,14 +236,11 @@ export interface UpdateDocumentStatusApiResponse {
   timestamp: string;
 }
 
-export const updateDocumentStatus = async (
-  documentId: string | number,
-  status: string
-): Promise<UpdateDocumentStatusResponse> => {
+export const updateDocumentStatus = async (documentId: string | number, status: string): Promise<UpdateDocumentStatusResponse> => {
   try {
     // Convert documentId to number if it's a string
     const id = typeof documentId === "string" ? parseInt(documentId, 10) : documentId;
-    
+
     if (isNaN(id)) {
       throw new Error("ID tài liệu không hợp lệ");
     }
@@ -254,7 +252,7 @@ export const updateDocumentStatus = async (
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     if (response.data.status && response.data.data) {
@@ -263,15 +261,12 @@ export const updateDocumentStatus = async (
 
     throw new Error(response.data.message || "Không thể cập nhật trạng thái");
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể cập nhật trạng thái";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể cập nhật trạng thái";
     throw new Error(errorMessage);
   }
 };
 
-export const getDocumentAttachmentsCrawl = async (
-  params?: GetDocumentAttachmentsCrawlParams
-): Promise<GetDocumentAttachmentsCrawlResult> => {
+export const getDocumentAttachmentsCrawl = async (params?: GetDocumentAttachmentsCrawlParams): Promise<GetDocumentAttachmentsCrawlResult> => {
   try {
     const requestParams: Record<string, any> = {
       page: params?.page || 1,
@@ -322,9 +317,25 @@ export const getDocumentAttachmentsCrawl = async (
       limit: typeof limit === "number" ? limit : parseInt(String(limit), 10),
     };
   } catch (error: any) {
-    const errorMessage =
-      error?.response?.data?.message || error?.message || "Không thể lấy danh sách tài liệu crawl";
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách tài liệu crawl";
     throw new Error(errorMessage);
   }
 };
 
+export const deleteDocument = async (id: string | number): Promise<void> => {
+  try {
+    const documentId = typeof id === "string" ? parseInt(id, 10) : id;
+    if (isNaN(documentId)) throw new Error("ID tài liệu không hợp lệ");
+
+    const response = await apiClient.delete(`/documents/${documentId}`);
+
+    if (response.status === 204 || response.data.status) {
+      return;
+    }
+
+    throw new Error(response.data.message || "Không thể xóa tài liệu");
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || "Không thể xóa tài liệu";
+    throw new Error(errorMessage);
+  }
+};

@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 import AdminLayoutClient from "./AdminLayoutClient";
 import { decryptCookie } from "@/lib/utils/server-cookie-decrypt";
 import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
+import { FEATURES } from "@/app/config/features";
 
 async function getInitialUserData() {
   try {
@@ -58,6 +59,10 @@ async function getInitialUserData() {
 }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  if (!FEATURES.admin) {
+    redirect("/");
+  }
+
   const initialUserData = await getInitialUserData();
 
   // Redirect to login if not authenticated
@@ -68,8 +73,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Ensure only teachers can access this route ("admin" route is actually the Teacher portal)
   const roleName = initialUserData.role_name?.toLowerCase();
 
-  if (roleName !== "teacher" && roleName !== "admin") {
-    if (roleName === "super_admin" || roleName === "superadmin") {
+  if (roleName !== "teacher" && roleName !== "giảng viên") {
+    if (roleName === "super_admin" || roleName === "superadmin" || roleName === "admin") {
       redirect("/super-admin");
     } else {
       redirect("/user");

@@ -10,7 +10,7 @@
 export function normalizeForComparison(str: string): string {
   return str
     .toLowerCase()
-    .replace(/[.,!?;:]/g, "")
+    .replace(/[.,!?;:。，！？、：；「」『』（）"']/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }

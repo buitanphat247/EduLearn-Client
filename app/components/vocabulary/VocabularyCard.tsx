@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOutlined, ArrowRightOutlined } from "@ant-design/icons";
+import { BookOutlined, ArrowRightOutlined, CrownOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -9,6 +9,7 @@ interface VocabularyCardProps {
   folderName: string;
   learned_count?: number;
   total_count?: number;
+  access_level?: "free" | "pro";
   href?: string;
 }
 
@@ -17,9 +18,12 @@ export default function VocabularyCard({
   folderName,
   learned_count = 0,
   total_count = 0,
+  access_level = "free",
   href = "#",
 }: VocabularyCardProps) {
   const router = useRouter();
+  const isPro = access_level === "pro";
+
   return (
     <Link
       href={href}
@@ -35,14 +39,25 @@ export default function VocabularyCard({
         {/* Content */}
         <div className="p-6 flex-1 relative flex flex-col">
 
-          {/* Header: Icon & Badge */}
+          {/* Header: Icon & Badges (folderId + access_level tag) */}
           <div className="flex justify-between items-start mb-5">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform duration-300">
               <BookOutlined className="text-2xl" />
             </div>
 
-            <div className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/50 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider backdrop-blur-sm">
-              #{folderId}
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {isPro ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/50 uppercase tracking-wider">
+                  <CrownOutlined className="text-xs" /> PRO
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 uppercase tracking-wider">
+                  FREE
+                </span>
+              )}
+              <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/50 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider backdrop-blur-sm">
+                #{folderId}
+              </span>
             </div>
           </div>
 

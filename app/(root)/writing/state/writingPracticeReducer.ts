@@ -3,33 +3,41 @@
  * Consolidates multiple useState into a single useReducer
  */
 
+export interface HintData {
+  vocabulary: Array<{ word: string; meaning: string }>;
+  structure: string;
+}
+
 export interface WritingPracticeState {
   userTranslation: string;
   showHint: boolean;
-  showTranscript: boolean;
-  showTranslation: boolean;
   completedSentences: Set<number>;
   revealedWordIndices: Set<number>;
+  hintData: HintData | null;
+  hintLoading: boolean;
+  hintCache: Map<number, HintData>;
 }
 
 export type WritingPracticeAction =
   | { type: "SET_TRANSLATION"; payload: string }
   | { type: "TOGGLE_HINT" }
-  | { type: "TOGGLE_TRANSCRIPT" }
-  | { type: "TOGGLE_TRANSLATION" }
   | { type: "ADD_COMPLETED_SENTENCE"; payload: number }
   | { type: "SET_REVEALED_WORDS"; payload: Set<number> }
   | { type: "MERGE_REVEALED_WORDS"; payload: Set<number> }
   | { type: "RESET_REVEALED_WORDS" }
-  | { type: "RESET_FOR_NEXT_SENTENCE" };
+  | { type: "RESET_FOR_NEXT_SENTENCE" }
+  | { type: "SET_HINT_LOADING"; payload: boolean }
+  | { type: "SET_HINT_DATA"; payload: { sentenceIndex: number; data: HintData; currentViewIndex: number } }
+  | { type: "LOAD_CACHED_HINT"; payload: number };
 
 export const initialWritingState: WritingPracticeState = {
   userTranslation: "",
   showHint: false,
-  showTranscript: false,
-  showTranslation: false,
   completedSentences: new Set<number>(),
   revealedWordIndices: new Set<number>(),
+  hintData: null,
+  hintLoading: false,
+  hintCache: new Map<number, HintData>(),
 };
 
 export function writingPracticeReducer(state: WritingPracticeState, action: WritingPracticeAction): WritingPracticeState {
@@ -39,12 +47,6 @@ export function writingPracticeReducer(state: WritingPracticeState, action: Writ
 
     case "TOGGLE_HINT":
       return { ...state, showHint: !state.showHint };
-
-    case "TOGGLE_TRANSCRIPT":
-      return { ...state, showTranscript: !state.showTranscript };
-
-    case "TOGGLE_TRANSLATION":
-      return { ...state, showTranslation: !state.showTranslation };
 
     case "ADD_COMPLETED_SENTENCE":
       return {
@@ -70,7 +72,38 @@ export function writingPracticeReducer(state: WritingPracticeState, action: Writ
         userTranslation: "",
         showHint: false,
         revealedWordIndices: new Set<number>(),
+        hintData: null,
+        hintLoading: false,
       };
+
+    case "SET_HINT_LOADING":
+      return { ...state, hintLoading: action.payload };
+
+    case "SET_HINT_DATA": {
+      const { sentenceIndex, data, currentViewIndex } = action.payload;
+
+      // Always update cache regardless of current view
+      const newCache = new Map(state.hintCache);
+      newCache.set(sentenceIndex, data);
+
+      // Only update hintData display if indices match
+      const shouldUpdateDisplay = sentenceIndex === currentViewIndex;
+
+      return {
+        ...state,
+        hintData: shouldUpdateDisplay ? data : state.hintData,
+        hintLoading: shouldUpdateDisplay ? false : state.hintLoading,
+        hintCache: newCache,
+      };
+    }
+
+    case "LOAD_CACHED_HINT": {
+      const cached = state.hintCache.get(action.payload);
+      return {
+        ...state,
+        hintData: cached || null,
+      };
+    }
 
     default:
       return state;

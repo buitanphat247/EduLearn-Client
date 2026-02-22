@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { App, Button, Upload, Spin, Tag, Modal, Descriptions } from "antd";
 import {
@@ -323,12 +323,15 @@ export default function SubmitExercisePage() {
 
   // Logic for initial submit with files
   const [tempFiles, setTempFiles] = useState<File[]>([]);
+  const submittingRef = useRef(false);
 
   const onSubmitInitial = async () => {
     if (tempFiles.length === 0) {
       message.warning("Vui lòng đính kèm bài làm.");
       return;
     }
+    if (submittingRef.current) return;
+    submittingRef.current = true;
 
     try {
       setSubmitting(true);
@@ -424,6 +427,7 @@ export default function SubmitExercisePage() {
     } catch (error: any) {
       message.error(error.message);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
       setUploadLoading(false);
     }

@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 
 import SuperAdminLayoutClient from "./SuperAdminLayoutClient";
 import { decryptCookie } from "@/lib/utils/server-cookie-decrypt";
+import { FEATURES } from "@/app/config/features";
 
 async function getInitialUserData() {
   try {
@@ -47,6 +48,10 @@ async function getInitialUserData() {
 }
 
 export default async function SuperAdminLayout({ children }: { children: React.ReactNode }) {
+  if (!FEATURES.superAdmin) {
+    redirect("/");
+  }
+
   const initialUserData = await getInitialUserData();
 
   // Redirect to login if not authenticated
@@ -54,15 +59,18 @@ export default async function SuperAdminLayout({ children }: { children: React.R
     redirect("/auth");
   }
 
-  // Ensure only super_admins can access this route
+  // Ensure only super_admins and admins can access this route
   const roleName = initialUserData.role_name?.toLowerCase();
+  const roleId = Number(initialUserData.user_id === 1 ? 1 : 0); // Temporary check if ID 1 is Super Admin? No, role_id is better.
 
-  if (roleName !== "super_admin" && roleName !== "superadmin") {
-    // If they are an admin, redirect to admin, else default to root
-    if (roleName === "admin") {
+  // We should trust role_name if it exists
+  const isAdmin = roleName === "super_admin" || roleName === "superadmin" || roleName === "admin";
+
+  if (!isAdmin) {
+    if (roleName === "teacher" || roleName === "giảng viên") {
       redirect("/admin");
     } else {
-      redirect("/");
+      redirect("/user");
     }
   }
 

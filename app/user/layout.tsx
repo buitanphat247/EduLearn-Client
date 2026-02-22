@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 import UserLayoutClient from "./UserLayoutClient";
 import { decryptCookie } from "@/lib/utils/server-cookie-decrypt";
 import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
+import { FEATURES } from "@/app/config/features";
 
 async function getInitialUserData() {
   try {
@@ -71,11 +72,23 @@ async function getInitialUserData() {
 }
 
 export default async function UserLayout({ children }: { children: React.ReactNode }) {
+  if (!FEATURES.user) {
+    redirect("/");
+  }
+
   const initialUserData = await getInitialUserData();
 
   // Redirect to login if not authenticated
   if (!initialUserData) {
     redirect("/auth");
+  }
+
+  const roleName = initialUserData.role_name?.toLowerCase();
+
+  if (roleName === "admin" || roleName === "super_admin" || roleName === "superadmin") {
+    redirect("/super-admin");
+  } else if (roleName === "teacher" || roleName === "giảng viên") {
+    redirect("/admin");
   }
 
   return (

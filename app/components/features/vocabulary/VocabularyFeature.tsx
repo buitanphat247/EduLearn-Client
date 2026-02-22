@@ -2,14 +2,17 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { App, Empty } from "antd";
 import { BarChartOutlined, ReloadOutlined } from "@ant-design/icons";
 import Swal from "sweetalert2";
 import { useTheme } from "@/app/context/ThemeContext";
 import {
   getFolders,
+  getVocabularyGroups,
   resetVocabularyProgress,
   type FolderResponse,
+  type VocabularyGroupItem,
 } from "@/lib/api/vocabulary";
 import { useDebounce } from "@/app/hooks/useDebounce";
 import { useServerAuthedUser } from "@/app/context/ServerAuthedUserProvider";
@@ -22,6 +25,7 @@ const PAGE_SIZE = 20;
 
 export default function VocabularyFeature() {
   const { message } = App.useApp();
+  const router = useRouter();
   const { theme } = useTheme();
   const user = useServerAuthedUser();
   const userId = user?.userId ? Number(user.userId) : undefined;
@@ -31,24 +35,33 @@ export default function VocabularyFeature() {
   const [resetting, setResetting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [vocabularyGroups, setVocabularyGroups] = useState<VocabularyGroupItem[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | undefined>(undefined);
   const [searchText, setSearchText] = useState("");
   const debouncedSearchQuery = useDebounce(searchText, 500);
   const prevSearchRef = useRef(debouncedSearchQuery);
+  const prevGroupRef = useRef(selectedGroupId);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
     isMountedRef.current = true;
+    getVocabularyGroups().then(data => {
+      if (isMountedRef.current) setVocabularyGroups(data);
+    });
     return () => { isMountedRef.current = false; };
   }, []);
 
   const fetchFolders = useCallback(
     async (page?: number) => {
       const searchChanged = prevSearchRef.current !== debouncedSearchQuery;
-      if (searchChanged) {
+      const groupChanged = prevGroupRef.current !== selectedGroupId;
+
+      if (searchChanged || groupChanged) {
         prevSearchRef.current = debouncedSearchQuery;
+        prevGroupRef.current = selectedGroupId;
         setCurrentPage(1);
       }
-      const pageToFetch = page ?? (searchChanged ? 1 : currentPage);
+      const pageToFetch = page ?? (searchChanged || groupChanged ? 1 : currentPage);
 
       setLoading(true);
       setFolders([]);
@@ -57,6 +70,7 @@ export default function VocabularyFeature() {
           page: pageToFetch,
           limit: PAGE_SIZE,
           search: debouncedSearchQuery || undefined,
+          vocabularyGroupId: selectedGroupId,
           userId,
         });
 
@@ -67,6 +81,12 @@ export default function VocabularyFeature() {
       } catch (error: unknown) {
         if (!isMountedRef.current) return;
 
+        const err = error as { response?: { status?: number; data?: { message?: string } } };
+        if (err?.response?.status === 403) {
+          message.warning(err?.response?.data?.message || "Bạn cần gói Pro để truy cập từ vựng.");
+          router.back();
+          return;
+        }
         const msg = error instanceof Error ? error.message : "Không thể tải danh sách folders";
         message.error(msg);
         setFolders([]);
@@ -77,7 +97,7 @@ export default function VocabularyFeature() {
         }
       }
     },
-    [currentPage, debouncedSearchQuery, message, userId]
+    [currentPage, debouncedSearchQuery, selectedGroupId, message, userId, router]
   );
 
   useEffect(() => {
@@ -154,6 +174,35 @@ export default function VocabularyFeature() {
             onChange={(e) => setSearchText(e.target.value)}
             wrapperClassName="flex-1 w-full"
           />
+          {/* Vocabulary Group Filter */}
+          <div className="w-full md:w-64 shrink-0">
+            <select
+              value={selectedGroupId || ""}
+              onChange={(e) => setSelectedGroupId(e.target.value ? Number(e.target.value) : undefined)}
+              className={`
+                h-10 w-full px-3 rounded-lg
+                bg-white dark:bg-[#1e293b]
+                border border-slate-200 dark:border-slate-700/50
+                text-slate-700 dark:text-slate-200
+                focus:outline-none focus:ring-2 focus:ring-blue-500/20
+                transition-all duration-200 text-sm font-medium
+                cursor-pointer appearance-none
+              `}
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 0.75rem center',
+                backgroundSize: '1rem'
+              }}
+            >
+              <option value="">Tất cả loại nhóm</option>
+              {vocabularyGroups.map((group) => (
+                <option key={group.vocabularyGroupId} value={group.vocabularyGroupId}>
+                  {group.groupName}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="w-full md:w-auto shrink-0">
             <Link
               href="/vocabulary/review"
@@ -210,6 +259,7 @@ export default function VocabularyFeature() {
                 folderName={folder.folderName}
                 learned_count={folder.learned_count}
                 total_count={folder.total_count}
+                access_level={folder.access_level}
                 href={`/vocabulary/${folder.folderId}`}
               />
             ))}

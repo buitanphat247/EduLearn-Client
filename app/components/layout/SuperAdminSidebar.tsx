@@ -13,15 +13,26 @@ import {
   SafetyCertificateOutlined,
   LogoutOutlined,
   ReloadOutlined,
+  BookOutlined,
+  ReadOutlined,
+  CrownOutlined,
+  EditOutlined,
+  SettingOutlined,
+  RobotOutlined,
 } from "@ant-design/icons";
 import { Button, App } from "antd";
 
 const menuItems = [
   { path: "/super-admin", icon: HomeOutlined, label: "Trang chủ" },
   { path: "/super-admin/documents-crawl", icon: CloudDownloadOutlined, label: "Quản lý tài liệu" },
+  { path: "/super-admin/website-docs", icon: BookOutlined, label: "Tài liệu trang web" },
   { path: "/super-admin/accounts", icon: UserOutlined, label: "Quản lý tài khoản" },
+  { path: "/super-admin/subscriptions", icon: CrownOutlined, label: "Quản lý Gói cước" },
+  { path: "/super-admin/subscriptions/limits", icon: SettingOutlined, label: "Cấu hình giới hạn" },
+  { path: "/super-admin/ai-usage", icon: RobotOutlined, label: "Thống kê AI" },
+  { path: "/super-admin/ai-writing", icon: EditOutlined, label: "AI Writing Config" },
+  { path: "/super-admin/vocabulary", icon: ReadOutlined, label: "Quản lý từ vựng" },
   { path: "/super-admin/notification", icon: BellOutlined, label: "Quản lý thông báo" },
-  { path: "/super-admin/posts", icon: FileTextOutlined, label: "Quản lý tin tức" },
   { path: "/super-admin/events", icon: CalendarOutlined, label: "Quản lý sự kiện" },
   { path: "/super-admin/permissions", icon: SafetyCertificateOutlined, label: "Phân quyền" },
   { path: "/super-admin/all", icon: DatabaseOutlined, label: "Quản lý toàn bộ" },
@@ -57,8 +68,8 @@ export default function SuperAdminSidebar() {
       <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isExactMatch = item.path === "/super-admin";
-          const isActive = isExactMatch ? pathname === "/super-admin" : pathname?.startsWith(item.path);
+          const isExactMatch = item.path === "/super-admin" || item.path === "/super-admin/subscriptions";
+          const isActive = isExactMatch ? pathname === item.path : pathname?.startsWith(item.path);
           const isNotificationItem = item.path === "/super-admin/notification";
 
           const baseClasses = `group flex items-center gap-4 px-5 py-3 rounded-xl cursor-pointer w-full`;
@@ -79,14 +90,14 @@ export default function SuperAdminSidebar() {
             >
               <Icon
                 className={`text-xl ${isActive
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
                   }`}
               />
               <span
                 className={`text-[14px] flex-1 ${isActive
-                    ? "font-bold text-blue-600 dark:text-blue-400"
-                    : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
+                  ? "font-bold text-blue-600 dark:text-blue-400"
+                  : "font-medium text-gray-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:font-semibold"
                   }`}
               >
                 {item.label}

@@ -7,7 +7,7 @@ import { SearchOutlined, PlusOutlined, CalendarOutlined, RobotOutlined, Exclamat
 import Swal from "sweetalert2";
 import type { ClassExamsTabProps, Exam } from "./types";
 import { getRagTestsByClass, deleteRagTest } from "@/lib/api/rag-exams";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { getUserIdFromCookie, getUserDataFromSession } from "@/lib/utils/cookies";
 
 
 const ClassExamsTab = memo(function ClassExamsTab({
@@ -34,13 +34,12 @@ const ClassExamsTab = memo(function ClassExamsTab({
     try {
       let studentId = Number(getUserIdFromCookie());
       if (!studentId) {
-        const userStr = localStorage.getItem("user");
-        if (userStr) {
+        const u = getUserDataFromSession();
+        if (u) {
           try {
-            const u = JSON.parse(userStr);
             studentId = Number(u.id || u.user_id);
           } catch (e) {
-            console.error("Error parsing user", e);
+            console.error("Error parsing user from session", e);
           }
         }
       }
@@ -195,36 +194,36 @@ const ClassExamsTab = memo(function ClassExamsTab({
 
   const handleStartExam = useCallback(
     (exam: Exam) => {
-        if (exam.isLocked) {
-          Swal.fire({
-            icon: "warning",
-            title: "Đã hết lượt làm bài",
-            text: "Bạn đã sử dụng hết số lượt làm bài cho phép của đề thi này.",
-            confirmButtonText: "Đóng",
-            confirmButtonColor: "#f59e0b",
-          });
-          return;
-        }
-
-        const isDevToolsOpen = () => {
-          const threshold = 160;
-          return window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold;
-        };
-
-        if (isDevToolsOpen()) {
-          Swal.fire({
-            icon: "error",
-            title: "Phát hiện DevTools!",
-            text: "Vui lòng đóng công cụ lập trình (Developer Tools) để có thể bắt đầu bài thi.",
-            confirmButtonText: "Đóng",
-            confirmButtonColor: "#ef4444",
-          });
-          return;
-        }
-
+      if (exam.isLocked) {
         Swal.fire({
-          title: "",
-          html: `
+          icon: "warning",
+          title: "Đã hết lượt làm bài",
+          text: "Bạn đã sử dụng hết số lượt làm bài cho phép của đề thi này.",
+          confirmButtonText: "Đóng",
+          confirmButtonColor: "#f59e0b",
+        });
+        return;
+      }
+
+      const isDevToolsOpen = () => {
+        const threshold = 160;
+        return window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold;
+      };
+
+      if (isDevToolsOpen()) {
+        Swal.fire({
+          icon: "error",
+          title: "Phát hiện DevTools!",
+          text: "Vui lòng đóng công cụ lập trình (Developer Tools) để có thể bắt đầu bài thi.",
+          confirmButtonText: "Đóng",
+          confirmButtonColor: "#ef4444",
+        });
+        return;
+      }
+
+      Swal.fire({
+        title: "",
+        html: `
             <div class="text-center mb-5">
               <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-50 rounded-full mb-3">
                 <span style="font-size: 32px;">📝</span>
@@ -293,28 +292,28 @@ const ClassExamsTab = memo(function ClassExamsTab({
               </div>
             </div>
           `,
-          showCancelButton: true,
-          confirmButtonColor: "#4f46e5",
-          cancelButtonColor: "#f1f5f9",
-          confirmButtonText: "Bắt đầu bài thi",
-          cancelButtonText: "Quay lại",
-          focusConfirm: true,
-          width: "460px",
-          customClass: {
-            popup: "rounded-[24px] shadow-2xl border-0 p-6",
-            htmlContainer: "p-0 m-0",
-            actions: "mt-8 gap-3",
-            confirmButton:
-              "px-8 py-3 rounded-xl font-bold text-[14px] text-white bg-linear-to-r from-indigo-600 to-violet-600 shadow-lg shadow-indigo-200 hover:shadow-indigo-300/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
-            cancelButton:
-              "px-8 py-3 rounded-xl font-bold text-[14px] text-gray-500 bg-gray-50 hover:bg-gray-100 hover:text-gray-700 transition-all duration-200 border-0",
-          },
-          buttonsStyling: false,
-        }).then((result) => {
-          if (result.isConfirmed) {
-            router.push(`/user/classes/${classId}/exams/${exam.id}`);
-          }
-        });
+        showCancelButton: true,
+        confirmButtonColor: "#4f46e5",
+        cancelButtonColor: "#f1f5f9",
+        confirmButtonText: "Bắt đầu bài thi",
+        cancelButtonText: "Quay lại",
+        focusConfirm: true,
+        width: "460px",
+        customClass: {
+          popup: "rounded-[24px] shadow-2xl border-0 p-6",
+          htmlContainer: "p-0 m-0",
+          actions: "mt-8 gap-3",
+          confirmButton:
+            "px-8 py-3 rounded-xl font-bold text-[14px] text-white bg-linear-to-r from-indigo-600 to-violet-600 shadow-lg shadow-indigo-200 hover:shadow-indigo-300/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
+          cancelButton:
+            "px-8 py-3 rounded-xl font-bold text-[14px] text-gray-500 bg-gray-50 hover:bg-gray-100 hover:text-gray-700 transition-all duration-200 border-0",
+        },
+        buttonsStyling: false,
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push(`/user/classes/${classId}/exams/${exam.id}`);
+        }
+      });
     },
     [router, classId]
   );

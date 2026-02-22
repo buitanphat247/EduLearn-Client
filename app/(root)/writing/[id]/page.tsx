@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useMemo, useCallback, useEffect } from "react";
+import { useReducer, useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { App, Button, ConfigProvider, theme } from "antd";
 import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
@@ -10,6 +10,9 @@ import WritingPracticeHeader from "../components/WritingPracticeHeader";
 import WritingPracticeContent from "../components/WritingPracticeContent";
 import WritingPracticeControls from "../components/WritingPracticeControls";
 import WritingPracticeInput from "../components/WritingPracticeInput";
+import WritingPracticeInfo from "../components/WritingPracticeInfo";
+import { getWritingHint } from "@/lib/api/writing";
+import { getUsageStatusForFeature, type FeatureUsageStatus } from "@/lib/api/subscription";
 
 // Custom hooks
 import { useTimer, useWritingData, useWritingProgress } from "../hooks";
@@ -51,6 +54,15 @@ export default function WritingPracticePage() {
 
   // State management with useReducer
   const [state, dispatch] = useReducer(writingPracticeReducer, initialWritingState);
+  const [hintUsage, setHintUsage] = useState<FeatureUsageStatus | null>(null);
+
+  // Fetch hint usage limit theo gói when data is ready
+  useEffect(() => {
+    if (!data) return;
+    getUsageStatusForFeature("ai_writing_hint")
+      .then(setHintUsage)
+      .catch(() => setHintUsage({ allowed: false, currentCount: 0, limit: 0 }));
+  }, [data]);
 
   // Start timer when data is loaded
   useEffect(() => {
@@ -62,6 +74,13 @@ export default function WritingPracticePage() {
   // Reset revealed words when sentence changes
   useEffect(() => {
     dispatch({ type: "RESET_REVEALED_WORDS" });
+  }, [currentIndex]);
+
+  // No data state refs
+  const currentIndexRef = useRef(currentIndex);
+  const hintRequestInFlightRef = useRef(false);
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
   }, [currentIndex]);
 
   // Memoized data
@@ -77,17 +96,67 @@ export default function WritingPracticePage() {
     dispatch({ type: "SET_TRANSLATION", payload: value });
   }, []);
 
-  const handleToggleHint = useCallback(() => {
+  const handleToggleHint = useCallback(async () => {
+    // If hint modal is currently open, just close it
+    if (state.showHint) {
+      dispatch({ type: "TOGGLE_HINT" });
+      return;
+    }
+
+    // Check cache first - avoid duplicate API calls (saves tokens!)
+    const cached = state.hintCache.get(currentIndex);
+    if (cached) {
+      dispatch({ type: "LOAD_CACHED_HINT", payload: currentIndex });
+      dispatch({ type: "TOGGLE_HINT" });
+      return;
+    }
+
+    // Block double-click / Strict Mode double-invoke: only one hint request at a time
+    if (hintRequestInFlightRef.current) return;
+    hintRequestInFlightRef.current = true;
+
+    const currentVietnamese = vietnameseSentences[currentIndex];
+    const currentEnglish = englishSentences[currentIndex] || "";
+    if (!currentVietnamese) {
+      hintRequestInFlightRef.current = false;
+      return;
+    }
+
+    const indexAtRequest = currentIndex;
+
+    dispatch({ type: "SET_HINT_LOADING", payload: true });
     dispatch({ type: "TOGGLE_HINT" });
-  }, []);
 
-  const handleToggleTranscript = useCallback(() => {
-    dispatch({ type: "TOGGLE_TRANSCRIPT" });
-  }, []);
+    try {
+      const hintResult = await getWritingHint({
+        practiceId: id,
+        sentenceIndex: currentIndex,
+        originalSentence: currentVietnamese,
+        targetSentence: currentEnglish,
+        targetLanguage: "English",
+      });
 
-  const handleToggleTranslation = useCallback(() => {
-    dispatch({ type: "TOGGLE_TRANSLATION" });
-  }, []);
+      dispatch({
+        type: "SET_HINT_DATA",
+        payload: {
+          sentenceIndex: indexAtRequest,
+          data: {
+            vocabulary: hintResult.vocabulary,
+            structure: hintResult.structure,
+          },
+          currentViewIndex: currentIndexRef.current,
+        },
+      });
+      // Cập nhật lượt còn lại sau khi dùng gợi ý
+      getUsageStatusForFeature("ai_writing_hint").then(setHintUsage).catch(() => {});
+    } catch (error: any) {
+      console.error("Hint API error:", error);
+      message.error(error?.message || "Không thể tạo gợi ý. Vui lòng thử lại.");
+      dispatch({ type: "SET_HINT_LOADING", payload: false });
+    } finally {
+      hintRequestInFlightRef.current = false;
+    }
+  }, [state.showHint, state.hintCache, currentIndex, vietnameseSentences, englishSentences, id, message]);
 
   const handleCheck = useCallback(async () => {
     if (!state.userTranslation.trim()) {
@@ -180,34 +249,36 @@ export default function WritingPracticePage() {
               formattedTime={formattedTime}
               currentSentenceIndex={currentIndex}
               totalSentences={data.totalSentences}
+              contentType={data.contentType}
             />
 
-            {/* Content - 2 Column Layout */}
+            <WritingPracticeInfo data={data} />
+
+            {/* Content - 2 Column Layout (PARAGRAPH = full width, no transcript) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <WritingPracticeContent
                 vietnameseSentences={vietnameseSentences}
                 currentSentenceIndex={currentIndex}
+                contentType={data.contentType}
               />
 
               <WritingPracticeControls
                 englishSentences={englishSentences}
-                vietnameseSentences={vietnameseSentences}
                 currentSentenceIndex={currentIndex}
-                showTranscript={state.showTranscript}
-                showTranslation={state.showTranslation}
                 completedSentences={state.completedSentences}
                 revealedWordIndices={state.revealedWordIndices}
-                onToggleTranscript={handleToggleTranscript}
-                onToggleTranslation={handleToggleTranslation}
+                showHint={state.showHint}
+                hintData={state.hintData}
+                hintLoading={state.hintLoading}
+                onToggleHint={handleToggleHint}
+                hintUsage={hintUsage}
               />
             </div>
 
             <WritingPracticeInput
               userTranslation={state.userTranslation}
-              showHint={state.showHint}
               currentEnglishSentence={currentEnglishSentence}
               onTranslationChange={handleTranslationChange}
-              onToggleHint={handleToggleHint}
               onCheck={handleCheck}
             />
           </div>

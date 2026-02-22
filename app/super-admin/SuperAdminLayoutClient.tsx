@@ -38,7 +38,7 @@ function SuperAdminHeader({ initialUserData }: { initialUserData: InitialUserDat
   const getBreadcrumbItems = useMemo(() => {
     const items = [
       {
-        title: <Link href="/super-admin">Hệ thống quản lý Super Admin</Link>,
+        title: <Link href="/super-admin">Hệ thống quản trị Admin</Link>,
       },
     ];
 
@@ -163,6 +163,8 @@ export default function SuperAdminLayoutClient({
 }) {
   const pathname = usePathname();
   const isDocumentCrawlPage = pathname === "/super-admin/documents-crawl";
+  const isLimitsPage = pathname === "/super-admin/subscriptions/limits";
+  const mainPadding = isLimitsPage ? "p-0" : "p-6";
 
   // Create provider user object
   const serverUser = useMemo(() => {
@@ -173,7 +175,7 @@ export default function SuperAdminLayoutClient({
       roleName: initialUserData.role_name,
       avatar: initialUserData.avatar
     };
-  }, [initialUserData]);
+  }, [initialUserData, initialUserData]);
 
   return (
     <ServerAuthedUserProvider user={serverUser}>
@@ -181,7 +183,7 @@ export default function SuperAdminLayoutClient({
         <SuperAdminSidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <SuperAdminHeader initialUserData={initialUserData} />
-          <main className={`flex-1 overflow-y-auto bg-gray-50 dark:bg-black p-6 ${isDocumentCrawlPage ? "pb-0" : ""} transition-colors duration-300`}>
+          <main className={`flex-1 overflow-y-auto bg-gray-50 dark:bg-black ${mainPadding} ${isDocumentCrawlPage ? "pb-0" : ""} transition-colors duration-300`}>
             {children}
           </main>
         </div>

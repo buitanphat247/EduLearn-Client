@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { App, Button, ConfigProvider, theme } from "antd";
-import { SoundOutlined, FileTextOutlined, CheckCircleOutlined, EditOutlined, BookOutlined, BarChartOutlined } from "@ant-design/icons";
+import { App, ConfigProvider, theme } from "antd";
+import { SoundOutlined, FileTextOutlined, CheckCircleOutlined, EditOutlined, BookOutlined, BarChartOutlined, CrownOutlined } from "@ant-design/icons";
 import { getVocabulariesByFolder, type VocabularyResponse } from "@/lib/api/vocabulary";
-import Image from "next/image";
+import { getSubscriptionStatus } from "@/lib/api/subscription";
 import { IoArrowBackOutline } from "react-icons/io5";
 import { GoBook } from "react-icons/go";
 import VocabularyDetailSkeleton from "@/app/components/features/vocabulary/VocabularyDetailSkeleton";
+
+type Tier = "free" | "pro";
 
 export default function VocabularyDetail() {
   const { message } = App.useApp();
@@ -18,95 +20,121 @@ export default function VocabularyDetail() {
   const folderId = params?.folderId ? parseInt(params.folderId as string, 10) : null;
   const [vocabularies, setVocabularies] = useState<VocabularyResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [playingId, setPlayingId] = useState<number | null>(null);
   const [folderName, setFolderName] = useState("");
+  const [isPro, setIsPro] = useState(false);
 
-  useEffect(() => {
-    if (folderId) {
-      fetchVocabularies();
-    }
-  }, [folderId]);
-
-  const fetchVocabularies = async () => {
+  const isMountedRef = useRef(true);
+  const fetchVocabularies = useCallback(async () => {
     if (!folderId) return;
-
-    setLoading(true);
-    setVocabularies([]); // Clear previous data
-    setFolderName("");
+    if (isMountedRef.current) {
+      setLoading(true);
+      setVocabularies([]);
+      setFolderName("");
+    }
     try {
       const data = await getVocabulariesByFolder(folderId);
-
+      if (!isMountedRef.current) return;
       setVocabularies(data);
-      if (data.length > 0) {
-        setFolderName(data[0].folder.folderName);
-      }
+      if (data.length > 0) setFolderName(data[0].folder.folderName);
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : 'Không thể tải danh sách từ vựng';
+      const err = error as { response?: { status?: number; data?: { message?: string } } };
+      const status = err?.response?.status;
+      if (isMountedRef.current && (status === 403 || status === 404)) {
+        if (status === 404) {
+          message.warning("Không tìm thấy thư mục từ vựng.");
+        } else {
+          message.warning(err?.response?.data?.message || "Bạn cần gói Pro để truy cập từ vựng.");
+        }
+        router.replace("/vocabulary");
+        return;
+      }
+      const errorMessage = error instanceof Error ? error.message : "Không thể tải danh sách từ vựng";
       console.error("Error fetching vocabularies:", error);
-      message.error(errorMessage);
-      setVocabularies([]);
+      if (isMountedRef.current) {
+        message.error(errorMessage);
+        setVocabularies([]);
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
-  };
+  }, [folderId, message, router]);
 
-  const playAudio = (audioUrl: string) => {
+  useEffect(() => {
+    isMountedRef.current = true;
+    if (folderId) fetchVocabularies();
+    return () => { isMountedRef.current = false; };
+  }, [folderId, fetchVocabularies]);
+
+  useEffect(() => {
+    getSubscriptionStatus()
+      .then((res) => {
+        if (isMountedRef.current) setIsPro(res.isPro);
+      })
+      .catch(() => {
+        if (isMountedRef.current) setIsPro(false);
+      });
+  }, []);
+
+  const playAudio = (audioUrl: string, id: number) => {
+    setPlayingId(id);
     const audio = new Audio(audioUrl);
+
+    audio.onended = () => {
+      setPlayingId(null);
+    };
+
+    audio.onerror = () => {
+      setPlayingId(null);
+      message.error("Không thể phát audio");
+    };
+
     audio.play().catch((error) => {
       console.error("Error playing audio:", error);
-      message.error("Không thể phát audio");
+      setPlayingId(null);
+      message.error("Trình duyệt chặn phát âm thanh tự động");
     });
   };
 
-  const parseExample = (exampleStr: string) => {
-    try {
-      if (!exampleStr) return null;
-      const parsed = JSON.parse(exampleStr);
-      return {
-        content: parsed.content || "",
-        translation: parsed.translation || "",
-      };
-    } catch {
-      return null;
-    }
-  };
-
-  const parseVariations = (variations: string[]) => {
-    try {
-      if (!variations || variations.length === 0) return [];
-      const joined = variations.join("");
-      const parsed = JSON.parse(joined);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const practiceModes = [
+  const practiceModes: Array<{
+    title: string;
+    description: string;
+    icon: typeof FileTextOutlined;
+    color: string;
+    tier: Tier;
+    path: string;
+  }> = [
     {
       title: "Flashcard",
       description: "Học với thẻ ghi nhớ thông minh",
       icon: FileTextOutlined,
       color: "green",
+      tier: "free",
+      path: `/vocabulary/flashcard/${folderId}`,
     },
     {
       title: "Kiểm tra",
       description: "Trắc nghiệm & điền từ",
       icon: CheckCircleOutlined,
       color: "blue",
+      tier: "free",
+      path: `/vocabulary/quiz/${folderId}`,
     },
     {
       title: "Gõ từ",
       description: "Nghe và viết lại từ vựng",
       icon: EditOutlined,
       color: "purple",
+      tier: "free",
+      path: `/vocabulary/typing/${folderId}`,
     },
     {
       title: "Thống kê",
       description: "Xem tiến độ học tập",
       icon: BarChartOutlined,
       color: "orange",
+      tier: "free",
+      path: "/vocabulary/review",
     },
   ];
 
@@ -198,17 +226,11 @@ export default function VocabularyDetail() {
                 {practiceModes.map((mode, index) => {
                   const IconComponent = mode.icon;
                   const handleClick = () => {
-                    if (mode.title === "Flashcard") {
-                      router.push(`/vocabulary/flashcard/${folderId}`);
-                    } else if (mode.title === "Kiểm tra") {
-                      router.push(`/vocabulary/quiz/${folderId}`);
-                    } else if (mode.title === "Gõ từ") {
-                      router.push(`/vocabulary/typing/${folderId}`);
-                    } else if (mode.title === "Thống kê") {
-                      router.push(`/vocabulary/review`);
-                    } else {
-                      message.info("Tính năng này đang được phát triển");
+                    if (mode.tier === "pro" && !isPro) {
+                      message.warning("Tính năng này dành cho tài khoản Pro. Vui lòng nâng cấp để sử dụng.");
+                      return;
                     }
+                    router.push(mode.path);
                   };
 
                   const colors: Record<string, string> = {
@@ -219,17 +241,30 @@ export default function VocabularyDetail() {
                     orange: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20 group-hover:bg-orange-500/20 group-hover:border-orange-500/40",
                   };
 
+                  const tierBadge =
+                    mode.tier === "pro" ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/50">
+                        <CrownOutlined /> PRO
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600">
+                        FREE
+                      </span>
+                    );
+
                   return (
                     <div
                       key={index}
                       onClick={handleClick}
                       className="group bg-white dark:bg-[#1e293b] rounded-2xl p-5 border border-slate-200 dark:border-slate-700/50 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
                     >
-                      <div
-                        className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors border ${colors[mode.color].split(" group-hover")[0]
-                          }`}
-                      >
-                        <IconComponent className="text-xl" />
+                      <div className="flex items-start justify-between gap-2 mb-4">
+                        <div
+                          className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors border shrink-0 ${colors[mode.color].split(" group-hover")[0]}`}
+                        >
+                          <IconComponent className="text-xl" />
+                        </div>
+                        {tierBadge}
                       </div>
                       <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-1 group-hover:text-blue-600 dark:group-hover:text-white transition-colors">{mode.title}</h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{mode.description}</p>
@@ -249,8 +284,6 @@ export default function VocabularyDetail() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {vocabularies.map((vocab) => {
-                  const example = parseExample(vocab.example);
-                  const variations = parseVariations(vocab.variations);
                   const primaryAudio = vocab.audioUrl?.[0]?.url;
 
                   return (
@@ -260,21 +293,6 @@ export default function VocabularyDetail() {
                     >
                       {/* Top Section */}
                       <div className="flex items-start gap-4 mb-5">
-                        <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-slate-100 dark:border-slate-600/50 shadow-sm bg-slate-50 dark:bg-slate-900">
-                          {vocab.avatarUrl ? (
-                            <Image
-                              src={vocab.avatarUrl}
-                              alt={vocab.content}
-                              width={64}
-                              height={64}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-600 font-bold text-xl uppercase">
-                              {vocab.content.charAt(0)}
-                            </div>
-                          )}
-                        </div>
                         <div className="flex-1 min-w-0 pt-1">
                           <div className="flex items-center justify-between mb-1">
                             <h3
@@ -284,13 +302,19 @@ export default function VocabularyDetail() {
                               {vocab.content}
                             </h3>
                             {primaryAudio && (
-                              <Button
-                                type="text"
-                                icon={<SoundOutlined />}
-                                size="small"
-                                onClick={() => playAudio(primaryAudio)}
-                                className="text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-800 -mr-2"
-                              />
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  playAudio(primaryAudio, vocab.sourceWordId);
+                                }}
+                                className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 active:scale-90 shadow-sm hover:shadow-md ${playingId === vocab.sourceWordId
+                                    ? "bg-blue-600 text-white animate-pulse scale-110"
+                                    : "bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500"
+                                  }`}
+                                title="Phát âm"
+                              >
+                                <SoundOutlined className={`text-base ${playingId === vocab.sourceWordId ? "animate-bounce" : ""}`} />
+                              </button>
                             )}
                           </div>
 
@@ -307,54 +331,6 @@ export default function VocabularyDetail() {
                         </div>
                       </div>
 
-                      {/* Divider */}
-                      <div className="h-px bg-slate-100 dark:bg-slate-700/50 mb-4"></div>
-
-                      {/* Example Section */}
-                      {example && (
-                        <div className="mb-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-700/50">
-                          <div className="text-sm text-slate-600 dark:text-slate-300 italic mb-1">
-                            {example.content}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {example.translation}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Details (Variations, Family...) */}
-                      <div className="space-y-3">
-                        {variations.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {variations.slice(0, 3).map((variation: any, idx: number) => (
-                              <span
-                                key={idx}
-                                className="px-2 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-medium rounded-md border border-blue-100 dark:border-blue-500/20"
-                              >
-                                {variation.variationWordContent || variation}
-                              </span>
-                            ))}
-                            {variations.length > 3 && (
-                              <span className="px-2 py-1 text-slate-500 text-[10px] font-medium">+{variations.length - 3}</span>
-                            )}
-                          </div>
-                        )}
-
-                        {vocab.family && vocab.family.length > 0 && (
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-wider">Họ từ</p>
-                            <div className="space-y-1">
-                              {vocab.family.slice(0, 2).map((item, idx) => (
-                                <div key={idx} className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 overflow-hidden">
-                                  <span className="w-1 h-1 bg-slate-400 dark:bg-slate-600 rounded-full shrink-0"></span>
-                                  <span className="font-semibold text-slate-700 dark:text-slate-300">{item.word}</span>
-                                  <span className="truncate text-slate-500">- {item.meaning}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
                     </div>
                   );
                 })}

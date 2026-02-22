@@ -1,0 +1,161 @@
+Test Name,content,pronunciation,pos,translation,Audio URL,avatar url
+TEST 1 - ETS 2026,Take place,teɪk pleɪs,động từ,Diễn ra,https://api.dictionaryapi.dev/media/pronunciations/en/take%20place-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/0b6623b8-28e1-4702-ac1f-a59e0995796e.png
+TEST 1 - ETS 2026,Attendee,əˌtenˈdiː,danh từ,Người tham dự,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/3c46caec-0d99-4084-8123-988e5a7342a6.png
+TEST 1 - ETS 2026,Antique,ænˈtiːk,danh từ; tính từ,Đồ cổ,https://api.dictionaryapi.dev/media/pronunciations/en/antique-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/dd120c25-c2c0-4696-a55a-007fc0d7554d.png
+TEST 1 - ETS 2026,Organization,ˌɔːɡənaɪˈzeɪʃn,danh từ,Tổ chức,https://api.dictionaryapi.dev/media/pronunciations/en/organization-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/e86e82ab-49f5-47c8-93b0-518ad55e5596.png
+TEST 1 - ETS 2026,Suspicious,səˈspɪʃəs,tính từ,Đáng ngờ,https://api.dictionaryapi.dev/media/pronunciations/en/suspicious-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/187b7073-5ff8-4e89-8ca2-badc0ddbb594.png
+TEST 1 - ETS 2026,Vary,ˈveəri,động từ,"Thay đổi, đa dạng",https://api.dictionaryapi.dev/media/pronunciations/en/vary-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/7d2d40b1-83cf-42e1-a618-37c896a9fbe5.png
+TEST 1 - ETS 2026,Inventory,ˈɪnvəntri,danh từ,Hàng tồn kho,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/1a708a58-a521-42a7-9b6e-7716f65e2784.png
+TEST 1 - ETS 2026,Expand,ɪkˈspænd,động từ,Mở rộng,https://api.dictionaryapi.dev/media/pronunciations/en/expand-uk.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/6675a622-4693-4293-a52b-b45131fc072a.png
+TEST 1 - ETS 2026,Solicit,səˈlɪsɪt,động từ,"Yêu cầu, kêu gọi",,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/31bb2509-97fe-441e-be51-c37e0d98ea32.png
+TEST 1 - ETS 2026,Intend,ɪnˈtend,động từ,Dự định,https://api.dictionaryapi.dev/media/pronunciations/en/intend-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/04e8ed8c-4a05-4025-8d27-51477c16a96e.png
+TEST 1 - ETS 2026,Prevent,prɪˈvent,động từ,Ngăn chặn,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/221e9483-c043-4cbb-bc4c-c0d3c35dede5.png
+TEST 1 - ETS 2026,Aim,eɪm,danh từ; động từ,"Nhắm tới, mục tiêu",https://api.dictionaryapi.dev/media/pronunciations/en/aim-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/a6dfd618-59ce-45df-ab01-e4431042e3b9.png
+TEST 1 - ETS 2026,Qualified,ˈkwɒlɪfaɪd,tính từ,Có đủ năng lực,https://api.dictionaryapi.dev/media/pronunciations/en/qualified-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/b90382e9-6db4-4fd0-99ad-8b3a8927de9d.png
+TEST 1 - ETS 2026,Resident,ˈrezɪdənt,danh từ,Cư dân,https://api.dictionaryapi.dev/media/pronunciations/en/resident-uk.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/97e3f4b1-c7e1-41f5-9271-41c0230a9198.png
+TEST 1 - ETS 2026,Agreement,əˈɡriːmənt,danh từ,Thỏa thuận,https://api.dictionaryapi.dev/media/pronunciations/en/agreement-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/b86beb30-1518-4b29-974a-93aa4ae0d996.png
+TEST 1 - ETS 2026,Opposition,ˌɒpəˈzɪʃn,danh từ,Sự phản đối,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/459c8243-52ad-4203-8eac-d393e424e10e.png
+TEST 1 - ETS 2026,Extensive,ɪkˈstensɪv,tính từ,"Rộng, bao quát",https://api.dictionaryapi.dev/media/pronunciations/en/extensive-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/4083b7bd-7fd1-4284-b48c-bc7920b53070.png
+TEST 1 - ETS 2026,Guarantee,ˌɡærənˈtiː,danh từ; động từ,Bảo đảm,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/6d1d8a6b-9c33-416e-9903-812bcc7910d7.png
+TEST 1 - ETS 2026,Supplier,səˈplaɪə(r),danh từ,Nhà cung cấp,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/cbe85c98-b0ce-4848-ae6d-c4176b4d9e0e.png
+TEST 1 - ETS 2026,Landscaping,ˈlændskeɪpɪŋ,danh từ,Cảnh quan,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/9f08d37f-f88f-4548-8593-fa5941f6733e.png
+TEST 1 - ETS 2026,Suggestion,səˈdʒestʃən,danh từ,Đề xuất,https://api.dictionaryapi.dev/media/pronunciations/en/suggestion-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/a5b7c60f-e268-4c60-9235-af16d0f483d2.png
+TEST 1 - ETS 2026,Expertise,ˌekspɜːˈtiːz,danh từ,Chuyên môn,https://api.dictionaryapi.dev/media/pronunciations/en/expertise-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/6c99cd68-c260-4bf8-b4a7-88d554f27570.png
+TEST 1 - ETS 2026,Competitor,kəmˈpetɪtə(r),danh từ,Đối thủ,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/92f2383d-4079-41bd-9bf5-10111d682d93.png
+TEST 1 - ETS 2026,Anniversary,ˌænɪˈvɜːsəri,danh từ,Kỷ niệm,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/11e72f42-22b8-4037-b67b-817f5f8ef341.png
+TEST 1 - ETS 2026,Dedication,ˌdedɪˈkeɪʃn,danh từ,Sự cống hiến,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/21d3e4a7-4d36-41e3-992c-b28bc731ea06.png
+TEST 1 - ETS 2026,Loyalty,ˈlɔɪəlti,danh từ,Lòng trung thành,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/e1572ea3-03b8-406a-9a2d-903c3d466feb.png
+TEST 1 - ETS 2026,Contribute,kənˈtrɪbjuːt,động từ,Đóng góp,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/98c74065-a593-41e9-8c41-b5d7a2daf558.png
+TEST 1 - ETS 2026,Gratitude,ˈɡrætɪtjuːd,danh từ,Lòng biết ơn,https://api.dictionaryapi.dev/media/pronunciations/en/gratitude-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/5331f1b4-cef2-447f-9cfd-f180dd13c741.png
+TEST 1 - ETS 2026,Refine,rɪˈfaɪn,động từ,Tinh chỉnh,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/69075d1e-732e-4eb3-bcf7-e1d56fb237b4.png
+TEST 1 - ETS 2026,Spacious,ˈspeɪʃəs,tính từ,Rộng rãi,https://api.dictionaryapi.dev/media/pronunciations/en/spacious-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/1c85241f-866e-4988-a451-9c113eb25d2a.png
+TEST 1 - ETS 2026,Go through,ɡəʊ θruː,cụm từ; động từ,Xem xét kỹ,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/0b60e6e5-f81a-44d2-a8b7-0e13c676047e.png
+TEST 1 - ETS 2026,Various,ˈveəriəs,tính từ,Đa dạng,https://api.dictionaryapi.dev/media/pronunciations/en/various-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/2d30f104-36f7-42ea-b746-a5cdf6066863.png
+TEST 1 - ETS 2026,Secure,sɪˈkjʊə(r),tính từ; động từ,An toàn,https://api.dictionaryapi.dev/media/pronunciations/en/secure-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/487f882c-0e74-4130-874c-3e51ceca26c3.png
+TEST 1 - ETS 2026,Remove,rɪˈmuːv,động từ,Loại bỏ,https://api.dictionaryapi.dev/media/pronunciations/en/remove-au.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/6b9deb95-bd7f-40a6-afce-6fd04de65ffc.png
+TEST 1 - ETS 2026,Previous,ˈpriːviəs,tính từ,Trước đó,https://api.dictionaryapi.dev/media/pronunciations/en/previous-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/ec4fc218-3a38-4d0a-9305-4d4a7ba6c651.png
+TEST 1 - ETS 2026,Cooperation,kəʊˌɒpəˈreɪʃn,danh từ,Sự hợp tác,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/81e787d1-31ee-4d3e-b8c7-79cd532bb04c.png
+TEST 1 - ETS 2026,Upcoming,ˈʌpkʌmɪŋ,tính từ,Sắp tới,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/54e17f78-ed67-41a2-8bc7-75e57c832f3a.png
+TEST 1 - ETS 2026,Charge,tʃɑːdʒ,danh từ; động từ,Tính phí,https://api.dictionaryapi.dev/media/pronunciations/en/charge-au.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/bdcd6e32-aa3d-4a86-ab8c-f36bdfdb8dbd.png
+TEST 1 - ETS 2026,Assign,əˈsaɪn,động từ,Phân công,https://api.dictionaryapi.dev/media/pronunciations/en/assign-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/85cc2a9f-9f82-4e64-9f98-9b729ed86bc6.png
+TEST 1 - ETS 2026,Administrator,ədˈmɪnɪstreɪtə(r),danh từ,Quản trị viên,https://api.dictionaryapi.dev/media/pronunciations/en/administrator-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/f7337946-7899-49c8-a158-bd3e17af66e5.png
+TEST 1 - ETS 2026,New hire,njuː haɪə(r),danh từ,Nhân viên mới,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/d4bcee32-119e-4620-81a6-48fba3c50c25.png
+TEST 1 - ETS 2026,Promote,prəˈməʊt,động từ,Quảng bá,https://api.dictionaryapi.dev/media/pronunciations/en/promote-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/00391d3c-7ad5-4dd5-9e40-99468b387576.png
+TEST 1 - ETS 2026,Advertise,ˈædvətaɪz,động từ,Quảng cáo,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/138543a4-ee83-4319-82a2-4a6e2f720c7a.png
+TEST 1 - ETS 2026,Coordinator,kəʊˈɔːdɪneɪtə(r),danh từ,Người điều phối,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/46e34769-0f57-4b6e-b6bc-ab22256e6b61.png
+TEST 1 - ETS 2026,Telescope,ˈtelɪskəʊp,danh từ,Kính thiên văn,https://api.dictionaryapi.dev/media/pronunciations/en/telescope-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/44834486-5040-4794-b5d8-b9f27fa2825b.png
+TEST 1 - ETS 2026,Revise,rɪˈvaɪz,động từ,Sửa đổi,https://api.dictionaryapi.dev/media/pronunciations/en/revise-au.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/967db1ef-3c39-45c4-98ab-f92123f8a550.png
+TEST 1 - ETS 2026,Representative,ˌreprɪˈzentətɪv,danh từ,Đại diện,https://api.dictionaryapi.dev/media/pronunciations/en/representative-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/4362e29f-d868-4af7-8285-026764d0e50f.png
+TEST 1 - ETS 2026,Inquiry,ɪnˈkwaɪəri,danh từ,Yêu cầu thông tin,https://api.dictionaryapi.dev/media/pronunciations/en/inquiry-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/89f34eb8-0605-4f54-b10e-a4a4e0df28a9.png
+TEST 1 - ETS 2026,General,ˈdʒenrəl,tính từ,Chung,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/e498ab19-d10a-425a-bb6f-f8521da73729.png
+TEST 1 - ETS 2026,Release,rɪˈliːs,động từ; danh từ,Phát hành,https://api.dictionaryapi.dev/media/pronunciations/en/release-1-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/6564fa88-8c91-415c-a466-a95cd5b87205.png
+TEST 1 - ETS 2026,Indicate,ˈɪndɪkeɪt,động từ,Chỉ ra,https://api.dictionaryapi.dev/media/pronunciations/en/indicate-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/88b09d5b-2dc6-4313-96b1-7988381fb3c3.png
+TEST 1 - ETS 2026,Retain,rɪˈteɪn,động từ,Giữ lại,https://api.dictionaryapi.dev/media/pronunciations/en/retain-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/520c4f84-d8f3-492b-a5ea-2221ef991d58.png
+TEST 1 - ETS 2026,Flavour,ˈfleɪvə(r),danh từ; động từ,Hương vị,https://api.dictionaryapi.dev/media/pronunciations/en/flavour-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/b2ec0477-a39a-4615-b8ff-78b97067fd1b.png
+TEST 1 - ETS 2026,Sacrifice,ˈsækrɪfaɪs,động từ; danh từ,Hy sinh,https://api.dictionaryapi.dev/media/pronunciations/en/sacrifice-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/61a4bc92-1645-4bb8-a0eb-3361ed3a6828.png
+TEST 1 - ETS 2026,Obtain,əbˈteɪn,động từ,Đạt được,https://api.dictionaryapi.dev/media/pronunciations/en/obtain-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/b2750f75-e1a3-414d-859d-8d077495abb6.png
+TEST 1 - ETS 2026,Merger,ˈmɜːdʒə(r),danh từ,Sự sáp nhập,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/040baf6d-0610-4694-a251-d3411c8ff580.png
+TEST 1 - ETS 2026,Nutritious,njuˈtrɪʃəs,tính từ,Bổ dưỡng,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/e3d0ea2e-f984-4d74-8be1-945fabf33ee9.png
+TEST 1 - ETS 2026,Individual,ˌɪndɪˈvɪdʒuəl,danh từ; tính từ,Cá nhân,https://api.dictionaryapi.dev/media/pronunciations/en/individual-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/fe2ea72b-e731-4131-af45-5eb4e062dff6.png
+TEST 1 - ETS 2026,Opportunity,ˌɒpəˈtjuːnəti,danh từ,Cơ hội,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/68a47e30-c525-4c86-a157-7f8d4edb5614.png
+TEST 1 - ETS 2026,Substitute,ˈsʌbstɪtjuːt,danh từ; động từ,Thay thế,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/249578ab-ecf3-437b-ae5e-17ec7bf9d8e4.png
+TEST 1 - ETS 2026,Critical,ˈkrɪtɪkl,tính từ,Then chốt,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/ac918f54-ff3a-4f4f-81c7-ffcddde47e54.png
+TEST 1 - ETS 2026,Colleague,ˈkɒliːɡ,danh từ,Đồng nghiệp,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/e091a8f7-57bd-45cd-8b24-192e3cc167ad.png
+TEST 1 - ETS 2026,Courtesy,ˈkɜːtəsi,danh từ,Sự lịch thiệp,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/71eac9a6-e5ec-42da-8450-fe2a1b8b93b8.png
+TEST 1 - ETS 2026,Get the word out,ɡet ðə wɜːd aʊt,động từ,Lan truyền,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/c1655132-f2a8-4724-9b81-447f10d45416.png
+TEST 1 - ETS 2026,Install,ɪnˈstɔːl,động từ,Cài đặt,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/9bfae766-a6cf-4f24-ac62-d0819f59d842.png
+TEST 1 - ETS 2026,Significant,sɪɡˈnɪfɪkənt,tính từ,Đáng kể,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/459082ec-6a91-4506-8ebb-1f26e4c0296b.png
+TEST 1 - ETS 2026,Estimate,ˈestɪmeɪt,động từ; danh từ,Ước tính,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/865af8b7-16fc-4aa5-977e-a969effefd49.png
+TEST 1 - ETS 2026,Liaison,liˈeɪzn,danh từ,Người liên lạc,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/316dc1b2-2f36-487d-bd6f-1c89f717cca9.png
+TEST 1 - ETS 2026,Successive,səkˈsesɪv,tính từ,Liên tiếp,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/f8372205-3170-4c34-83c5-698cbce6e9db.png
+TEST 1 - ETS 2026,Expert,ˈekspɜːt,danh từ; tính từ,Chuyên gia,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/acc72198-a29e-40bd-85ea-83fc9485c094.png
+TEST 1 - ETS 2026,Diagnose,ˌdaɪəɡˈnəʊz,động từ,Chẩn đoán,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/97de5d49-4dba-4815-8264-ec7effaaf03b.png
+TEST 1 - ETS 2026,Replace,rɪˈpleɪs,động từ,Thay thế,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/39bcabaf-95d4-4dde-b1f6-116420ad7d1b.png
+TEST 1 - ETS 2026,Resemble,rɪˈzembl,động từ,Giống với,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/a417abf9-6c40-4009-9069-facbc6b8ff05.png
+TEST 1 - ETS 2026,Approve,əˈpruːv,động từ,Phê duyệt,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/c8587e82-cff5-47f1-bc39-7fca0399ff9d.png
+TEST 1 - ETS 2026,Inspection,ɪnˈspekʃn,danh từ,Kiểm tra,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/33704339-b1e4-407c-a984-8450ec504467.png
+TEST 1 - ETS 2026,Proactive,ˌprəʊˈæktɪv,tính từ,Chủ động,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/b7c32094-2917-411a-ab9d-8d630c91126d.png
+TEST 1 - ETS 2026,Procedure,prəˈsiːdʒə(r),danh từ,Quy trình,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/ef61cb81-4eb5-42ae-af78-06836569f2fb.png
+TEST 1 - ETS 2026,Compete,kəmˈpiːt,động từ,Cạnh tranh,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/bc5020ea-d174-4c49-9e3e-e1668d915f82.png
+TEST 1 - ETS 2026,Instrumental,ˌɪnstrəˈmentl,tính từ,Then chốt,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/9b19f517-d56e-49ea-a43e-a8ee960f239d.png
+TEST 1 - ETS 2026,Combine,kəmˈbaɪn,động từ,Kết hợp,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/ffa77489-45f0-4ae1-a4e0-139e121e7e23.png
+TEST 1 - ETS 2026,Carry,ˈkæri,động từ,Mang theo,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/676974da-5487-42bd-a104-d50a225bd8a4.png
+TEST 1 - ETS 2026,Remove,rɪˈmuːv,động từ,"Gỡ bỏ, cởi ra",,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/67b3678f-e802-4861-a540-1958e0f5dac7.png
+TEST 1 - ETS 2026,Pour,pɔː(r),động từ,"Đổ, rót",,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/0caa2ade-b26a-426d-ab0e-620b33412893.png
+TEST 1 - ETS 2026,Beverage,ˈbevərɪdʒ,danh từ,Đồ uống,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/3d5875a0-e434-415f-9894-4381d9898864.png
+TEST 1 - ETS 2026,Light fixture,laɪt ˈfɪkstʃə(r),danh từ,Thiết bị chiếu sáng,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/7c06721a-b4cb-4900-975e-72453b5cc27d.png
+TEST 1 - ETS 2026,Install,ɪnˈstɔːl,động từ,Lắp đặt,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/da423169-74fd-402b-9548-a538eb1c3c3e.png
+TEST 1 - ETS 2026,Warehouse,ˈweəhaʊs,danh từ,Kho hàng,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/f66a5ad3-052b-452e-b2ef-6fcf83e400e7.png
+TEST 1 - ETS 2026,Meeting minutes,ˈmiːtɪŋ ˈmɪnɪts,danh từ,Biên bản cuộc họp,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/f73c9aab-89ae-4127-810f-fef067b62298.png
+TEST 1 - ETS 2026,Accounting,əˈkaʊntɪŋ,danh từ,Kế toán,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/9579cabf-a348-461c-864a-30a5bba698ee.png
+TEST 1 - ETS 2026,Assistant,əˈsɪstənt,danh từ,Trợ lý,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/b1a7df91-6424-423f-b3ea-6f3321e83535.png
+TEST 1 - ETS 2026,Account,əˈkaʊnt,danh từ,Tài khoản,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/e5689255-2358-454b-928a-5d9ddca645bd.png
+TEST 1 - ETS 2026,Analyst,ˈænəlɪst,danh từ,Nhà phân tích,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/bbb56ea4-c8d8-4ac0-84f1-2d7ad5ea9ce8.png
+TEST 1 - ETS 2026,Decoration,ˌdekəˈreɪʃn,danh từ,Đồ trang trí,https://api.dictionaryapi.dev/media/pronunciations/en/decoration-us.mp3,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/d28c2abf-38b9-42d3-9677-182dbe0f904a.png
+TEST 1 - ETS 2026,Competent,ˈkɒmpɪtənt,tính từ,Có năng lực,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/6156290c-24ea-49e8-b07b-65c8b75f9b83.png
+TEST 1 - ETS 2026,Retreat,rɪˈtriːt,danh từ,Chuyến dã ngoại,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/120384f5-273b-4ce0-b13a-6928865191a4.png
+TEST 1 - ETS 2026,Solve,sɒlv,động từ,Giải quyết,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/59f67929-a2f6-4a3e-a904-96a4b1cc5a45.png
+TEST 1 - ETS 2026,Departure,dɪˈpɑːtʃə(r),danh từ,Sự khởi hành,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/0cf9cb76-cfa3-4db4-87e3-75144232316f.png
+TEST 1 - ETS 2026,Introduction,ˌɪntrəˈdʌkʃn,danh từ,Lời giới thiệu,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/f4b4c2ae-94e4-4eda-a6a5-0826aea30270.png
+TEST 1 - ETS 2026,Retirement,rɪˈtaɪəmənt,danh từ,Sự nghỉ hưu,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/5ee1d7ce-48f1-4950-83a7-f586feae74d9.png
+TEST 1 - ETS 2026,Appointment,əˈpɔɪntmənt,danh từ,Cuộc hẹn,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/3eb5cf59-52de-48e9-877b-065758b781fb.png
+TEST 1 - ETS 2026,Borrow,ˈbɒrəʊ,động từ,"Vay, mượn",,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/1f6c77f6-298f-4599-83bd-ea892c8b45ba.png
+TEST 1 - ETS 2026,Brochure,ˈbrəʊʃə(r),danh từ,Tờ gấp quảng cáo,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/3da1e68b-75e1-4e65-915a-008a28acadfb.png
+TEST 1 - ETS 2026,Confirmation,ˌkɒnfəˈmeɪʃn,danh từ,Sự xác nhận,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/8b0f3a8d-1870-42ed-b9d2-bfb9120f974f.png
+TEST 1 - ETS 2026,Process,ˈprəʊses,danh từ; động từ,Quy trình,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/b714b1be-ad2a-499a-905a-48614628b42b.png
+TEST 1 - ETS 2026,Expense,ɪkˈspens,danh từ,Chi phí,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/15048735-88da-444e-9581-9144b78bdae4.png
+TEST 1 - ETS 2026,Finance,ˈfaɪnæns,danh từ; động từ,Tài chính,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/cb5aa76e-0351-4dd0-b1ed-7410bf8d761f.png
+TEST 1 - ETS 2026,Correct,kəˈrekt,tính từ; động từ,Chính xác,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/f3297ab1-1788-4ced-8bc7-14292e989174.png
+TEST 1 - ETS 2026,Demonstration,ˌdemənˈstreɪʃn,danh từ,Buổi trình diễn,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/407cc09a-e8a5-4118-b76f-f4105767b62a.png
+TEST 1 - ETS 2026,Charge,tʃɑːdʒ,động từ; danh từ,"Sạc, tính phí",,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/aec10dea-6d31-4edf-8c71-be0353a87ad1.png
+TEST 1 - ETS 2026,Device,dɪˈvaɪs,danh từ,Thiết bị,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/7be62412-8e80-4e8e-8881-2ad16f9f797e.png
+TEST 1 - ETS 2026,Cost,kɒst,động từ; danh từ,Tốn chi phí,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/ca3f1c21-e7b7-4229-8ecb-5916508780d9.png
+TEST 1 - ETS 2026,Extra,ˈekstrə,tính từ; trạng từ,"Thêm, phụ",,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/6c2d4299-8d8d-43cf-a44e-3d5208677bea.png
+TEST 1 - ETS 2026,In charge of,ɪn tʃɑːdʒ əv,cụm từ,Phụ trách,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/f9c9404c-e894-46b6-a732-7b9528d4d1f5.png
+TEST 1 - ETS 2026,Crew,kruː,danh từ,"Đội, nhóm",,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/f2792851-6463-454f-9f9b-a6cc739ec459.png
+TEST 1 - ETS 2026,Available,əˈveɪləbl,tính từ,Có sẵn,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/9a816abb-674b-4801-9b9a-7eea71bce5bf.png
+TEST 1 - ETS 2026,Depend on,dɪˈpend ɒn,động từ,Phụ thuộc vào,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/4e4eacbd-815f-4376-b44d-d97bc5306081.png
+TEST 1 - ETS 2026,Addition,əˈdɪʃn,danh từ,Sự bổ sung,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/1278e9db-976f-410b-af93-78ac1d48cc79.png
+TEST 1 - ETS 2026,Consider,kənˈsɪdə(r),động từ,Cân nhắc,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/67f9a14e-0188-44e9-9f7d-ec82ca4b1a76.png
+TEST 1 - ETS 2026,Lower,ˈləʊə(r),động từ; tính từ,Hạ thấp,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/ae897bef-d319-44e1-ab86-ee752a5c7a11.png
+TEST 1 - ETS 2026,Headquarters,hedˈkwɔːtəz,danh từ,Trụ sở chính,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/27ae7d21-a84d-424a-a7a3-bdfef2c6612d.png
+TEST 1 - ETS 2026,Book,bʊk,động từ,Đặt chỗ,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/aed9f5a2-6cc8-4ef4-90f8-9a19d680d67b.png
+TEST 1 - ETS 2026,Regional,ˈriːdʒənl,tính từ,Thuộc khu vực,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/48756308-6f31-48eb-95a4-4a7f4ab82c42.png
+TEST 1 - ETS 2026,Performance,pəˈfɔːməns,danh từ,Hiệu suất,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/3c85068b-3c05-4ebb-bc79-4827005b872b.png
+TEST 1 - ETS 2026,Advance,ədˈvɑːns,danh từ; tính từ,"Trước, sớm",,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/1e9aebdc-df39-4f46-a379-9a852097f6c3.png
+TEST 1 - ETS 2026,Payment,ˈpeɪmənt,danh từ,Thanh toán,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/266e47f0-c0f9-4346-8fbe-91ad4fb5f95c.png
+TEST 1 - ETS 2026,Required,rɪˈkwaɪəd,tính từ,Được yêu cầu,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/d284aa70-11cb-453b-8d2b-5b41c3362a7b.png
+TEST 1 - ETS 2026,Sign up for,saɪn ʌp fɔː(r),động từ,Đăng ký,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/6536e46b-dc16-424e-8ce9-1c671bdd4e39.png
+TEST 1 - ETS 2026,Competition,ˌkɒmpəˈtɪʃn,danh từ,Cuộc thi,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/8f3fe657-f6d7-4b14-ab8a-d1285b620606.png
+TEST 1 - ETS 2026,Merchandise,ˈmɜːtʃəndaɪs,danh từ,Hàng hóa,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/1ebb11bd-fc92-4d63-9b5b-5217db3d0296.png
+TEST 1 - ETS 2026,Permit,ˈpɜːmɪt,danh từ; động từ,Giấy phép,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/85878685-54bd-4a06-8755-6b9e08a2a2c8.png
+TEST 1 - ETS 2026,Agree,əˈɡriː,động từ,Đồng ý,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/9e42c53f-fd1c-461f-b3ba-e699f2308b0a.png
+TEST 1 - ETS 2026,Annual,ˈænjuəl,tính từ,Hằng năm,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/82682db0-7bec-426d-be76-c4f3b8bd5cbc.png
+TEST 1 - ETS 2026,Expand,ɪkˈspænd,động từ,Mở rộng,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/ef03cf7d-1cbf-405e-8974-830bbc3f787b.png
+TEST 1 - ETS 2026,Take care of,teɪk keə(r) əv,động từ,"Xử lý, chăm sóc",,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/870f49ae-258e-4843-b70e-2e3d5becb476.png
+TEST 1 - ETS 2026,Attendee,əˌtenˈdiː,danh từ,Người tham dự,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/83e2119b-ea84-4b7d-a98b-d9c7c73ac4ea.png
+TEST 1 - ETS 2026,Job opening,dʒɒb ˈəʊpnɪŋ,danh từ,Vị trí tuyển dụng,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/f2b6f9bc-0bc9-4736-be78-a48256f56552.png
+TEST 1 - ETS 2026,Author,ˈɔːθə(r),danh từ,Tác giả,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/d52b58a1-a81c-450b-b958-429085900503.png
+TEST 1 - ETS 2026,Reserve,rɪˈzɜːv,động từ,Đặt trước,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/fdc759cb-95b0-4fba-98f8-3f3d63aa6fe6.png
+TEST 1 - ETS 2026,Revise,rɪˈvaɪz,động từ,Sửa đổi,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/80ab0476-527b-4b78-a678-18ca01cea272.png
+TEST 1 - ETS 2026,Budget,ˈbʌdʒɪt,danh từ,Ngân sách,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/d816fd55-4628-4841-b9b5-bad904f51753.png
+TEST 1 - ETS 2026,Get rid of,ɡet rɪd əv,động từ,Loại bỏ,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/d3a2784f-205a-460a-b489-2bf7ac064c48.png
+TEST 1 - ETS 2026,Unfortunately,ʌnˈfɔːtʃənətli,trạng từ,Thật không may,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/c6dfb77b-e8e5-41db-808d-e51580331ed7.png
+TEST 1 - ETS 2026,Operation,ˌɒpəˈreɪʃn,danh từ,Hoạt động,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/caaced77-c2e0-4b9b-b88a-c485c33b59fb.png
+TEST 1 - ETS 2026,Application,ˌæplɪˈkeɪʃn,danh từ,Đơn xin,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/2174d220-032c-4dd1-a4a1-4dfe74025542.png
+TEST 1 - ETS 2026,Directions,dəˈrekʃnz,danh từ,Chỉ dẫn,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/0416f452-d9f6-4d7e-975d-bec7eefec1f1.png
+TEST 1 - ETS 2026,Owner,ˈəʊnə(r),danh từ,Chủ sở hữu,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/417e22c8-7749-4c24-b4f2-1058f71782fb.png
+TEST 1 - ETS 2026,Location,ləʊˈkeɪʃn,danh từ,Địa điểm,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/36a62dd1-fbcd-4cf5-8ab5-fb3762d48706.png
+TEST 1 - ETS 2026,Local,ˈləʊkl,tính từ,Địa phương,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/5e2fd681-b112-47f8-8401-f5762268bd99.png
+TEST 1 - ETS 2026,Advantage,ədˈvɑːntɪdʒ,danh từ,Lợi thế,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/ba42ab83-c633-48c3-87ee-e71b38902dce.png
+TEST 1 - ETS 2026,Rental,ˈrentl,danh từ; tính từ,Sự cho thuê,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/8c458359-8118-422e-bd46-ef88336385b1.png
+TEST 1 - ETS 2026,Release,rɪˈliːs,động từ; danh từ,Phát hành,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/bca0797f-f460-4cb3-b3b1-2606600668a2.png
+TEST 1 - ETS 2026,Issue,ˈɪʃuː,danh từ; động từ,Vấn đề,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/326b3d8f-bd51-44a4-83e7-a29bb0ff083c.png
+TEST 1 - ETS 2026,Secure,sɪˈkjʊə(r),động từ; tính từ,"Đạt được, đảm bảo",,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/4705e7f1-d06d-4f48-9e55-ddd6cd0efdd6.png
+TEST 1 - ETS 2026,Conduct,kənˈdʌkt,động từ,Tiến hành,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/695257c4-88f5-47fb-ab0c-93f43bad0e52.png
+TEST 1 - ETS 2026,Negotiate,nɪˈɡəʊʃieɪt,động từ,Đàm phán,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/6440156f-7a8e-4c99-9cab-88f35bf136b1.png
+TEST 1 - ETS 2026,Maintenance,ˈmeɪntənəns,danh từ,Bảo trì,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/26cea94f-188b-4f6b-96ef-2d569c71c2e3.png
+TEST 1 - ETS 2026,Randomly,ˈrændəmli,trạng từ,Ngẫu nhiên,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/2a9b4ca2-c767-4f32-821f-244f56207844.png
+TEST 1 - ETS 2026,Malfunction,ˌmælˈfʌŋkʃn,danh từ; động từ,Trục trặc,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/3ca6abbf-745b-4750-9b23-0615936aa16e.png
+TEST 1 - ETS 2026,Complete,kəmˈpliːt,động từ; tính từ,Hoàn thành,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/a46fa8e8-9622-49a3-a96c-6f480546eea4.png
+TEST 1 - ETS 2026,Increase,ɪnˈkriːs,động từ; danh từ,Tăng lên,,https://qfhmnlvgweznzcsoijyr.supabase.co/storage/v1/object/public/vocabulary-images/972d24f5-8bf0-4f90-aa2f-11e1ac1797ab.png

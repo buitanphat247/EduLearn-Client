@@ -6,7 +6,7 @@ import { IoArrowBackOutline } from "react-icons/io5";
 import { useRouter } from "next/navigation";
 
 interface QuizHeaderProps {
-  folderId: number;
+  folderId: number | string;
   folderName: string;
   currentQuestionIndex: number;
   totalQuestions: number;
@@ -37,7 +37,16 @@ export default function QuizHeader({
         <Link href="/vocabulary" className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
           Học từ vựng
         </Link>
-        {folderName && (
+        {folderId === "review" ? (
+          <>
+            <span className="text-slate-400 dark:text-slate-600">/</span>
+            <Link href="/vocabulary/review/detail" className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
+              Ôn tập
+            </Link>
+            <span className="text-slate-400 dark:text-slate-600">/</span>
+            <span className="text-slate-600 dark:text-slate-300 font-medium">Kiểm tra</span>
+          </>
+        ) : folderName && (
           <>
             <span className="text-slate-400 dark:text-slate-600">/</span>
             <Link href={`/vocabulary/${folderId}`} className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
@@ -65,7 +74,7 @@ export default function QuizHeader({
 
         <Button
           icon={<IoArrowBackOutline />}
-          onClick={() => router.push(`/vocabulary/${folderId}`)}
+          onClick={() => router.push(folderId === "review" ? "/vocabulary/review/detail" : `/vocabulary/${folderId}`)}
           size="middle"
           className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 border-0 text-white font-medium shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105"
         >

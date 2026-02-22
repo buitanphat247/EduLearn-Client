@@ -44,6 +44,7 @@ export function useWritingData(id: string): UseWritingDataReturn {
             userPoints: contentData.userPoints || 0,
             practiceType: contentData.practiceType || null,
             topic: contentData.topic || "",
+            createdAt: historyData.created_at || contentData.createdAt,
           };
 
           setData(mappedData);
@@ -99,7 +100,7 @@ export function useWritingData(id: string): UseWritingDataReturn {
   }, [id, message, router]);
 
   useEffect(() => {
-    // Validate ID: check for undefined, null, empty string, or string "undefined"
+    // Validate ID
     if (!id || id === "undefined" || id === "null") {
       message.error("Không tìm thấy ID bài luyện tập");
       router.push("/writing");
@@ -107,20 +108,66 @@ export function useWritingData(id: string): UseWritingDataReturn {
       return;
     }
 
+    let isIgnore = false;
+
     const loadData = async () => {
       const isHistoryId = /^\d+$/.test(id);
 
-      if (isHistoryId) {
-        await loadFromHistory(parseInt(id, 10));
-      } else {
-        loadFromSession();
-      }
+      try {
+        if (isHistoryId) {
+          const historyId = parseInt(id, 10);
+          const response = await getWritingHistoryById(historyId);
 
-      setLoading(false);
+          if (!isIgnore && response.status === 200 && response.data) {
+            const historyData = response.data;
+            const contentData = historyData.data;
+
+            const mappedData: WritingGenerateResponse = {
+              id: contentData.id || id.toString(),
+              language: contentData.language || "English",
+              contentType: contentData.contentType || "DIALOGUE",
+              difficulty: contentData.difficulty || 2,
+              englishSentences: contentData.englishSentences || [],
+              vietnameseSentences: contentData.vietnameseSentences || [],
+              totalSentences: contentData.totalSentences || 0,
+              userPoints: contentData.userPoints || 0,
+              practiceType: contentData.practiceType || null,
+              topic: contentData.topic || "",
+              createdAt: historyData.created_at || contentData.createdAt,
+            };
+
+            setData(mappedData);
+
+            if (historyData.current_index !== undefined && typeof historyData.current_index === "number") {
+              setCurrentIndex(historyData.current_index);
+            }
+          } else if (!isIgnore) {
+            message.error(response.message || "Không tìm thấy dữ liệu bài luyện");
+            router.push("/writing");
+          }
+        } else {
+          // loadFromSession handles redirection internally if needed
+          if (!isIgnore) loadFromSession();
+        }
+      } catch (error: any) {
+        if (!isIgnore) {
+          console.error("Error fetching data:", error);
+          message.error(error?.message || "Không thể tải dữ liệu bài luyện");
+          router.push("/writing");
+        }
+      } finally {
+        if (!isIgnore) {
+          setLoading(false);
+        }
+      }
     };
 
     loadData();
-  }, [id, loadFromHistory, loadFromSession, message, router]);
+
+    return () => {
+      isIgnore = true;
+    };
+  }, [id, loadFromSession, message, router]);
 
   return {
     data,

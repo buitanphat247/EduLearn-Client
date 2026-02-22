@@ -12,7 +12,7 @@ const ACTIONS = [
         color: "blue",
     },
     {
-        href: "/vocabulary",
+        href: "/vocabulary/review/detail",
         icon: ReloadOutlined,
         title: "Ôn tập flashcard",
         subtitle: "Bắt đầu luyện tập",
@@ -33,9 +33,8 @@ export default function QuickActionsGrid({ className = "" }: QuickActionsGridPro
                 return (
                     <Link key={action.title} href={action.href} className="block group">
                         <div
-                            className={`rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 p-5 shadow-sm hover:shadow-md transition-all duration-300 h-full ${
-                                isBlue ? "hover:border-blue-200 dark:hover:border-blue-500/30" : "hover:border-emerald-200 dark:hover:border-emerald-500/30"
-                            }`}
+                            className={`rounded-2xl bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 p-5 shadow-sm hover:shadow-md transition-all duration-300 h-full ${isBlue ? "hover:border-blue-200 dark:hover:border-blue-500/30" : "hover:border-emerald-200 dark:hover:border-emerald-500/30"
+                                }`}
                         >
                             <div className="flex items-center gap-3">
                                 <div
@@ -48,9 +47,8 @@ export default function QuickActionsGrid({ className = "" }: QuickActionsGridPro
                                 <div className="flex-1 min-w-0">
                                     <h3 className="text-sm font-bold text-slate-800 dark:text-white">{action.title}</h3>
                                     <span
-                                        className={`inline-flex items-center gap-1 text-xs font-medium group-hover:gap-2 transition-all duration-300 ${
-                                            isBlue ? "text-blue-600 dark:text-blue-400" : "text-emerald-600 dark:text-emerald-400"
-                                        }`}
+                                        className={`inline-flex items-center gap-1 text-xs font-medium group-hover:gap-2 transition-all duration-300 ${isBlue ? "text-blue-600 dark:text-blue-400" : "text-emerald-600 dark:text-emerald-400"
+                                            }`}
                                     >
                                         {action.subtitle} <RightOutlined className="text-[10px]" />
                                     </span>

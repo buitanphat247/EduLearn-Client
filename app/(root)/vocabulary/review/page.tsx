@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { BookOutlined, ClockCircleOutlined, RiseOutlined, TrophyOutlined } from "@ant-design/icons";
 import {
     ReviewBreadcrumb,
@@ -39,6 +39,7 @@ export default function StatisticsPage() {
     const [stats, setStats] = useState<UserVocabularyStats | null>(null);
     const [activity, setActivity] = useState<ActivityStat[]>([]);
     const [dueWords, setDueWords] = useState<UserVocabularyResponse[]>([]);
+    const [dueTotal, setDueTotal] = useState(0);
     const [learnedWords, setLearnedWords] = useState<UserVocabularyResponse[]>([]);
     const [learnedTotal, setLearnedTotal] = useState(0);
     const [learnedPage, setLearnedPage] = useState(1);
@@ -46,46 +47,52 @@ export default function StatisticsPage() {
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState<number | null>(null);
     const [mounted, setMounted] = useState(false);
+    const isMountedRef = useRef(true);
 
     useEffect(() => {
         const timer = setTimeout(() => setMounted(true), 50);
         return () => clearTimeout(timer);
     }, []);
 
-    useEffect(() => {
-        const init = async () => {
-            try {
-                const profile = await getProfile();
-                if (profile && profile.user_id) {
-                    setUserId(Number(profile.user_id));
-                    await fetchData(Number(profile.user_id));
-                }
-            } catch (error) {
-                console.error("Error fetching profile", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        init();
-    }, []);
-
-    const fetchData = async (id: number) => {
+    const fetchData = useCallback(async (id: number) => {
         setLoading(true);
         try {
             const [statsData, activityData, dueData] = await Promise.all([
                 getUserVocabularyStats(id),
                 getUserActivityStats(id),
-                getDueWords(id, 20),
+                getDueWords(id, { limit: 20 }),
             ]);
+            if (!isMountedRef.current) return;
             setStats(statsData);
             setActivity(activityData || []);
-            setDueWords(Array.isArray(dueData) ? dueData : []);
+            setDueWords(dueData?.data || []);
+            setDueTotal(dueData?.total || 0);
         } catch (error: unknown) {
-            message.error("Không thể tải thông tin thống kê");
+            if (isMountedRef.current) message.error("Không thể tải thông tin thống kê");
         } finally {
-            setLoading(false);
+            if (isMountedRef.current) setLoading(false);
         }
-    };
+    }, [message]);
+
+    useEffect(() => {
+        isMountedRef.current = true;
+        const init = async () => {
+            try {
+                const profile = await getProfile();
+                if (!isMountedRef.current) return;
+                if (profile && profile.user_id) {
+                    setUserId(Number(profile.user_id));
+                    await fetchData(Number(profile.user_id));
+                }
+            } catch (error) {
+                if (isMountedRef.current) console.error("Error fetching profile", error);
+            } finally {
+                if (isMountedRef.current) setLoading(false);
+            }
+        };
+        init();
+        return () => { isMountedRef.current = false; };
+    }, [fetchData]);
 
     useEffect(() => {
         if (!userId) return;
@@ -93,12 +100,13 @@ export default function StatisticsPage() {
             setLearnedLoading(true);
             try {
                 const res = await getUserVocabularyByUser(userId, { page: learnedPage, limit: 50 });
+                if (!isMountedRef.current) return;
                 setLearnedWords(Array.isArray(res.data) ? res.data : []);
                 setLearnedTotal(res.total ?? 0);
             } catch {
-                message.error("Không thể tải danh sách từ vựng đã học");
+                if (isMountedRef.current) message.error("Không thể tải danh sách từ vựng đã học");
             } finally {
-                setLearnedLoading(false);
+                if (isMountedRef.current) setLearnedLoading(false);
             }
         };
         load();
@@ -124,7 +132,7 @@ export default function StatisticsPage() {
 
     const total = safeNum(stats?.total);
     const mastered = safeNum(stats?.mastered);
-    const dueCount = dueWords?.length ?? 0;
+    const dueCount = stats?.dueCount ?? dueTotal;
     const dailyGoal = 20;
     const reviewedToday = safeNum(stats?.reviewedToday);
     const learnedCount = safeNum(stats?.notMastered);
@@ -146,7 +154,7 @@ export default function StatisticsPage() {
         { label: "Tổng từ vựng", value: total, icon: <BookOutlined className="text-2xl" />, variant: "blue" },
         { label: "Đang học", value: learnedCount, icon: <RiseOutlined className="text-2xl" />, variant: "cyan" },
         { label: "Đã thành thạo", value: mastered, icon: <TrophyOutlined className="text-2xl" />, variant: "emerald" },
-        { label: "Cần ôn tập", value: dueCount, icon: <ClockCircleOutlined className="text-2xl" />, variant: "indigo" },
+        { label: "Cần ôn tập", value: dueCount, icon: <ClockCircleOutlined className="text-2xl" />, variant: "indigo", path: "/vocabulary/review/detail" },
     ];
 
     if (loading) {
@@ -193,19 +201,20 @@ export default function StatisticsPage() {
                                         <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-400">#</th>
                                         <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-400">Từ vựng</th>
                                         <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-400">Nghĩa</th>
+                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-400 w-20">Gói</th>
                                         <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-400">Thời gian review lại</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {learnedLoading ? (
                                         <tr>
-                                            <td colSpan={4} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
+                                            <td colSpan={5} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
                                                 Đang tải...
                                             </td>
                                         </tr>
                                     ) : learnedWords.length === 0 ? (
                                         <tr>
-                                            <td colSpan={4} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
+                                            <td colSpan={5} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
                                                 Chưa có từ vựng nào
                                             </td>
                                         </tr>
@@ -223,6 +232,17 @@ export default function StatisticsPage() {
                                                 </td>
                                                 <td className="px-6 py-3 text-slate-600 dark:text-slate-300">
                                                     {item.vocabulary?.translation ?? "-"}
+                                                </td>
+                                                <td className="px-6 py-3">
+                                                    {(item as { folder_pro?: boolean }).folder_pro ? (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/50">
+                                                            PRO
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400">
+                                                            FREE
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-3 text-slate-600 dark:text-slate-300">
                                                     {item.next_review_at

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { App, ConfigProvider, theme } from "antd";
 import { LeftOutlined, RightOutlined, SoundOutlined, SwapOutlined } from "@ant-design/icons";
-import { getVocabulariesByFolder, type VocabularyResponse } from "@/lib/api/vocabulary";
+import { getVocabulariesByFolder, getDueWords, getVocabularyDetail, getVocabularyBatch, type VocabularyResponse } from "@/lib/api/vocabulary";
+import { getSubscriptionStatus } from "@/lib/api/subscription";
 import { IoArrowBackOutline } from "react-icons/io5";
 import VocabularyFlashcardSkeleton from "@/app/components/features/vocabulary/VocabularyFlashcardSkeleton";
 import { useTheme } from "@/app/context/ThemeContext";
@@ -17,7 +18,8 @@ export default function VocabularyFlashcard() {
   const { message } = App.useApp();
   const router = useRouter();
   const params = useParams();
-  const folderId = params?.folderId ? parseInt(params.folderId as string, 10) : null;
+  const folderIdString = params?.folderId as string;
+  const folderId = folderIdString === "review" ? "review" : (folderIdString ? parseInt(folderIdString, 10) : null);
   const { theme: currentTheme } = useTheme();
 
   const [vocabularies, setVocabularies] = useState<VocabularyResponse[]>([]);
@@ -59,12 +61,53 @@ export default function VocabularyFlashcard() {
 
     setLoading(true);
     try {
-      const data = await getVocabulariesByFolder(folderId);
+      let data: any[];
+      if (folderId === "review") {
+        if (!userId) {
+          setLoading(false);
+          return;
+        }
+        const [sub, res] = await Promise.all([
+          getSubscriptionStatus().catch(() => ({ isPro: false })),
+          getDueWords(userId, { limit: 20 }),
+        ]);
+        const allowed = sub?.isPro ? res.data : (res.data || []).filter((x: any) => !x.folder_pro);
+
+        if (allowed.length > 0) {
+          const sourceWordIds = allowed.map((item: any) => item.sourceWordId);
+          const details = await getVocabularyBatch(sourceWordIds);
+
+          data = allowed.map((item: any) => {
+            const detail = details.find((d: any) => d.sourceWordId === item.sourceWordId);
+            return {
+              ...(detail || item.vocabulary),
+              sourceWordId: item.sourceWordId,
+              nextReviewAt: item.next_review_at,
+              last_grade: item.last_grade,
+              repetition: item.repetition
+            };
+          });
+        } else {
+          data = [];
+        }
+      } else {
+        data = await getVocabulariesByFolder(folderId as number);
+      }
       setVocabularies(data);
       setCurrentIndex(0);
       setIsFlipped(false);
       setReviewLevels({});
     } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 403 || status === 404) {
+        if (status === 404) {
+          message.warning("Không tìm thấy thư mục từ vựng.");
+        } else {
+          message.warning(error?.response?.data?.message || "Bạn cần gói Pro để truy cập từ vựng.");
+        }
+        router.replace("/vocabulary");
+        return;
+      }
       console.error("Error fetching vocabularies:", error);
       message.error(error?.message || "Không thể tải danh sách từ vựng");
       setVocabularies([]);
@@ -72,12 +115,17 @@ export default function VocabularyFlashcard() {
     } finally {
       setLoading(false);
     }
-  }, [folderId, message]);
+  }, [folderId, userId, message, router]);
 
   useEffect(() => {
     if (folderId) fetchVocabularies();
-  }, [folderId, fetchVocabularies]);
+  }, [folderId, userId, fetchVocabularies]);
 
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
   // Load trạng thái đã học của user để hiển thị đúng nút đã chọn
   useEffect(() => {
     if (!userId || vocabularies.length === 0) return;
@@ -88,6 +136,7 @@ export default function VocabularyFlashcard() {
         userId,
         vocabularies.map((v) => v.sourceWordId),
       );
+      if (!isMountedRef.current) return;
       const loaded: Record<number, ReviewLevel> = {};
       batch.forEach((item) => {
         const level = gradeToLevel(item.last_grade);
@@ -98,7 +147,10 @@ export default function VocabularyFlashcard() {
     loadBatch();
   }, [userId, vocabularies, gradeToLevel]);
 
-  const folderName = useMemo(() => vocabularies[0]?.folder?.folderName || "", [vocabularies]);
+  const folderName = useMemo(() => {
+    if (folderId === "review") return "Ôn tập tổng hợp";
+    return vocabularies[0]?.folder?.folderName || "";
+  }, [vocabularies, folderId]);
   const currentVocab = useMemo(() => (vocabularies.length > 0 ? vocabularies[currentIndex] : null), [vocabularies, currentIndex]);
 
   // Reset flip khi chuyển thẻ
@@ -198,23 +250,6 @@ export default function VocabularyFlashcard() {
     [currentVocab, userId, currentIndex, vocabularies.length, handleNext, message]
   );
 
-  const parseExample = useCallback((exampleStr: string) => {
-    try {
-      if (!exampleStr) return null;
-      const parsed = JSON.parse(exampleStr);
-      return {
-        content: parsed.content || "",
-        translation: parsed.translation || "",
-      };
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const parsedExample = useMemo(() => {
-    if (!currentVocab?.example) return null;
-    return parseExample(currentVocab.example);
-  }, [currentVocab?.example, parseExample]);
 
   if (!folderId) {
     return (
@@ -252,7 +287,16 @@ export default function VocabularyFlashcard() {
               <Link href="/vocabulary" className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
                 Học từ vựng
               </Link>
-              {folderName && (
+              {folderId === "review" ? (
+                <>
+                  <span className="text-slate-400 dark:text-slate-600">/</span>
+                  <Link href="/vocabulary/review/detail" className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
+                    Ôn tập
+                  </Link>
+                  <span className="text-slate-400 dark:text-slate-600">/</span>
+                  <span className="text-slate-600 dark:text-slate-300 font-medium">Flashcard</span>
+                </>
+              ) : folderName && (
                 <>
                   <span className="text-slate-400 dark:text-slate-600">/</span>
                   <Link href={`/vocabulary/${folderId}`} className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
@@ -276,11 +320,11 @@ export default function VocabularyFlashcard() {
 
               <button
                 type="button"
-                onClick={() => router.push(`/vocabulary/${folderId}`)}
+                onClick={() => router.push(folderId === "review" ? "/vocabulary/review/detail" : `/vocabulary/${folderId}`)}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 border-0 text-white font-medium shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105"
               >
                 <IoArrowBackOutline className="text-lg" />
-                Quay lại danh sách
+                Quay lại
               </button>
             </div>
           </div>
@@ -290,10 +334,10 @@ export default function VocabularyFlashcard() {
               <p className="text-slate-500 dark:text-slate-400 mb-4">Chưa có từ vựng nào trong folder này.</p>
               <button
                 type="button"
-                onClick={() => router.push(`/vocabulary/${folderId}`)}
+                onClick={() => router.push(folderId === "review" ? "/vocabulary" : `/vocabulary/${folderId}`)}
                 className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
               >
-                Thêm từ vựng ngay
+                {folderId === "review" ? "Về trang chủ học tập" : "Thêm từ vựng ngay"}
               </button>
             </div>
           ) : (
@@ -385,13 +429,7 @@ export default function VocabularyFlashcard() {
                           </span>
                         )}
 
-                        {/* Mini Example Preview */}
-                        {parsedExample && (
-                          <div className="max-w-lg mx-auto bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl text-sm border border-slate-100 dark:border-slate-700/50 transition-colors">
-                            <p className="text-slate-700 dark:text-slate-300 italic mb-1" dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(parsedExample.content) }} />
-                            <p className="text-slate-500" dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(parsedExample.translation) }} />
-                          </div>
-                        )}
+
                       </div>
 
                       <div className="text-sm text-slate-400 dark:text-slate-500 mt-4 flex items-center gap-2">
@@ -443,7 +481,7 @@ export default function VocabularyFlashcard() {
                       } ${isProcessing ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                   >
                     <span>Học lại</span>
-                    <span className="text-xs font-medium opacity-70">30m</span>
+                    <span className="text-xs font-medium opacity-70">1m</span>
                   </button>
                   <button
                     type="button"

@@ -6,11 +6,13 @@ import { CheckOutlined } from "@ant-design/icons";
 interface WritingPracticeContentProps {
   vietnameseSentences: string[];
   currentSentenceIndex: number;
+  contentType: "DIALOGUE" | "PARAGRAPH";
 }
 
 export default function WritingPracticeContent({
   vietnameseSentences,
   currentSentenceIndex,
+  contentType,
 }: WritingPracticeContentProps) {
   const activeSentenceRef = useRef<HTMLDivElement>(null);
 
@@ -20,18 +22,44 @@ export default function WritingPracticeContent({
     }
   }, [currentSentenceIndex]);
 
+  const isParagraph = contentType === "PARAGRAPH";
+
   return (
     <div className="lg:col-span-7 space-y-6">
       <div className="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded-xl shadow-xl overflow-hidden relative transition-colors duration-300">
-        <div className="p-4 max-h-[500px] overflow-y-auto custom-scrollbar scroll-smooth">
-          <div className="space-y-4 px-2 py-4">
+        <div className="p-4 h-[500px] overflow-y-auto custom-scrollbar scroll-smooth">
+          <div className={isParagraph ? "px-2 py-4 leading-loose" : "space-y-4 px-2 py-4"}>
             {vietnameseSentences.map((sentence, index) => {
-              const parts = sentence.split(":");
-              const speaker = parts[0]?.trim() || "";
-              const content = parts.slice(1).join(":").trim();
-
               const isActive = index === currentSentenceIndex;
               const isCompleted = index < currentSentenceIndex;
+
+              /* ─── PARAGRAPH: inline text, no blur, highlight active ─── */
+              if (isParagraph) {
+                return (
+                  <span
+                    key={index}
+                    ref={isActive ? activeSentenceRef as React.RefObject<HTMLSpanElement> : null}
+                    className={`
+                      inline text-base font-medium transition-all duration-300 cursor-default
+                      ${isActive
+                        ? "bg-amber-100 dark:bg-amber-900/30 text-slate-800 dark:text-slate-100 rounded px-1 ring-2 ring-amber-400/50"
+                        : isCompleted
+                          ? "text-slate-500 dark:text-slate-400"
+                          : "text-slate-600 dark:text-slate-300"
+                      }
+                    `}
+                  >
+                    {sentence}
+                    {isCompleted && <CheckOutlined className="text-xs text-emerald-500 ml-1" />}
+                    {" "}
+                  </span>
+                );
+              }
+
+              /* ─── DIALOGUE: chat bubbles with speaker ─── */
+              const colonIndex = sentence.indexOf(":");
+              const speaker = colonIndex > -1 ? sentence.substring(0, colonIndex).trim() : "";
+              const content = colonIndex > -1 ? sentence.substring(colonIndex + 1).trim() : sentence;
 
               return (
                 <div key={index} className="flex w-full justify-start">
@@ -51,13 +79,15 @@ export default function WritingPracticeContent({
                       className={`text-base leading-relaxed wrap-break-word font-medium ${isActive ? "text-slate-800 dark:text-slate-100" : isCompleted ? "text-slate-600 dark:text-slate-300" : "text-slate-400 dark:text-slate-500"
                         }`}
                     >
-                      <span
-                        className={`text-sm font-bold mr-2 ${isActive ? "text-blue-600 dark:text-blue-400" : isCompleted ? "text-emerald-600 dark:text-emerald-500" : "text-slate-500 dark:text-slate-600"
-                          }`}
-                      >
-                        {speaker}:
-                        {isCompleted && <CheckOutlined className="text-xs ml-1" />}
-                      </span>
+                      {speaker && (
+                        <span
+                          className={`text-sm font-bold mr-2 ${isActive ? "text-blue-600 dark:text-blue-400" : isCompleted ? "text-emerald-600 dark:text-emerald-500" : "text-slate-500 dark:text-slate-600"
+                            }`}
+                        >
+                          {speaker}:
+                          {isCompleted && <CheckOutlined className="text-xs ml-1" />}
+                        </span>
+                      )}
                       <span>{content}</span>
                     </div>
                   </div>

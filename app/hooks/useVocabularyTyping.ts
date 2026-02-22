@@ -25,40 +25,23 @@ export function useVocabularyTyping(vocabularies: VocabularyResponse[]) {
   const lastQuestionIdRef = useRef<number | null>(null);
   const inputRef = useRef<any>(null);
 
-  // Parse example để lấy câu
-  const parseExample = useCallback((exampleStr: string) => {
-    try {
-      if (!exampleStr) return null;
-      const parsed = JSON.parse(exampleStr);
-      return parsed.content || "";
-    } catch {
-      return null;
-    }
-  }, []);
-
   // Generate typing questions
-  const generateQuestions = useCallback(
-    (vocabs: VocabularyResponse[]) => {
-      const questionCount = vocabs.length;
-      const shuffled = [...vocabs].sort(() => Math.random() - 0.5);
-      const selectedVocabs = shuffled.slice(0, questionCount);
+  const generateQuestions = useCallback((vocabs: VocabularyResponse[]) => {
+    const questionCount = vocabs.length;
+    const shuffled = [...vocabs].sort(() => Math.random() - 0.5);
+    const selectedVocabs = shuffled.slice(0, questionCount);
 
-      const newQuestions: TypingQuestion[] = selectedVocabs.map((vocab, index) => {
-        const example = parseExample(vocab.example);
-        const sentence = example || vocab.content;
+    const newQuestions: TypingQuestion[] = selectedVocabs.map((vocab, index) => {
+      return {
+        id: index + 1,
+        word: vocab,
+        sentence: vocab.content,
+      };
+    });
 
-        return {
-          id: index + 1,
-          word: vocab,
-          sentence: sentence,
-        };
-      });
-
-      setQuestions(newQuestions);
-      lastQuestionIdRef.current = null;
-    },
-    [parseExample],
-  );
+    setQuestions(newQuestions);
+    lastQuestionIdRef.current = null;
+  }, []);
 
   const currentQuestion = useMemo(() => questions[currentQuestionIndex] || null, [questions, currentQuestionIndex]);
 

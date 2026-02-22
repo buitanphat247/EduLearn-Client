@@ -17,10 +17,10 @@ const getBaseURL = getApiBaseUrl;
 /**
  * API timeout in milliseconds
  * @constant {number}
- * @default 30000
- * @description Can be overridden via NEXT_PUBLIC_API_TIMEOUT env variable
+ * @default 120000
+ * @description Can be overridden via NEXT_PUBLIC_API_TIMEOUT env variable. Tăng thành 120s để AI khỏi bị đứt kết nối.
  */
-const API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT) || 30000;
+const API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT) || 120000;
 
 /**
  * Auth cache TTL in milliseconds

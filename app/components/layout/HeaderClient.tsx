@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
 import { Button, Dropdown, Avatar } from "antd";
 import Swal from "sweetalert2";
 import type { MenuProps } from "antd";
@@ -16,11 +16,13 @@ import { BulbOutlined, BulbFilled } from "@ant-design/icons";
 import { signOut } from "@/lib/api/auth";
 import type { AuthState } from "@/lib/utils/auth-server";
 import { useTheme } from "@/app/context/ThemeContext";
-import { saveUserDataToSession, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
+import { saveUserDataToSession, getUserDataFromSession, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
+import { getDecryptedUser } from "@/lib/utils/cookie-encryption";
 import ScrollProgress from "./ScrollProgress";
 import NotificationBell from "@/app/components/notifications/NotificationBell";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
+import { FEATURES } from "@/app/config/features";
 import "./Header.css";
 
 interface HeaderClientProps {
@@ -80,50 +82,45 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
     return avatarStr !== '' && avatarStr !== 'null' && avatarStr !== 'undefined';
   }, [user?.avatar]);
 
+  const isMountedRef = useRef(true);
   useEffect(() => {
+    isMountedRef.current = true;
     const syncUser = () => {
-      if (typeof window !== "undefined") {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-            // Reset imgError when user changes
-            setImgError(false);
-          } catch (e) {
-            console.error("Error parsing user from localStorage", e);
-          }
+      if (typeof window === "undefined") return;
+
+      const sessionUser = getUserDataFromSession();
+      if (sessionUser) {
+        if (isMountedRef.current) {
+          setUser(sessionUser);
+          setImgError(false);
         }
+        return;
       }
+
+      getDecryptedUser().then((cookieUser) => {
+        if (!isMountedRef.current) return;
+        if (cookieUser) {
+          setUser(cookieUser);
+          setImgError(false);
+          saveUserDataToSession(cookieUser);
+        }
+      }).catch(() => { /* ignore */ });
     };
 
     syncUser();
-
-    window.addEventListener("storage", (e) => {
-      if (e.key === "user") syncUser();
-    });
-
     window.addEventListener("user-updated", syncUser);
 
     return () => {
-      window.removeEventListener("storage", syncUser);
+      isMountedRef.current = false;
       window.removeEventListener("user-updated", syncUser);
     };
   }, []);
 
   useEffect(() => {
     if (user && typeof window !== "undefined") {
-      localStorage.setItem("user", JSON.stringify(user));
       saveUserDataToSession(user);
       getUserIdFromCookieAsync().catch(() => { });
     }
-
-    const handleStorageChange = () => {
-      window.location.reload();
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
   }, [user]);
 
   const handleAboutClick: MenuProps["onClick"] = useCallback(({ key }: { key: string }) => {
@@ -178,9 +175,19 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
     if (!user) return null;
     const roleId = user.role_id || user.role?.role_id;
     const roleName = user.role?.role_name?.toLowerCase() || "";
-    if (roleId === 3 || roleName === "student" || roleName === "học sinh") return "/user";
-    if (roleId === 2 || roleName === "teacher" || roleName === "giáo viên" || roleName === "giảng viên") return "/admin";
-    if (roleId === 1 || roleName === "admin" || roleName === "super admin") return "/super-admin";
+
+    // Teacher portal — chỉ khi module admin bật
+    if (FEATURES.admin && (roleId === 2 || roleName === "teacher" || roleName === "giáo viên" || roleName === "giảng viên")) {
+      return "/admin";
+    }
+
+    // Admin/Super Admin portal — chỉ khi module super-admin bật
+    if (FEATURES.superAdmin && (roleId === 1 || roleName === "admin" || roleName === "super_admin" || roleName === "super admin" || roleName === "superadmin")) {
+      return "/super-admin";
+    }
+
+    // Default User/Student portal — chỉ khi module user bật
+    if (FEATURES.user) return "/user";
     return null;
   }, [user]);
 
@@ -344,7 +351,7 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
             href="/notifications"
             prefetch={true}
             onMouseEnter={() => router.prefetch("/notifications")}
-            className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white flex-grow"
+            className="text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white grow"
           >
             Thông báo
           </Link>
@@ -407,6 +414,7 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
                 <NavLink to="/vocabulary" label="Học từ vựng" />
                 <NavLink to="/writing" label="Luyện viết" />
                 <NavLink to="/listening" label="Luyện nghe" />
+                <NavLink to="/documents" label="Tài liệu" />
               </>
             )}
 

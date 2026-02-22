@@ -39,18 +39,15 @@ class ClassSocketClient {
     if (typeof window === "undefined") return null;
 
     try {
-      // Import from cookies utility
-      const { getUserIdFromCookie } = require("@/lib/utils/cookies");
+      const { getUserIdFromCookie, getUserIdFromSession, getUserDataFromSession } = require("@/lib/utils/cookies");
       const userId = getUserIdFromCookie();
       if (userId) return userId;
 
-      // Fallback to localStorage for compatibility
-      const userStr = localStorage.getItem("user");
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        if (user.user_id) return user.user_id;
-        if (user.id) return user.id;
-      }
+      const sessionId = getUserIdFromSession();
+      if (sessionId) return sessionId;
+
+      const userData = getUserDataFromSession();
+      if (userData?.user_id) return userData.user_id;
     } catch (error) {
       if (isDev) console.error("[ClassSocket] Error getting user ID:", error);
     }
@@ -83,9 +80,7 @@ class ClassSocketClient {
     if (typeof window === "undefined") return null;
     try {
       const { getCookie } = require("@/lib/utils/cookies");
-      const token = getCookie("_at") || getCookie("access_token") || getCookie("token");
-      if (token) return token;
-      return localStorage.getItem("token") || localStorage.getItem("access_token");
+      return getCookie("_at") || getCookie("access_token") || getCookie("token") || null;
     } catch (e) {
       return null;
     }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getRagTestDetail, type RagTestDetail } from "@/lib/api/rag-exams";
 import { getTestAttempts, type StudentAttempt } from "@/lib/api/exam-attempts";
-import { getUserIdFromCookie } from "@/lib/utils/cookies";
+import { getUserIdFromCookie, getUserDataFromSession } from "@/lib/utils/cookies";
 
 export function useExamHistory(examId: string) {
   const fetchIdRef = useRef(0);
@@ -18,7 +18,7 @@ export function useExamHistory(examId: string) {
     let id = Number(getUserIdFromCookie());
     if (!id && typeof window !== "undefined") {
       try {
-        const u = JSON.parse(localStorage.getItem("user") || "{}");
+        const u = getUserDataFromSession() || {};
         id = Number(u.id || u.user_id) || 0;
       } catch {
         id = 0;
@@ -36,10 +36,7 @@ export function useExamHistory(examId: string) {
     const id = ++fetchIdRef.current;
     setLoading(true);
     try {
-      const [testData, attemptsData] = await Promise.all([
-        getRagTestDetail(examId),
-        getTestAttempts(examId),
-      ]);
+      const [testData, attemptsData] = await Promise.all([getRagTestDetail(examId), getTestAttempts(examId)]);
       if (!isMountedRef.current || id !== fetchIdRef.current) return;
       setTest(testData);
       const myAttempts = attemptsData.filter((a) => Number(a.student_id) === sid);

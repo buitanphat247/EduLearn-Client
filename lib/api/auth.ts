@@ -7,17 +7,24 @@ import type { SignInRequest, SignInResponse, SignUpRequest, SignUpResponse } fro
  * Next.js rewrite doesn't forward Set-Cookie headers automatically
  */
 function setCookiesFromResponse(response: any): void {
-  if (typeof window === "undefined" || !response.data?.cookies) return;
-  
   const isDev = process.env.NODE_ENV === "development";
-  const sameSiteAttr = isDev ? 'SameSite=Lax' : 'SameSite=None; Secure=true';
-  const cookies = response.data.cookies;
-  
+  const body = response.data;
+  const cookies = body?.data?.cookies || body?.cookies;
+
+  if (typeof window === "undefined" || !cookies) {
+    if (isDev) console.log("[API] No cookies found in response", body);
+    return;
+  }
+
+  if (isDev) console.log("[API] Setting cookies from response:", Object.keys(cookies));
+
+  const sameSiteAttr = isDev ? "SameSite=Lax" : "SameSite=None; Secure=true";
+
   Object.keys(cookies).forEach((name) => {
-    if (name === '_at' || name === '_u' || name === '_rt') {
+    if (name === "_at" || name === "_u" || name === "_rt") {
       const cookieData = cookies[name];
       const value = cookieData.value || cookieData;
-      const maxAge = cookieData.maxAge || (7 * 24 * 60 * 60 * 1000);
+      const maxAge = cookieData.maxAge || 7 * 24 * 60 * 60 * 1000;
       const expDate = new Date(Date.now() + maxAge);
       document.cookie = `${name}=${encodeURIComponent(value)}; path=/; expires=${expDate.toUTCString()}; ${sameSiteAttr}`;
     }
@@ -48,6 +55,66 @@ export const signUp = async (data: SignUpRequest): Promise<SignUpResponse> => {
     return response.data;
   } catch (error: any) {
     const errorMessage = error?.response?.data?.message || error?.message || "Đăng ký thất bại";
+    throw new Error(errorMessage);
+  }
+};
+
+export const googleLogin = async (data: { token?: string; code?: string; redirect_uri?: string; device_name?: string }): Promise<SignInResponse> => {
+  const isDev = process.env.NODE_ENV === "development";
+  try {
+    if (isDev) {
+      console.log("[Google Login API] ===== START =====");
+      console.log("[Google Login API] Sending to /auth/google-login:", {
+        hasToken: !!data.token,
+        tokenLength: data.token?.length || 0,
+        hasCode: !!data.code,
+        device_name: data.device_name,
+      });
+    }
+
+    const response = await apiClient.post<SignInResponse>("/auth/google-login", data, {
+      withCredentials: true,
+    });
+
+    if (isDev) {
+      console.log("[Google Login API] Raw response status:", response.status);
+      console.log("[Google Login API] Response data keys:", Object.keys(response.data || {}));
+      console.log("[Google Login API] Response data:", JSON.stringify(response.data, null, 2).substring(0, 500));
+    }
+
+    // Set cookies from response body (server sends encrypted cookies in response for fallback)
+    // This sets _at, _u, _rt cookies which are the ONLY source of auth state
+    setCookiesFromResponse(response);
+
+    // Cache user data in sessionStorage for fast lookup (tab-scoped, NOT persistent like localStorage)
+    const responseData = response.data as any;
+    const userData = responseData?.data?.user || responseData?.user;
+
+    if (isDev) {
+      console.log("[Google Login API] Extracted userData:", userData ? `user_id=${userData.user_id}` : "MISSING!");
+      console.log(
+        "[Google Login API] Cookies in response:",
+        responseData?.data?.cookies ? Object.keys(responseData.data.cookies) : responseData?.cookies ? Object.keys(responseData.cookies) : "NONE",
+      );
+    }
+
+    if (userData && typeof window !== "undefined") {
+      try {
+        saveUserDataToSession(userData);
+        if (isDev) console.log("[Google Login API] ✅ User data cached in sessionStorage");
+      } catch (e) {
+        if (isDev) console.error("[Google Login API] ⚠️ Failed to cache user to session:", e);
+      }
+    }
+
+    if (isDev) console.log("[Google Login API] ===== DONE =====");
+    return response.data;
+  } catch (error: any) {
+    console.error("[Google Login API] ===== ERROR =====");
+    console.error("[Google Login API] Error:", error?.message);
+    console.error("[Google Login API] Error response:", error?.response?.data);
+    console.error("[Google Login API] Error status:", error?.response?.status);
+    const errorMessage = error?.response?.data?.message || error?.message || "Đăng nhập Google thất bại";
     throw new Error(errorMessage);
   }
 };
