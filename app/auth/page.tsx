@@ -11,6 +11,7 @@ import { getCurrentUser } from "@/lib/api/users";
 import { useTheme } from "@/app/context/ThemeContext";
 import { getCookie } from "@/lib/utils/cookies";
 import ForgotPasswordModal from "@/app/components/auth/ForgotPasswordModal";
+import GoogleCompleteProfileModal from "@/app/components/auth/GoogleCompleteProfileModal";
 
 // Import UI components
 import AuthHero from "@/app/components/auth/AuthHero";
@@ -31,6 +32,10 @@ export default function AuthPage() {
   const [signInForm] = Form.useForm();
   const [signUpForm] = Form.useForm();
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [googleInfo, setGoogleInfo] = useState<any>(null);
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const { message } = App.useApp();
@@ -61,13 +66,25 @@ export default function AuthPage() {
     },
     onSuccess: (res) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const isSuccess = (res as any)?.status === true || (res as any)?.statusCode === 200 || !!(res as any)?.data?.user || !!(res as any)?.user;
+      const response = res as any;
+
+      // Xử lý wrapper định dạng từ backend interceptor
+      const payload = response?.data || response;
+
+      if (payload?.need_registration) {
+        setGoogleInfo(payload.google_info);
+        setIsGoogleModalOpen(true);
+        message.info("Vui lòng hoàn tất thông tin đăng ký!");
+        return;
+      }
+
+      const isSuccess = !!payload?.user || !!response?.user;
       if (isSuccess) {
         message.success("Đăng nhập Google thành công!");
         window.location.href = "/profile";
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        message.error((res as any)?.message || "Đăng nhập Google thất bại");
+        message.error((res as any)?.message || "Đăng nhập Google thất bại (không tìm thấy người dùng)");
       }
     },
     onError: (error: unknown) => {
@@ -171,12 +188,16 @@ export default function AuthPage() {
         password: values.password,
         role_id: values.role_id,
         device_name: deviceName,
+        google_id: values.google_id,
+        provider: values.provider,
+        avatar: values.avatar,
       });
     },
     onSuccess: (response) => {
       if (response.status && response.data?.user) {
         message.success("Đăng ký thành công!");
         setAttemptCount(0);
+        setIsGoogleModalOpen(false);
         window.location.href = "/profile";
       } else {
         message.error(response.message || "Đăng ký thất bại. Vui lòng thử lại!");
@@ -219,6 +240,34 @@ export default function AuthPage() {
     signUpMutation.mutate(values);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleGoogleCompleteSignup = (values: any) => {
+    const now = Date.now();
+    const timeSinceLastAttempt = now - lastAttemptRef.current;
+
+    if (timeSinceLastAttempt < RATE_LIMIT_DELAY_MS) {
+      message.warning("Vui lòng đợi một chút trước khi thử lại");
+      return;
+    }
+    lastAttemptRef.current = now;
+
+    // Tạo username ngẫu nhiên từ email
+    const baseUsername = googleInfo.email.split('@')[0].substring(0, 40);
+    const username = `${baseUsername}_${Math.random().toString(36).substring(2, 7)}`;
+
+    signUpMutation.mutate({
+      username: username,
+      name: googleInfo.fullname,
+      email: googleInfo.email,
+      phone: values.phone,
+      password: values.password,
+      role_id: 3, // Bắt buộc Học sinh theo yêu cầu
+      google_id: googleInfo.google_id,
+      provider: 'google',
+      avatar: googleInfo.avatar
+    });
+  };
+
   const { theme: currentTheme } = useTheme();
 
   const googleClientId =
@@ -254,6 +303,16 @@ export default function AuthPage() {
       <ForgotPasswordModal
         open={isForgotPasswordOpen}
         onCancel={() => setIsForgotPasswordOpen(false)}
+      />
+      <GoogleCompleteProfileModal
+        open={isGoogleModalOpen}
+        onCancel={() => {
+          setIsGoogleModalOpen(false);
+          setGoogleInfo(null);
+        }}
+        onFinish={handleGoogleCompleteSignup}
+        isLoading={signUpMutation.isPending}
+        googleInfo={googleInfo}
       />
     </>
   );

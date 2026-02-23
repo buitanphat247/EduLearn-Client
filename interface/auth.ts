@@ -118,6 +118,12 @@ export interface SignUpRequest {
   role_id: number;
   /** Device name for session tracking */
   device_name: string;
+  /** Google ID if registered via Google */
+  google_id?: string;
+  /** Auth provider (e.g. google, local) */
+  provider?: string;
+  /** Avatar URL mapped from Google */
+  avatar?: string;
 }
 
 /**
