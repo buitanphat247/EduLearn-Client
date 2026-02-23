@@ -83,80 +83,19 @@ export default function Footer() {
             </div>
           </div>
 
-          <div>
-            <h3 className="text-slate-800 dark:text-white font-semibold mb-4">Liên kết nhanh</h3>
-            <ul className="space-y-2 text-slate-600 dark:text-gray-300">
-              <li>
-                <Link
-                  href="/teachers"
-                  prefetch={false}
-                  onMouseEnter={() => router.prefetch("/teachers")}
-                  className="text-slate-600 dark:text-white hover:text-blue-600 dark:hover:text-white/80 transition-colors"
-                >
-                  <span className="">Giảng viên</span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/about"
-                  prefetch={false}
-                  onMouseEnter={() => router.prefetch("/about")}
-                  className="text-slate-600 dark:text-white hover:text-blue-600 dark:hover:text-white/80 transition-colors"
-                >
-                  <span className="">Về chúng tôi</span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/contact"
-                  prefetch={false}
-                  onMouseEnter={() => router.prefetch("/contact")}
-                  className="text-slate-600 dark:text-white hover:text-blue-600 dark:hover:text-white/80 transition-colors"
-                >
-                  <span className="">Liên hệ</span>
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-slate-800 dark:text-white font-semibold mb-4">Liên hệ</h3>
-            <ul className="space-y-2">
-              <li className="flex items-start space-x-2 text-slate-600 dark:text-slate-400">
-                <svg className="w-5 h-5 mt-0.5 text-blue-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
-                </svg>
-                <span>info@edulearning.com</span>
-              </li>
-              <li className="flex items-start space-x-2 text-slate-600 dark:text-slate-400">
-                <svg className="w-5 h-5 mt-0.5 text-blue-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                  />
-                </svg>
-                <span>+84 123 456 789</span>
-              </li>
-              <li className="flex items-start space-x-2 text-slate-600 dark:text-slate-400">
-                <svg className="w-5 h-5 mt-0.5 text-blue-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                  />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span>123 Đường ABC, Quận XYZ, TP.HCM</span>
-              </li>
-            </ul>
+          <div className="col-span-1 md:col-span-2">
+            <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700/50 h-full min-h-[200px]">
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3918.485398611076!2d106.76933817410568!3d10.850637657822427!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752763f23816ab%3A0x282f711441b6916f!2zVHLGsOG7nW5nIMSQ4bqhaSBo4buNYyBDw7RuZyBuZ2jhu4cgS-G7uSB0aHXhuq10IFRow6BuaCBwaOG7kSBI4buTIENow60gTWluaA!5e0!3m2!1svi!2s!4v1771861822937!5m2!1svi!2s"
+                width="100%"
+                height="100%"
+                style={{ border: 0, minHeight: 200 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Bản đồ trường ĐH Công nghệ Kỹ thuật TP.HCM"
+              />
+            </div>
           </div>
         </div>
 

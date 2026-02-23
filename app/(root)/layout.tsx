@@ -1,5 +1,6 @@
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
+import ZaloButton from "../components/common/ZaloButton";
 
 
 
@@ -9,6 +10,7 @@ export default function RootLayoutWrapper({ children }: { children: React.ReactN
       <Header />
       <main>{children}</main>
       <Footer />
+      <ZaloButton />
     </>
   );
 }

@@ -14,6 +14,7 @@ export interface GetFoldersParams {
   search?: string;
   userId?: number;
   vocabularyGroupId?: number;
+  accessLevel?: "free" | "pro";
 }
 
 export interface GetFoldersResult {
@@ -48,6 +49,10 @@ export async function getFolders(params?: GetFoldersParams): Promise<GetFoldersR
 
     if (params?.vocabularyGroupId) {
       requestParams.vocabularyGroupId = params.vocabularyGroupId;
+    }
+
+    if (params?.accessLevel) {
+      requestParams.accessLevel = params.accessLevel;
     }
 
     const response = await apiClient.get<GetFoldersResponse>("/folders", {

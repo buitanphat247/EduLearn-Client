@@ -166,7 +166,7 @@ const nextConfig = {
                             "font-src 'self' https://fonts.gstatic.com data:",
                             "img-src 'self' data: blob: https: http:",
                             "connect-src 'self' https: wss: ws: http://localhost:* ws://localhost:* https://vercel.live https://accounts.google.com https://oauth2.googleapis.com",
-                            "frame-src https://accounts.google.com https://content.googleapis.com",
+                            "frame-src https://accounts.google.com https://content.googleapis.com https://www.google.com",
                             "frame-ancestors 'self'",
                             "base-uri 'self'",
                             "form-action 'self' https://accounts.google.com",

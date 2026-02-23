@@ -34,9 +34,11 @@ export default function VocabularyFeature() {
   const initialPage = Number(searchParams.get("page")) || 1;
   const initialGroup = searchParams.get("group") ? Number(searchParams.get("group")) : undefined;
   const initialSearch = searchParams.get("search") || "";
+  const initialAccessLevel = searchParams.get("access") as 'free' | 'pro' | undefined || undefined;
 
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [selectedGroupId, setSelectedGroupId] = useState<number | undefined>(initialGroup);
+  const [selectedAccessLevel, setSelectedAccessLevel] = useState<'free' | 'pro' | undefined>(initialAccessLevel);
   const [searchText, setSearchText] = useState(initialSearch);
   const debouncedSearchQuery = useDebounce(searchText, 500);
 
@@ -57,21 +59,27 @@ export default function VocabularyFeature() {
       if (params.get("search") !== debouncedSearchQuery) { params.set("search", debouncedSearchQuery); changed = true; }
     } else if (params.has("search")) { params.delete("search"); changed = true; }
 
+    if (selectedAccessLevel) {
+      if (params.get("access") !== selectedAccessLevel) { params.set("access", selectedAccessLevel); changed = true; }
+    } else if (params.has("access")) { params.delete("access"); changed = true; }
+
     if (changed) {
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }
-  }, [currentPage, selectedGroupId, debouncedSearchQuery, pathname, router, searchParams]);
+  }, [currentPage, selectedGroupId, selectedAccessLevel, debouncedSearchQuery, pathname, router, searchParams]);
 
   // Reset page when filter changes
   const prevSearchRef = useRef(debouncedSearchQuery);
   const prevGroupRef = useRef(selectedGroupId);
+  const prevAccessRef = useRef(selectedAccessLevel);
   useEffect(() => {
-    if (prevSearchRef.current !== debouncedSearchQuery || prevGroupRef.current !== selectedGroupId) {
+    if (prevSearchRef.current !== debouncedSearchQuery || prevGroupRef.current !== selectedGroupId || prevAccessRef.current !== selectedAccessLevel) {
       setCurrentPage(1);
       prevSearchRef.current = debouncedSearchQuery;
       prevGroupRef.current = selectedGroupId;
+      prevAccessRef.current = selectedAccessLevel;
     }
-  }, [debouncedSearchQuery, selectedGroupId]);
+  }, [debouncedSearchQuery, selectedGroupId, selectedAccessLevel]);
 
   // Use React Query hooks
   const { data: groupsData = [] } = useVocabularyGroupsQuery();
@@ -88,6 +96,7 @@ export default function VocabularyFeature() {
     limit: PAGE_SIZE,
     search: debouncedSearchQuery || undefined,
     vocabularyGroupId: selectedGroupId,
+    accessLevel: selectedAccessLevel,
     userId,
   });
 
@@ -173,6 +182,32 @@ export default function VocabularyFeature() {
             onChange={(e) => setSearchText(e.target.value)}
             wrapperClassName="flex-1 w-full"
           />
+          {/* Access Level Filter */}
+          <div className="w-full md:w-44 shrink-0">
+            <select
+              value={selectedAccessLevel || ""}
+              onChange={(e) => setSelectedAccessLevel(e.target.value ? (e.target.value as 'free' | 'pro') : undefined)}
+              className={`
+                h-10 w-full px-3 rounded-lg
+                bg-white dark:bg-[#1e293b]
+                border border-slate-200 dark:border-slate-700/50
+                text-slate-700 dark:text-slate-200
+                focus:outline-none focus:ring-2 focus:ring-blue-500/20
+                transition-all duration-200 text-sm font-medium
+                cursor-pointer appearance-none
+              `}
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 0.75rem center',
+                backgroundSize: '1rem'
+              }}
+            >
+              <option value="">Tất cả loại</option>
+              <option value="free">Miễn phí</option>
+              <option value="pro">Pro</option>
+            </select>
+          </div>
           {/* Vocabulary Group Filter */}
           <div className="w-full md:w-64 shrink-0">
             <select
