@@ -38,7 +38,7 @@ export default function SubscriptionAdminPage() {
     const { data: plansData = [], isLoading: isLoadingPlans, isFetching: isFetchingPlans } = useQuery({
         queryKey: ['admin_subscription_plans'],
         queryFn: getSubscriptionPlans,
-        staleTime: 5 * 60 * 1000,
+        staleTime: 30 * 1000, // 30s - admin needs fresh data
     });
 
     // Fetch user subscriptions
@@ -49,7 +49,7 @@ export default function SubscriptionAdminPage() {
             return result;
         },
         placeholderData: keepPreviousData,
-        staleTime: 5 * 60 * 1000,
+        staleTime: 30 * 1000, // 30s - admin needs fresh data
     });
 
     const safeUsers = usersData?.data || [];

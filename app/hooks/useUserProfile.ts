@@ -26,7 +26,7 @@ export function useUserProfile(options: UseUserProfileOptions = { showError: fal
     // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
     queryFn: () => getUserInfo(userId!),
     enabled: !!userId && !userIdLoading,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // 30s
   });
 
   // Handle error showing logic

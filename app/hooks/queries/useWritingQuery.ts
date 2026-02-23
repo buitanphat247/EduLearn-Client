@@ -30,7 +30,7 @@ export function useWritingTopicsQuery(category?: "general" | "ielts" | "work") {
     queryKey: writingKeys.topics(category),
     queryFn: () => getWritingTopics(category),
     enabled: !!category,
-    staleTime: 5 * 60 * 1000, // Topics rarely change
+    staleTime: 30 * 1000, // 30s
     gcTime: 10 * 60 * 1000,
     select: (data) => {
       if (data.status === 200 && data.data) return data.data;
@@ -120,7 +120,7 @@ export function useWritingHistoryByIdQuery(historyId: number | null) {
       throw new Error("Không tìm thấy dữ liệu bài luyện");
     },
     enabled: !!historyId && historyId > 0,
-    staleTime: 60 * 1000, // Data doesn't change while viewing
+    staleTime: 30 * 1000, // 30s
     gcTime: 5 * 60 * 1000,
     retry: 1,
   });
@@ -136,7 +136,7 @@ export function useWritingUsageQuery() {
         currentCount: 0,
         limit: 0,
       })),
-    staleTime: 60 * 1000,
+    staleTime: 30 * 1000, // 30s
     gcTime: 5 * 60 * 1000,
   });
 }

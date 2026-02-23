@@ -18,7 +18,7 @@ export function useListeningLessonsQuery(filters: GetLessonsParams) {
     // Query requires auth context to stabilize to prevent duplicate fetches
     enabled: !userIdLoading,
     placeholderData: keepPreviousData, // Keeps previous data during page turn
-    staleTime: 60 * 1000, // Cache for 1 minute
+    staleTime: 30 * 1000, // 30s
   });
 }
 
@@ -33,6 +33,6 @@ export function useListeningLessonDetailQuery(lessonId: number | string | null) 
       throw new Error("Không thể tải bài học hoặc bài học chưa có nội dung");
     },
     enabled: !!lessonId,
-    staleTime: 5 * 60 * 1000, // Detail pages change rarely, keep 5 minutes
+    staleTime: 30 * 1000, // 30s
   });
 }

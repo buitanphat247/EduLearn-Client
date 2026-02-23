@@ -59,7 +59,7 @@ export default function AiUsageStatsPage() {
         },
         placeholderData: keepPreviousData,
         enabled: !!(start && end),
-        staleTime: 5 * 60 * 1000,
+        staleTime: 30 * 1000, // 30s - admin needs fresh data
     });
 
     if (isError) {

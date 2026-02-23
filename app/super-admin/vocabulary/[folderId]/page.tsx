@@ -45,7 +45,7 @@ export default function VocabularyDetailPage() {
     const { data: groups = [] } = useQuery({
         queryKey: ['admin_vocabulary_groups'],
         queryFn: getVocabularyGroups,
-        staleTime: 5 * 60 * 1000,
+        staleTime: 30 * 1000, // 30s - admin needs fresh data
     });
 
     const { data: folderData, isLoading: isLoadingFolder } = useQuery({
@@ -55,6 +55,7 @@ export default function VocabularyDetailPage() {
             return result;
         },
         enabled: !!folderId,
+        staleTime: 0, // always fresh — folder detail changes after bulk import
     });
 
     const { data: vocabularies = [], isLoading: isLoadingVocab, isFetching: isFetchingVocab } = useQuery({
@@ -64,6 +65,7 @@ export default function VocabularyDetailPage() {
             return vocabData.map(v => ({ ...v, key: v.sourceWordId }));
         },
         enabled: !!folderId,
+        staleTime: 0, // always fresh — vocab list changes after bulk import/audio regen
     });
 
     const bulkImportMutation = useMutation({
@@ -77,12 +79,16 @@ export default function VocabularyDetailPage() {
             setImportData([]);
             setFileInfo(null);
             setSelectedGroupId(null);
-            queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_list', folderId] });
-            queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_folders'] }); // invalidate folders to update count
         },
         onError: (error: any) => {
             message.error(error?.message || "Lỗi khi import dữ liệu");
-        }
+        },
+        onSettled: () => {
+            // ALWAYS sync UI with server — runs after success OR error
+            queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_list', folderId] });
+            queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_folder_detail', folderId] });
+            queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_folders'] });
+        },
     });
 
     const regenerateAudioMutation = useMutation({
@@ -92,13 +98,18 @@ export default function VocabularyDetailPage() {
                 message.success(`✅ Tất cả ${result.total} từ đều đã có audio.`);
             } else if (result.regenerated > 0) {
                 message.success(`✅ Đã tạo audio cho ${result.regenerated}/${result.missing} từ thiếu audio.`);
-                queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_list', folderId] });
             } else {
                 message.warning(`⚠️ Phát hiện ${result.missing} từ thiếu audio nhưng không tạo được (đang xử lý bởi request khác).`);
             }
         },
         onError: (error: any) => {
             message.error(error?.message || "Lỗi khi tạo lại audio");
+        },
+        onSettled: () => {
+            // ALWAYS invalidate regardless of success/error — ensure UI syncs with server
+            queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_list', folderId] });
+            queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_folder_detail', folderId] });
+            queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_folders'] });
         },
     });
 

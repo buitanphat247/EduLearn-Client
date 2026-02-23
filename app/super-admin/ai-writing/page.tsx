@@ -18,7 +18,7 @@ export default function AIWritingAdminPage() {
             const data = await getUsageStats("ai_writing");
             return Array.isArray(data) ? data : [];
         },
-        staleTime: 5 * 60 * 1000,
+        staleTime: 30 * 1000, // 30s - admin needs fresh data
     });
 
     const columns = useMemo(() => [

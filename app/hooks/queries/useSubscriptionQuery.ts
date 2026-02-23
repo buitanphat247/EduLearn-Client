@@ -28,7 +28,7 @@ export function useSubscriptionQuery() {
     queryKey: subscriptionKeys.status(),
     queryFn: getSubscriptionStatus,
     enabled: !!userId && !userIdLoading,
-    staleTime: 5 * 60 * 1000, // 5 minutes — subscription rarely changes mid-session
+    staleTime: 30 * 1000, // 30s
     gcTime: 15 * 60 * 1000, // 15 minutes cache
   });
 }

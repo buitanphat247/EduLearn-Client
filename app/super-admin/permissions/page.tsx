@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 import { Typography, Button, Space, Breadcrumb, Modal, Form, Input, Switch, Divider, App, Spin } from "antd";
 import { PlusOutlined, KeyOutlined, RobotOutlined, UserOutlined, TeamOutlined, SafetyOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 
 // Sub-components
 import PermissionMatrix from "./components/PermissionMatrix";
@@ -38,47 +39,33 @@ const ROLE_COLORS: Record<string, string> = {
 export default function PermissionPage() {
   const router = useRouter();
   const { message } = App.useApp();
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
-  const messageRef = useRef(message);
-  messageRef.current = message;
-  const hasFetchedRef = useRef(false);
+  const { data: roles = [], isLoading: loading } = useQuery({
+    queryKey: ['admin_roles'],
+    queryFn: async () => {
+      const response = await getRoles();
+      const data = response.data || response;
 
-  useEffect(() => {
-    if (hasFetchedRef.current) return;
-    hasFetchedRef.current = true;
+      const mappedRoles: Role[] = data.map((r: any) => ({
+        id: r.role_id.toString(),
+        name: r.role_name.charAt(0).toUpperCase() + r.role_name.slice(1),
+        color: ROLE_COLORS[r.role_name.toLowerCase()] || "#64748b",
+        icon: ROLE_ICONS[r.role_name.toLowerCase()] || <UserOutlined />,
+        status: "active",
+        permissions: [],
+        apiPermissionIds: r.rolePermissions?.map((rp: any) => rp.permission_id) || [],
+      }));
 
-    const fetchRoles = async () => {
-      try {
-        setLoading(true);
-        const response = await getRoles();
-        const data = response.data || response;
-
-        const mappedRoles: Role[] = data.map((r: any) => ({
-          id: r.role_id.toString(),
-          name: r.role_name.charAt(0).toUpperCase() + r.role_name.slice(1),
-          color: ROLE_COLORS[r.role_name.toLowerCase()] || "#64748b",
-          icon: ROLE_ICONS[r.role_name.toLowerCase()] || <UserOutlined />,
-          status: "active",
-          permissions: [],
-          apiPermissionIds: r.rolePermissions?.map((rp: any) => rp.permission_id) || [],
-        }));
-
-        setRoles(mappedRoles);
-        if (mappedRoles.length > 0) setSelectedRole(mappedRoles[0]);
-      } catch (error) {
-        console.error("Error fetching roles:", error);
-        messageRef.current.error("Không thể tải danh sách vai trò");
-      } finally {
-        setLoading(false);
+      if (mappedRoles.length > 0 && !selectedRole) {
+        setSelectedRole(mappedRoles[0]);
       }
-    };
 
-    fetchRoles();
-  }, []);
+      return mappedRoles;
+    },
+    staleTime: 30 * 1000, // 30s - admin needs fresh data
+  });
 
   const handleSaveMatrix = useCallback(() => {
     message.success("Đã cập nhật bảng phân quyền thành công!");

@@ -21,7 +21,7 @@ export function useVocabularyGroupsQuery() {
   return useQuery({
     queryKey: vocabularyKeys.groups(),
     queryFn: getVocabularyGroups,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // 30s
   });
 }
 
@@ -33,7 +33,7 @@ export function useVocabularyFoldersQuery(filters: GetFoldersParams) {
     queryFn: () => getFolders(filters),
     // Wait until userId finishes loading
     enabled: !userIdLoading,
-    staleTime: 60 * 1000, // Cache for 1 minute
+    staleTime: 30 * 1000, // 30s // Cache for 1 minute
   });
 }
 
@@ -44,7 +44,7 @@ export function useVocabulariesByFolderQuery(folderId: number) {
     queryKey: vocabularyKeys.vocabulariesByFolder(folderId),
     queryFn: () => getVocabulariesByFolder(folderId),
     enabled: !!folderId && !userIdLoading,
-    staleTime: 60 * 1000,
+    staleTime: 30 * 1000, // 30s
   });
 }
 
@@ -97,7 +97,7 @@ export function useUserVocabularyStatsQuery(userId: string | number | null) {
     queryKey: reviewStatsKeys.stats(userId || ""),
     queryFn: () => getUserVocabularyStats(Number(userId)),
     enabled: !!userId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // 30s
   });
 }
 
@@ -106,7 +106,7 @@ export function useUserActivityStatsQuery(userId: string | number | null) {
     queryKey: reviewStatsKeys.activity(userId || ""),
     queryFn: () => getUserActivityStats(Number(userId)),
     enabled: !!userId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // 30s
   });
 }
 
@@ -136,6 +136,6 @@ export function useLearnedVocabularyQuery(userId: string | number | null, page: 
     queryFn: () => getUserVocabularyByUser(Number(userId), { page, limit }),
     enabled: !!userId,
     placeholderData: keepPreviousData,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // 30s
   });
 }

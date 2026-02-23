@@ -20,6 +20,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
                         gcTime: 5 * 60 * 1000, // 5 minutes
                         retry: 1,
                         refetchOnWindowFocus: true,
+                        refetchOnMount: 'always', // ALWAYS refetch when component mounts (fixes stale UI after navigation)
                     },
                     mutations: {
                         retry: 0,

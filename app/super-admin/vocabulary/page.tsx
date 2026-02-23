@@ -58,7 +58,7 @@ export default function VocabularyManagementPage() {
     const { data: vocabGroups = [] } = useQuery({
         queryKey: ['admin_vocabulary_groups'],
         queryFn: getVocabularyGroups,
-        staleTime: 5 * 60 * 1000,
+        staleTime: 30 * 1000, // 30s - admin needs fresh data
     });
 
     const { data: folderData, isLoading, isFetching } = useQuery({
@@ -85,7 +85,7 @@ export default function VocabularyManagementPage() {
             };
         },
         placeholderData: keepPreviousData,
-        staleTime: 5 * 60 * 1000,
+        staleTime: 30 * 1000, // 30s - admin needs fresh data
     });
 
     const safeFolders = folderData?.folders || [];

@@ -48,7 +48,7 @@ export default function UserSettings() {
     // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
     queryFn: () => getUserInfo(userId!),
     enabled: !!userId && !userIdLoading,
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    staleTime: 30 * 1000, // 30s
   });
 
   // Handle setting initial form values when data loads

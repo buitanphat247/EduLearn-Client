@@ -159,7 +159,7 @@ export default function SuperAdminDashboard() {
       const stats = await getStats();
       return stats;
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // 30s - admin needs fresh data
   });
 
   if (isError) {
