@@ -29,7 +29,7 @@ export default function Hero() {
 
 
           {/* Floating UI Elements Mockup */}
-          <div className="mt-20 relative animate-float">
+          <div className="mt-20 relative animate-float hidden md:block">
             <div className="relative mx-auto rounded-xl bg-gradient-to-b from-white to-slate-50 dark:from-slate-700/50 dark:to-slate-800/50 p-2 backdrop-blur-xl border border-slate-200 dark:border-slate-700 shadow-2xl max-w-4xl">
               <div className="rounded-lg overflow-hidden bg-slate-100 dark:bg-[#0f172a] aspect-[16/9] flex items-center justify-center relative group">
                 {/* Grid Pattern */}

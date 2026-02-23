@@ -13,7 +13,7 @@ export default function ValueProps() {
         <ScrollAnimation direction="right" delay={0}>
           <div className="flex flex-col lg:flex-row items-center gap-16 mb-24">
             {/* Image Left */}
-            <div className="lg:w-1/2 order-2 lg:order-1 relative group">
+            <div className="hidden lg:block lg:w-1/2 order-2 lg:order-1 relative group">
               <div className="absolute inset-0 bg-blue-100 dark:bg-blue-600/10 rounded-3xl transform rotate-3 scale-105 group-hover:rotate-6 group-hover:scale-110 transition-all duration-500"></div>
               <div className="relative rounded-3xl shadow-2xl w-full overflow-hidden h-[400px] border border-slate-200 dark:border-slate-700/50">
                 <Image
@@ -78,7 +78,7 @@ export default function ValueProps() {
             </div>
 
             {/* Image Right */}
-            <div className="lg:w-1/2 relative group">
+            <div className="hidden lg:block lg:w-1/2 relative group">
               <div className="absolute inset-0 bg-purple-100 dark:bg-purple-600/10 rounded-3xl transform -rotate-2 scale-105 group-hover:-rotate-3 group-hover:scale-110 transition-all duration-500"></div>
               <div className="relative rounded-3xl shadow-2xl w-full overflow-hidden h-[400px] border border-slate-200 dark:border-slate-700/50">
                 <Image
