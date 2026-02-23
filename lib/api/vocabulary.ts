@@ -133,6 +133,26 @@ export async function bulkCreateVocabulary(folderId: number, vocabularyGroupId: 
   }
 }
 
+export interface RegenerateAudioResult {
+  total: number;
+  missing: number;
+  regenerated: number;
+  words: string[];
+}
+
+/**
+ * Quét folder và tạo lại audio cho các từ thiếu audio
+ */
+export async function regenerateAudio(folderId: number): Promise<RegenerateAudioResult> {
+  try {
+    const response = await apiClient.post<any>(`/vocabularies/regenerate-audio/${folderId}`);
+    const raw = response.data;
+    return raw?.data ?? raw;
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.message || error?.message || "Không thể tạo lại audio");
+  }
+}
+
 export interface VocabularyResponse {
   sourceWordId: number;
   vocabularyGroupId: number;

@@ -1,13 +1,13 @@
 "use client";
 
 import { Table, Tag, Button, App, Space, Input, Breadcrumb, Popconfirm, Modal, Select } from "antd";
-import { SearchOutlined, ArrowLeftOutlined, PlusOutlined, EditOutlined, DeleteOutlined, SoundOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import { SearchOutlined, ArrowLeftOutlined, PlusOutlined, EditOutlined, DeleteOutlined, SoundOutlined, QuestionCircleOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useState, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import type { ColumnsType } from "antd/es/table";
 import Papa from "papaparse";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getVocabulariesByFolder, getFolderDetail, bulkCreateVocabulary, getVocabularyGroups, type VocabularyResponse, type FolderResponse } from "@/lib/api/vocabulary";
+import { getVocabulariesByFolder, getFolderDetail, bulkCreateVocabulary, getVocabularyGroups, regenerateAudio, type VocabularyResponse, type FolderResponse } from "@/lib/api/vocabulary";
 
 interface VocabularyTableType extends VocabularyResponse {
     key: number;
@@ -83,6 +83,23 @@ export default function VocabularyDetailPage() {
         onError: (error: any) => {
             message.error(error?.message || "Lỗi khi import dữ liệu");
         }
+    });
+
+    const regenerateAudioMutation = useMutation({
+        mutationFn: () => regenerateAudio(folderId),
+        onSuccess: (result) => {
+            if (result.regenerated === 0 && result.missing === 0) {
+                message.success(`✅ Tất cả ${result.total} từ đều đã có audio.`);
+            } else if (result.regenerated > 0) {
+                message.success(`✅ Đã tạo audio cho ${result.regenerated}/${result.missing} từ thiếu audio.`);
+                queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_list', folderId] });
+            } else {
+                message.warning(`⚠️ Phát hiện ${result.missing} từ thiếu audio nhưng không tạo được (đang xử lý bởi request khác).`);
+            }
+        },
+        onError: (error: any) => {
+            message.error(error?.message || "Lỗi khi tạo lại audio");
+        },
     });
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -249,6 +266,14 @@ export default function VocabularyDetailPage() {
                         allowClear
                         className="w-64 rounded-lg bg-gray-50 border-gray-100 focus:bg-white transition-colors"
                     />
+                    <Button
+                        icon={<ReloadOutlined />}
+                        onClick={() => regenerateAudioMutation.mutate()}
+                        loading={regenerateAudioMutation.isPending}
+                        className="rounded-lg shadow-sm px-4 h-9 font-semibold"
+                    >
+                        {regenerateAudioMutation.isPending ? "Đang tạo audio..." : "Cập nhật Audio"}
+                    </Button>
                     <Button
                         type="primary"
                         icon={<PlusOutlined />}
