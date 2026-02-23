@@ -29,7 +29,6 @@ export default function VocabularyPage() {
                 <FeaturesHeader
                     title="Học từ vựng"
                     description="Học từ vựng theo chủ đề và chuyên ngành"
-                    badge={badge}
                 />
                 <Suspense fallback={<div className="h-64 flex items-center justify-center">Đang tải dữ liệu...</div>}>
                     <VocabularyFeature />
