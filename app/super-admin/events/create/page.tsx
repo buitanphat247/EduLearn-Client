@@ -6,12 +6,15 @@ import { Button, App } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd";
 import { createEvent } from "@/lib/api/events";
-import { getCurrentUser } from "@/lib/api/users";
+import { useUserId } from "@/app/hooks/useUserId";
+import { useQueryClient } from "@tanstack/react-query";
 import CSVUploadForm from "@/app/components/common/CSVUploadForm";
 
 export default function CreateEventPage() {
   const router = useRouter();
   const { message } = App.useApp();
+  const { userId } = useUserId();
+  const queryClient = useQueryClient();
   const [csvPreviewData, setCsvPreviewData] = useState<any[]>([]);
   const [uploadFileList, setUploadFileList] = useState<UploadFile[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -78,8 +81,7 @@ export default function CreateEventPage() {
 
   const mapCSVToAPI = (csvRow: any): { title: string; description: string; start_event_date: string; end_event_date: string; location: string; created_by: number } | null => {
     try {
-      const user = getCurrentUser();
-      if (!user || !user.user_id) {
+      if (!userId) {
         return null;
       }
 
@@ -88,7 +90,7 @@ export default function CreateEventPage() {
       const start_event_date_raw = csvRow.start_event_date || "";
       const end_event_date_raw = csvRow.end_event_date || "";
       const location = csvRow.location || "";
-      const created_by = csvRow.created_by ? Number(csvRow.created_by) : Number(user.user_id);
+      const created_by = csvRow.created_by ? Number(csvRow.created_by) : Number(userId);
 
       if (!title || !description || !start_event_date_raw || !end_event_date_raw || !location) {
         return null;
@@ -148,6 +150,7 @@ export default function CreateEventPage() {
         itemName="sự kiện"
         itemNamePlural="sự kiện"
         onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['admin_events'] });
           router.push("/super-admin/events");
         }}
         templateColumns={[

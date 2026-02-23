@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { Form } from "antd";
 import { useParams, useSearchParams } from "next/navigation";
 import { useTestData } from "./hooks/useTestData";
 import { useQuestionActions } from "./hooks/useQuestionActions";
 import { useTestMetadata } from "./hooks/useTestMetadata";
+import { transactionQueue } from "./utils/transactionQueue";
 import QuestionCard from "./components/QuestionCard";
 import SettingsPanel from "./components/SettingsPanel";
 import LoadingState from "./components/LoadingState";
@@ -17,6 +19,13 @@ export default function AIEditorPage() {
   const testId = searchParams.get("testId");
 
   const [metadataForm] = Form.useForm();
+
+  // Clear transaction queue on unmount to prevent cross-navigation mutations
+  useEffect(() => {
+    return () => {
+      transactionQueue.clear();
+    };
+  }, []);
 
   // Custom hooks
   const { loading, test, setTest, refetch } = useTestData(testId, metadataForm);

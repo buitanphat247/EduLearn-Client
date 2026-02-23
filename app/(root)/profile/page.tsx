@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Avatar, message } from "antd";
 import Swal from "sweetalert2";
 import {
@@ -22,64 +22,48 @@ import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import { useTheme } from "@/app/context/ThemeContext";
 import { saveUserDataToSession } from "@/lib/utils/cookies";
 
+import { useProfileQuery, profileKeys } from "@/app/hooks/queries/useProfileQuery";
+import { useQueryClient } from "@tanstack/react-query";
+
 import ProfileSkeleton from "@/app/components/profile/ProfileSkeleton";
 import LearningActivityCalendar from "@/app/components/profile/LearningActivityCalendar";
 import ForgettingCurveChart from "@/app/components/profile/ForgettingCurveChart";
 
 export default function Profile() {
-  const [user, setUser] = useState<UserInfoResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [imgError, setImgError] = useState(false);
   const { theme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // React Query for fetching profile
+  const {
+    data: profileData,
+    isLoading: loading,
+    error: profileError,
+    refetch: refetchProfile
+  } = useProfileQuery();
+
+  const user = profileData as UserInfoResponse | undefined | null;
+
+  // Sync to session storage (or handle error logic)
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchUserInfo = async () => {
+    if (user && typeof window !== "undefined") {
       try {
-        // Lấy thông tin profile từ API (đọc từ cookie đã mã hóa)
-        const userInfo = await getProfile();
-
-        // Activity stats API call temporarily disabled - using mock data instead
-        /*
-        if (userInfo && userInfo.user_id) {
-          const stats = await getUserActivityStats(Number(userInfo.user_id));
-          if (isMounted) setActivityData(stats);
-        }
-        */
-
-        if (isMounted) {
-          setUser(userInfo as UserInfoResponse);
-          // Cache user data in sessionStorage
-          if (typeof window !== "undefined") {
-            try {
-              saveUserDataToSession(userInfo);
-            } catch (error) {
-              console.error("Error saving user to session:", error);
-            }
-          }
-        }
-      } catch (error: any) {
-        if (isMounted) {
-          message.error(error.message || "Không thể tải thông tin user");
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        saveUserDataToSession(user);
+      } catch (error) {
+        console.error("Error saving user to session:", error);
       }
-    };
+    }
+  }, [user]);
 
-    fetchUserInfo();
+  useEffect(() => {
+    if (profileError) {
+      message.error(profileError instanceof Error ? profileError.message : "Không thể tải thông tin user");
+    }
+  }, [profileError, message]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const handleAvatarClick = () => {
+  const handleAvatarClick = useCallback(() => {
     if (uploading) return;
 
     Swal.fire({
@@ -98,7 +82,7 @@ export default function Profile() {
         fileInputRef.current?.click();
       }
     });
-  };
+  }, [uploading, theme]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,8 +110,8 @@ export default function Profile() {
       // 2. Update user profile
       const updatedUser = await updateUser(user.user_id, { avatar: imageUrl });
 
-      // 3. Update local state
-      setUser(updatedUser);
+      // 3. Update react query cache directly
+      queryClient.setQueryData(profileKeys.detail(), updatedUser);
       setImgError(false);
 
       // 4. Update sessionStorage
@@ -160,7 +144,7 @@ export default function Profile() {
     }
   };
 
-  const handleSignOutAllDevices = () => {
+  const handleSignOutAllDevices = useCallback(() => {
     Swal.fire({
       title: "Đăng xuất khỏi mọi thiết bị?",
       text: "Bạn sẽ bị đăng xuất khỏi tất cả các thiết bị hiện đang đăng nhập.",
@@ -176,13 +160,14 @@ export default function Profile() {
       if (result.isConfirmed) {
         try {
           message.loading("Đang đăng xuất khỏi mọi thiết bị...");
+          queryClient.clear();
           await signOutAllDevices();
         } catch (error: any) {
           message.error(error.message || "Lỗi khi đăng xuất");
         }
       }
     });
-  };
+  }, [theme, queryClient]);
 
   // ✅ Move useMemo hooks to top level (before early returns)
   const formattedCreatedAt = useMemo(() => {

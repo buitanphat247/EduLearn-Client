@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import { updateRagTest, publishRagTest, RagTestDetail } from "@/lib/api/rag-exams";
 import { transactionQueue } from "../utils/transactionQueue";
 
@@ -12,6 +12,7 @@ interface UseTestMetadataProps {
 }
 
 export function useTestMetadata({ testId, test, setTest, refetch, classId }: UseTestMetadataProps) {
+  const { message } = App.useApp();
   const [saving, setSaving] = useState(false);
 
   const saveMetadata = async (values: any) => {

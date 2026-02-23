@@ -8,7 +8,9 @@ import { getVocabulariesByFolder, getDueWords, getVocabularyDetail, getVocabular
 import { getSubscriptionStatus } from "@/lib/api/subscription";
 import { useTheme } from "@/app/context/ThemeContext";
 import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
+import { useUserId } from "@/app/hooks/useUserId";
 import { useVocabularyQuiz } from "@/app/hooks/useVocabularyQuiz";
+import { useVocabulariesByFolderQuery, useVocabularyReviewQuery } from "@/app/hooks/queries/useVocabularyQuery";
 import QuizHeader from "@/app/components/features/vocabulary/QuizHeader";
 import QuizQuestionCard from "@/app/components/features/vocabulary/QuizQuestionCard";
 import QuizResultCard from "@/app/components/features/vocabulary/QuizResultCard";
@@ -21,10 +23,14 @@ export default function VocabularyQuiz() {
   const folderId = folderIdString === "review" ? "review" : (folderIdString ? parseInt(folderIdString, 10) : null);
   const { theme: currentTheme } = useTheme();
 
-  const [vocabularies, setVocabularies] = useState<VocabularyResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<number | null>(null);
-  const isMountedRef = useRef(true);
+  const { userId: rawUserId } = useUserId();
+  const userId = rawUserId ? Number(rawUserId) : null;
+
+  const { data: folderVocabularies, isLoading: folderLoading } = useVocabulariesByFolderQuery(folderId !== "review" && folderId ? (folderId as number) : 0);
+  const { data: reviewVocabularies, isLoading: reviewLoading } = useVocabularyReviewQuery(folderId === "review" ? userId : null);
+
+  const vocabularies = useMemo(() => folderId === "review" ? (reviewVocabularies || []) : (folderVocabularies || []), [folderId, reviewVocabularies, folderVocabularies]);
+  const loading = folderId === "review" ? reviewLoading : folderLoading;
 
   const {
     questions,
@@ -44,96 +50,12 @@ export default function VocabularyQuiz() {
     cleanup,
   } = useVocabularyQuiz(vocabularies);
 
+  // Generate questions when vocabularies list arrives
   useEffect(() => {
-    isMountedRef.current = true;
-    return () => { isMountedRef.current = false; };
-  }, []);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const { getProfile } = await import("@/lib/api/auth");
-        const profile = await getProfile();
-        if (isMountedRef.current && profile?.user_id) {
-          setUserId(Number(profile.user_id));
-        }
-      } catch (error) {
-        if (isMountedRef.current) console.error("Error fetching profile:", error);
-      }
-    };
-    fetchProfile();
-  }, []);
-
-  const fetchVocabularies = async () => {
-    if (!folderId) return;
-
-    setLoading(true);
-    try {
-      let data: any[];
-      if (folderId === "review") {
-        if (!userId) {
-          if (isMountedRef.current) setLoading(false);
-          return;
-        }
-        const [sub, res] = await Promise.all([
-          getSubscriptionStatus().catch(() => ({ isPro: false })),
-          getDueWords(userId, { limit: 20 }),
-        ]);
-        const allowed = sub?.isPro ? res.data : (res.data || []).filter((x: any) => !x.folder_pro);
-
-        if (allowed.length > 0) {
-          const sourceWordIds = allowed.map((item: any) => item.sourceWordId);
-          const details = await getVocabularyBatch(sourceWordIds);
-
-          data = allowed.map((item: any) => {
-            const detail = details.find((d: any) => d.sourceWordId === item.sourceWordId);
-            return {
-              ...(detail || item.vocabulary),
-              sourceWordId: item.sourceWordId,
-              nextReviewAt: item.next_review_at,
-              last_grade: item.last_grade,
-              repetition: item.repetition
-            };
-          });
-        } else {
-          data = [];
-        }
-      } else {
-        data = await getVocabulariesByFolder(folderId as number);
-      }
-      if (!isMountedRef.current) return;
-      setVocabularies(data);
-      if (data.length > 0) {
-        generateQuestions(data);
-      }
-    } catch (error: any) {
-      const status = error?.response?.status;
-      if (status === 403 || status === 404) {
-        if (status === 404) {
-          message.warning("Không tìm thấy thư mục từ vựng.");
-        } else {
-          message.warning(error?.response?.data?.message || "Bạn cần gói Pro để truy cập từ vựng.");
-        }
-        router.replace("/vocabulary");
-        return;
-      }
-      if (isMountedRef.current) {
-        console.error("Error fetching vocabularies:", error);
-        message.error(error?.message || "Không thể tải danh sách từ vựng");
-        setVocabularies([]);
-      }
-    } finally {
-      if (isMountedRef.current) setLoading(false);
+    if (vocabularies.length > 0) {
+      generateQuestions(vocabularies);
     }
-  };
-
-  useEffect(() => {
-    if (folderId === "review") {
-      if (userId) fetchVocabularies();
-    } else if (folderId) {
-      fetchVocabularies();
-    }
-  }, [folderId, userId]);
+  }, [vocabularies, generateQuestions]);
 
   // Cleanup on unmount
   useEffect(() => {

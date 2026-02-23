@@ -1,14 +1,16 @@
 "use client";
 
-import { Table, Tag, Button, Space, App, Input, Spin } from "antd";
+import { Table, Tag, Button, Space, App, Input } from "antd";
 import { SearchOutlined, EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, LoadingOutlined } from "@ant-design/icons";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { ColumnsType } from "antd/es/table";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import CreateNotificationModal from "@/app/components/super-admin/CreateNotificationModal";
 import EditNotificationModal from "@/app/components/super-admin/EditNotificationModal";
 import NotificationDetailModal from "@/app/components/super-admin/NotificationDetailModal";
-import { getNotificationsByCreatedBy, deleteNotification, type NotificationResponse } from "@/lib/api/notifications";
+import { getNotificationsByCreatedBy, deleteNotification } from "@/lib/api/notifications";
 import { useUserId } from "@/app/hooks/useUserId";
+import { useDebounce } from "@/app/hooks/useDebounce";
 
 interface NotificationType {
   key: string;
@@ -22,24 +24,30 @@ interface NotificationType {
 
 export default function SuperAdminNotifications() {
   const { modal, message } = App.useApp();
-  const { userId, loading: userLoading } = useUserId(); // Use hook
-  const [allNotifications, setAllNotifications] = useState<NotificationType[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { userId, loading: userLoading } = useUserId();
+  const queryClient = useQueryClient();
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
   const [selectedNotificationId, setSelectedNotificationId] = useState<number | string | null>(null);
   const [editingNotification, setEditingNotification] = useState<NotificationType | null>(null);
+
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
-    total: 0,
   });
 
-  // Format date từ ISO string sang định dạng Việt Nam
-  const formatDate = useCallback((dateString: string): string => {
+  // Reset to page 1 on search
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, current: 1 }));
+  }, [debouncedSearchQuery]);
+
+  const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleString("vi-VN", {
       year: "numeric",
@@ -48,38 +56,19 @@ export default function SuperAdminNotifications() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  }, []);
+  };
 
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-      setPagination((prev) => ({ ...prev, current: 1 }));
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Fetch notifications
-  const fetchNotifications = useCallback(async (page: number = 1, limit: number = 10, search?: string) => {
-    if (!userId) {
-      // Wait for user id
-      if (!userLoading) {
-        message.error("Không tìm thấy thông tin người dùng");
-      }
-      return;
-    }
-
-    const startTime = Date.now();
-    try {
-      setLoading(true);
-      const result = await getNotificationsByCreatedBy(userId, {
-        page,
-        limit,
-        search: search?.trim() || undefined,
+  const { data, isLoading, isFetching, isError, error } = useQuery({
+    queryKey: ['admin_notifications', userId, pagination.current, pagination.pageSize, debouncedSearchQuery],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const result = await getNotificationsByCreatedBy(userId!, {
+        page: pagination.current,
+        limit: pagination.pageSize,
+        search: debouncedSearchQuery.trim() || undefined,
       });
 
-      const mappedNotifications: NotificationType[] = (result.data || []).map((notif) => ({
+      const mappedNotifications: NotificationType[] = (result.data || []).map((notif: any) => ({
         key: String(notif.notification_id),
         id: String(notif.notification_id),
         title: notif.title,
@@ -89,71 +78,63 @@ export default function SuperAdminNotifications() {
         createdAt: formatDate(notif.created_at),
       }));
 
-      // Ensure minimum loading time
-      const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 250;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
-      setAllNotifications(mappedNotifications);
-      setPagination((prev) => ({
-        ...prev,
-        current: result.page || page,
-        pageSize: result.limit || limit,
+      return {
+        data: mappedNotifications,
         total: result.total || mappedNotifications.length,
-      }));
-    } catch (error: any) {
-      // Ensure minimum loading time even on error
-      const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 250;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
+      };
+    },
+    enabled: !!userId && !userLoading,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
+  });
 
-      message.error(error?.message || "Không thể tải danh sách thông báo");
-    } finally {
-      setLoading(false);
-    }
-  }, [message, userId, userLoading, formatDate]);
-
-  // Fetch notifications on mount and when dependencies change
-  useEffect(() => {
-    if (userId && !userLoading) {
-      fetchNotifications(pagination.current, pagination.pageSize, debouncedSearchQuery);
-    }
-  }, [fetchNotifications, pagination.current, pagination.pageSize, debouncedSearchQuery, userId, userLoading]);
+  if (isError) {
+    message.error((error as Error)?.message || "Không thể tải danh sách thông báo");
+  }
 
   // Listen for refresh event from sidebar
   useEffect(() => {
     const handleRefreshEvent = () => {
       if (userId && !userLoading) {
-        fetchNotifications(pagination.current, pagination.pageSize, debouncedSearchQuery);
+        queryClient.invalidateQueries({ queryKey: ['admin_notifications', userId] });
       }
     };
-
     window.addEventListener("refresh-notifications", handleRefreshEvent);
     return () => {
       window.removeEventListener("refresh-notifications", handleRefreshEvent);
     };
-  }, [fetchNotifications, pagination.current, pagination.pageSize, debouncedSearchQuery, userId, userLoading]);
+  }, [userId, userLoading, queryClient]);
 
-  const handleTableChange = useCallback((page: number, pageSize: number) => {
-    setPagination((prev) => ({ ...prev, current: page, pageSize }));
-  }, []);
+  const handleTableChange = (page: number, pageSize: number) => {
+    setPagination({ current: page, pageSize });
+  };
 
-  const handleCreateSuccess = useCallback((created: NotificationResponse) => {
-    const mapped: NotificationType = {
-      key: String(created.notification_id),
-      id: String(created.notification_id),
-      title: created.title,
-      message: created.message,
-      scope: created.scope,
-      scope_id: created.scope_id === null ? null : (typeof created.scope_id === "string" ? Number(created.scope_id) : created.scope_id),
-      createdAt: formatDate(created.created_at),
-    };
-
-    setAllNotifications((prev) => [mapped, ...prev]);
+  const handleCreateSuccess = () => {
     setIsCreateModalOpen(false);
-  }, [formatDate]);
+    queryClient.invalidateQueries({ queryKey: ['admin_notifications', userId] });
+    message.success("Tạo thông báo thành công");
+  };
+
+  const handleEditSuccess = () => {
+    setIsEditModalOpen(false);
+    setEditingNotification(null);
+    queryClient.invalidateQueries({ queryKey: ['admin_notifications', userId] });
+    message.success("Cập nhật thông báo thành công");
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!userId) throw new Error("Không tìm thấy thông tin người dùng");
+      return deleteNotification(id, userId);
+    },
+    onSuccess: () => {
+      message.success("Đã xóa thông báo thành công");
+      queryClient.invalidateQueries({ queryKey: ['admin_notifications', userId] });
+    },
+    onError: (error: Error) => {
+      message.error(error.message || "Không thể xóa thông báo");
+    }
+  });
 
   const columns: ColumnsType<NotificationType> = useMemo(() => [
     {
@@ -223,22 +204,8 @@ export default function SuperAdminNotifications() {
             okText: "Xóa",
             okType: "danger",
             cancelText: "Hủy",
-            async onOk() {
-              if (!userId) {
-                message.error("Không tìm thấy thông tin người dùng để thực hiện xóa");
-                return;
-              }
-              try {
-                await deleteNotification(record.id, userId);
-                setAllNotifications((prev) => prev.filter((item) => item.id !== record.id));
-                setPagination((prev) => ({
-                  ...prev,
-                  total: Math.max(0, prev.total - 1),
-                }));
-                message.success("Đã xóa thông báo thành công");
-              } catch (error: any) {
-                message.error(error?.message || "Không thể xóa thông báo");
-              }
+            onOk: () => {
+              deleteMutation.mutate(record.id);
             },
           });
         };
@@ -271,6 +238,7 @@ export default function SuperAdminNotifications() {
               danger
               className="hover:bg-red-50 hover:border-red-400 transition-all duration-200"
               onClick={handleDelete}
+              loading={deleteMutation.isPending}
             >
               Xóa
             </Button>
@@ -278,13 +246,13 @@ export default function SuperAdminNotifications() {
         );
       },
     },
-  ], [pagination.current, pagination.pageSize, message, modal]);
+  ], [pagination.current, pagination.pageSize, modal, deleteMutation]);
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <Input
-          prefix={loading ? <LoadingOutlined spin /> : <SearchOutlined />}
+          prefix={isFetching ? <LoadingOutlined spin /> : <SearchOutlined />}
           placeholder="Tìm kiếm thông báo..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -328,18 +296,7 @@ export default function SuperAdminNotifications() {
           setIsEditModalOpen(false);
           setEditingNotification(null);
         }}
-        onSuccess={(updated) => {
-          setAllNotifications((prev) =>
-            prev.map((item) => (item.id === String(updated.notification_id) ? {
-              ...item,
-              title: updated.title,
-              message: updated.message,
-              createdAt: formatDate(updated.created_at),
-            } : item))
-          );
-          setIsEditModalOpen(false);
-          setEditingNotification(null);
-        }}
+        onSuccess={handleEditSuccess}
       />
 
       <NotificationDetailModal
@@ -352,25 +309,23 @@ export default function SuperAdminNotifications() {
       />
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <Spin spinning={loading}>
-          <Table
-            columns={columns}
-            dataSource={allNotifications}
-            pagination={{
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              total: pagination.total,
-              showSizeChanger: false,
-              showTotal: (total) => `Tổng ${total} thông báo`,
-              size: "small",
-              onChange: handleTableChange,
-            }}
-            className="news-table"
-            rowClassName="group hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 cursor-pointer border-b border-gray-100"
-          />
-        </Spin>
+        <Table
+          columns={columns}
+          dataSource={data?.data || []}
+          loading={isLoading || isFetching}
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: data?.total || 0,
+            showSizeChanger: false,
+            showTotal: (total) => `Tổng ${total} thông báo`,
+            size: "small",
+            onChange: handleTableChange,
+          }}
+          className="news-table"
+          rowClassName="group hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 cursor-pointer border-b border-gray-100"
+        />
       </div>
     </div>
   );
 }
-

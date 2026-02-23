@@ -59,6 +59,7 @@ export default function DarkPagination({
           px-4 py-2 rounded-xl shadow-lg border transition-colors duration-300
           bg-white dark:bg-[#1e293b] 
           border-slate-200 dark:border-slate-700/50 
+          [&_.ant-pagination]:flex [&_.ant-pagination]:flex-wrap [&_.ant-pagination]:justify-center [&_.ant-pagination]:gap-1
           [&_.ant-pagination-item]:!border-none 
           [&_.ant-pagination-item]:text-slate-600 dark:[&_.ant-pagination-item]:text-white 
           [&_.ant-pagination-item:hover]:!border-none 
@@ -70,6 +71,7 @@ export default function DarkPagination({
           [&_.ant-pagination-prev]:text-slate-500 dark:[&_.ant-pagination-prev]:text-white 
           [&_.ant-pagination-next]:text-slate-500 dark:[&_.ant-pagination-next]:text-white 
           [&_.ant-pagination-total-text]:text-slate-500 dark:[&_.ant-pagination-total-text]:text-slate-300
+          [&_.ant-pagination-total-text]:whitespace-nowrap
         `}>
           <Pagination
             current={current}

@@ -20,7 +20,7 @@ export default function EditClassNotificationModal({ open, notification, classId
     }
   }, [open, notification, form, loading]);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: { title: string; message: string }) => {
     if (!notification) return;
 
     setSubmitting(true);
@@ -60,8 +60,8 @@ export default function EditClassNotificationModal({ open, notification, classId
       message.success("Cập nhật thông báo thành công!");
       form.resetFields();
       onSuccess();
-    } catch (error: any) {
-      message.error(error?.message || "Không thể cập nhật thông báo");
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : "Không thể cập nhật thông báo");
     } finally {
       setSubmitting(false);
     }

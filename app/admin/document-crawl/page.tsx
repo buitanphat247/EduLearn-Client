@@ -154,9 +154,9 @@ export default function AdminContent() {
         pageSizeRef.current = pageSize;
         fetchDocuments(page, pageSize, searchQuery.trim() || undefined, selectedFileType);
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+       
     },
-    [searchQuery, selectedFileType]
+    [fetchDocuments, searchQuery, selectedFileType]
   );
 
   const formatFileSize = (bytes: string) => {

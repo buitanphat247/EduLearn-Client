@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     Table,
     Card,
@@ -13,16 +13,16 @@ import {
     Col,
     Tag,
     Button,
-    message
+    App
 } from 'antd';
 import {
     RobotOutlined,
-    HistoryOutlined,
     ReloadOutlined,
     BarChartOutlined,
     CloudServerOutlined
 } from '@ant-design/icons';
-import { getGlobalAiUsageStats, AiUsageLog, AiUsageStats } from '@/lib/api/subscription';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { getGlobalAiUsageStats, AiUsageLog } from '@/lib/api/subscription';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -39,8 +39,8 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 
 export default function AiUsageStatsPage() {
-    const [loading, setLoading] = useState(false);
-    const [data, setData] = useState<AiUsageStats>({ logs: [], total: 0, page: 1, limit: DEFAULT_PAGE_SIZE, stats: [] });
+    const { message } = App.useApp();
+
     const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
         dayjs().subtract(7, 'day'),
         dayjs(),
@@ -49,24 +49,22 @@ export default function AiUsageStatsPage() {
     const [page, setPage] = useState(DEFAULT_PAGE);
     const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-    const fetchData = useCallback(async (p: number = page, size: number = pageSize) => {
-        setLoading(true);
-        try {
-            const start = dateRange[0]?.format('YYYY-MM-DD');
-            const end = dateRange[1]?.format('YYYY-MM-DD');
-            const res = await getGlobalAiUsageStats(start, end, featureFilter, p, size);
-            setData(res);
-        } catch {
-            message.error('Không thể tải dữ liệu thống kê');
-            setData((prev) => ({ ...prev, logs: [], total: 0 }));
-        } finally {
-            setLoading(false);
-        }
-    }, [dateRange[0]?.valueOf(), dateRange[1]?.valueOf(), featureFilter, page, pageSize]);
+    const start = dateRange[0]?.format('YYYY-MM-DD');
+    const end = dateRange[1]?.format('YYYY-MM-DD');
 
-    useEffect(() => {
-        fetchData(page, pageSize);
-    }, [fetchData]);
+    const { data, isLoading, isFetching, refetch, isError, error } = useQuery({
+        queryKey: ['admin_ai_usage_stats', start, end, featureFilter, page, pageSize],
+        queryFn: async () => {
+            return await getGlobalAiUsageStats(start, end, featureFilter, page, pageSize);
+        },
+        placeholderData: keepPreviousData,
+        enabled: !!(start && end),
+        staleTime: 5 * 60 * 1000,
+    });
+
+    if (isError) {
+        message.error((error as Error)?.message || 'Không thể tải dữ liệu thống kê');
+    }
 
     const columns = useMemo(
         () => [
@@ -126,12 +124,12 @@ export default function AiUsageStatsPage() {
         [],
     );
 
-    const totalRequests = data.stats.reduce((acc, curr) => acc + curr.count, 0);
+    const safeData = data || { logs: [], total: 0, page: 1, limit: DEFAULT_PAGE_SIZE, stats: [] };
+    const totalRequests = safeData.stats.reduce((acc, curr) => acc + curr.count, 0);
 
     return (
         <div style={{ padding: '0' }}>
             {/* Header Filters */}
-            {/* Premium Filter Bar */}
             <Card
                 bordered={false}
                 style={{
@@ -140,7 +138,7 @@ export default function AiUsageStatsPage() {
                     background: '#fff',
                     border: '1px solid #cbd5e1'
                 }}
-                bodyStyle={{ padding: '16px 24px' }}
+                styles={{ body: { padding: '16px 24px' } }}
             >
                 <div style={{
                     display: 'flex',
@@ -198,9 +196,9 @@ export default function AiUsageStatsPage() {
                         <div style={{ alignSelf: 'flex-end', paddingBottom: '2px' }}>
                             <Button
                                 type="primary"
-                                icon={<ReloadOutlined className={loading ? 'ant-spin' : ''} />}
-                                onClick={() => fetchData(page, pageSize)}
-                                loading={loading}
+                                icon={<ReloadOutlined className={isFetching ? 'ant-spin' : ''} />}
+                                onClick={() => refetch()}
+                                loading={isFetching}
                                 style={{
                                     borderRadius: '8px',
                                     height: '38px',
@@ -233,10 +231,10 @@ export default function AiUsageStatsPage() {
                             />
                         </Card>
                     </Col>
-                    {data.stats.map(s => {
+                    {safeData.stats.map((s, index) => {
                         const feat = FEATURES.find(f => f.value === s.feature_code);
                         return (
-                            <Col xs={24} sm={12} lg={6} key={`${s.feature_code}-${s.model_name}`}>
+                            <Col xs={24} sm={12} lg={6} key={`${s.feature_code}-${s.model_name}-${index}`}>
                                 <Card
                                     bordered={false}
                                     size="small"
@@ -255,14 +253,14 @@ export default function AiUsageStatsPage() {
 
                 {/* Table */}
                 <Table
-                    dataSource={data.logs}
+                    dataSource={safeData.logs}
                     columns={columns}
                     rowKey="id"
-                    loading={loading}
+                    loading={isLoading || isFetching}
                     pagination={{
                         current: page,
                         pageSize,
-                        total: data.total,
+                        total: safeData.total,
                         showSizeChanger: true,
                         showTotal: (total) => `Tổng ${total} bản ghi`,
                         onChange: (p, size) => {
@@ -281,8 +279,6 @@ export default function AiUsageStatsPage() {
                     }}
                 />
             </div>
-
-
         </div>
     );
 }

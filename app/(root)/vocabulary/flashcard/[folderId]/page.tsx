@@ -11,6 +11,9 @@ import { IoArrowBackOutline } from "react-icons/io5";
 import VocabularyFlashcardSkeleton from "@/app/components/features/vocabulary/VocabularyFlashcardSkeleton";
 import { useTheme } from "@/app/context/ThemeContext";
 import { sanitizeForDisplay } from "@/lib/utils/sanitize";
+import { useUserId } from "@/app/hooks/useUserId";
+import { useQueryClient } from "@tanstack/react-query";
+import { useVocabulariesByFolderQuery, useVocabularyReviewQuery, vocabularyKeys, reviewStatsKeys } from "@/app/hooks/queries/useVocabularyQuery";
 
 type ReviewLevel = "again" | "hard" | "good" | "easy";
 
@@ -21,30 +24,15 @@ export default function VocabularyFlashcard() {
   const folderIdString = params?.folderId as string;
   const folderId = folderIdString === "review" ? "review" : (folderIdString ? parseInt(folderIdString, 10) : null);
   const { theme: currentTheme } = useTheme();
+  const queryClient = useQueryClient();
 
   const [vocabularies, setVocabularies] = useState<VocabularyResponse[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [reviewLevels, setReviewLevels] = useState<Record<number, ReviewLevel>>({});
   const [isFlipped, setIsFlipped] = useState(false);
-  const [userId, setUserId] = useState<number | null>(null);
+  const { userId: rawUserId } = useUserId();
+  const userId = rawUserId ? Number(rawUserId) : null;
   const [isProcessing, setIsProcessing] = useState(false);
-
-  // Lấy thông tin User Profile
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const { getProfile } = await import("@/lib/api/auth");
-        const profile = await getProfile();
-        if (profile?.user_id) {
-          setUserId(Number(profile.user_id));
-        }
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-      }
-    };
-    fetchProfile();
-  }, []);
 
   // Map last_grade -> ReviewLevel: 1->again, 2->hard, 3->good, 5->easy
   const gradeToLevel = useCallback((grade: number | null): ReviewLevel | undefined => {
@@ -56,70 +44,20 @@ export default function VocabularyFlashcard() {
     return "again";
   }, []);
 
-  const fetchVocabularies = useCallback(async () => {
-    if (!folderId) return;
+  const { data: folderVocabularies, isLoading: folderLoading } = useVocabulariesByFolderQuery(folderId !== "review" && folderId ? (folderId as number) : 0);
+  const { data: reviewVocabularies, isLoading: reviewLoading } = useVocabularyReviewQuery(folderId === "review" ? userId : null);
 
-    setLoading(true);
-    try {
-      let data: any[];
-      if (folderId === "review") {
-        if (!userId) {
-          setLoading(false);
-          return;
-        }
-        const [sub, res] = await Promise.all([
-          getSubscriptionStatus().catch(() => ({ isPro: false })),
-          getDueWords(userId, { limit: 20 }),
-        ]);
-        const allowed = sub?.isPro ? res.data : (res.data || []).filter((x: any) => !x.folder_pro);
+  const queryVocabularies = useMemo(() => folderId === "review" ? (reviewVocabularies || []) : (folderVocabularies || []), [folderId, reviewVocabularies, folderVocabularies]);
+  const loading = folderId === "review" ? reviewLoading : folderLoading;
 
-        if (allowed.length > 0) {
-          const sourceWordIds = allowed.map((item: any) => item.sourceWordId);
-          const details = await getVocabularyBatch(sourceWordIds);
-
-          data = allowed.map((item: any) => {
-            const detail = details.find((d: any) => d.sourceWordId === item.sourceWordId);
-            return {
-              ...(detail || item.vocabulary),
-              sourceWordId: item.sourceWordId,
-              nextReviewAt: item.next_review_at,
-              last_grade: item.last_grade,
-              repetition: item.repetition
-            };
-          });
-        } else {
-          data = [];
-        }
-      } else {
-        data = await getVocabulariesByFolder(folderId as number);
-      }
-      setVocabularies(data);
+  useEffect(() => {
+    if (queryVocabularies) {
+      setVocabularies(queryVocabularies);
       setCurrentIndex(0);
       setIsFlipped(false);
       setReviewLevels({});
-    } catch (error: any) {
-      const status = error?.response?.status;
-      if (status === 403 || status === 404) {
-        if (status === 404) {
-          message.warning("Không tìm thấy thư mục từ vựng.");
-        } else {
-          message.warning(error?.response?.data?.message || "Bạn cần gói Pro để truy cập từ vựng.");
-        }
-        router.replace("/vocabulary");
-        return;
-      }
-      console.error("Error fetching vocabularies:", error);
-      message.error(error?.message || "Không thể tải danh sách từ vựng");
-      setVocabularies([]);
-      setReviewLevels({});
-    } finally {
-      setLoading(false);
     }
-  }, [folderId, userId, message, router]);
-
-  useEffect(() => {
-    if (folderId) fetchVocabularies();
-  }, [folderId, userId, fetchVocabularies]);
+  }, [queryVocabularies]);
 
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -235,7 +173,9 @@ export default function VocabularyFlashcard() {
           grade: levelToGrade[level],
         });
 
-        message.success(`Đã ghi nhận: ${levelLabels[level]}`);
+        // ✅ Invalidate related caches so other pages show fresh data
+        queryClient.invalidateQueries({ queryKey: vocabularyKeys.all });
+        queryClient.invalidateQueries({ queryKey: reviewStatsKeys.all });
 
         if (currentIndex < vocabularies.length - 1) {
           setTimeout(() => handleNext(), 500);
@@ -247,7 +187,7 @@ export default function VocabularyFlashcard() {
         setTimeout(() => setIsProcessing(false), 500); // Debounce duration
       }
     },
-    [currentVocab, userId, currentIndex, vocabularies.length, handleNext, message]
+    [currentVocab, userId, currentIndex, vocabularies.length, handleNext, message, isProcessing, levelLabels, levelToGrade, queryClient]
   );
 
 

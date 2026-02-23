@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Form, Input, Button, Divider, Avatar, App } from "antd";
 import Swal from "sweetalert2";
 import {
@@ -31,13 +31,22 @@ interface SettingsFormData {
   username: string;
 }
 
+// ✅ Extracted outside component to prevent remount on every render
+const SettingsCard = ({ title, children }: { title?: React.ReactNode; children: React.ReactNode }) => (
+  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-none dark:shadow-sm mb-6 transition-colors duration-200 border border-slate-200 dark:border-slate-700">
+    {title && <div className="mb-6 text-gray-800 dark:text-gray-100">{title}</div>}
+    {children}
+  </div>
+);
+
 export default function AdminSettings() {
   const { message: messageApi } = App.useApp();
   const { userId, loading: userIdLoading } = useUserId();
   const [profileForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
   const [logoutAllLoading, setLogoutAllLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -150,9 +159,9 @@ export default function AdminSettings() {
     }
   };
 
-  const handleSaveProfile = async (values: SettingsFormData) => {
+  const handleSaveProfile = useCallback(async (values: SettingsFormData) => {
     try {
-      setSaving(true);
+      setSavingProfile(true);
       if (userId) {
         const updated = await updateUser(userId, values);
         setUserInfo(updated);
@@ -163,17 +172,51 @@ export default function AdminSettings() {
     } catch (error: any) {
       messageApi.error(error?.message || "Không thể cập nhật thông tin");
     } finally {
-      setSaving(false);
+      setSavingProfile(false);
     }
-  };
+  }, [userId, messageApi]);
 
-  // Custom Card Component
-  const CustomCard = ({ title, children }: { title?: React.ReactNode; children: React.ReactNode }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-none dark:shadow-sm mb-6 transition-colors duration-200 border border-slate-200 dark:border-slate-700">
-      {title && <div className="mb-6 text-gray-800 dark:text-gray-100">{title}</div>}
-      {children}
-    </div>
-  );
+  const handleChangePassword = useCallback(async (values: any) => {
+    try {
+      setSavingPassword(true);
+      await changePassword({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      });
+      messageApi.success("Đã đổi mật khẩu thành công");
+      passwordForm.resetFields();
+    } catch (error: any) {
+      messageApi.error(error?.message || "Không thể đổi mật khẩu");
+    } finally {
+      setSavingPassword(false);
+    }
+  }, [messageApi, passwordForm]);
+
+  const handleSignOutAll = useCallback(async () => {
+    const result = await Swal.fire({
+      title: "Đăng xuất mọi thiết bị?",
+      text: "Bạn sẽ bị đăng xuất ở tất cả thiết bị và cần đăng nhập lại.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Đăng xuất tất cả",
+      cancelButtonText: "Hủy",
+      background: theme === "dark" ? "#1e293b" : "#fff",
+      color: theme === "dark" ? "#fff" : "#000",
+    });
+    if (result.isConfirmed) {
+      try {
+        setLogoutAllLoading(true);
+        await signOutAllDevices();
+      } catch (error: any) {
+        messageApi.error(error?.message || "Không thể đăng xuất");
+        setLogoutAllLoading(false);
+      }
+    }
+  }, [theme, messageApi]);
+
+
 
   if (loading) {
     return <SettingsSkeleton />;
@@ -182,7 +225,7 @@ export default function AdminSettings() {
   return (
     <div className="space-y-6">
       {/* Profile Information */}
-      <CustomCard
+      <SettingsCard
         title={
           <div className="flex items-center gap-3">
             <UserOutlined className="text-blue-600 dark:text-blue-500" />
@@ -303,19 +346,19 @@ export default function AdminSettings() {
               htmlType="submit"
               icon={<SaveOutlined />}
               size="large"
-              loading={saving}
+              loading={savingProfile}
               className="bg-blue-600 hover:bg-blue-700 border-none"
             >
               Lưu thay đổi
             </Button>
           </div>
         </Form>
-      </CustomCard>
+      </SettingsCard>
 
 
 
       {/* Change Password */}
-      <CustomCard
+      <SettingsCard
         title={
           <div className="flex items-center gap-3">
             <LockOutlined className="text-blue-600 dark:text-blue-500" />
@@ -326,23 +369,7 @@ export default function AdminSettings() {
         <Form
           form={passwordForm}
           layout="vertical"
-          onFinish={async (values) => {
-            try {
-              setSaving(true);
-
-              await changePassword({
-                currentPassword: values.currentPassword,
-                newPassword: values.newPassword,
-              });
-
-              messageApi.success("Đã đổi mật khẩu thành công");
-              passwordForm.resetFields();
-            } catch (error: any) {
-              messageApi.error(error?.message || "Không thể đổi mật khẩu");
-            } finally {
-              setSaving(false);
-            }
-          }}
+          onFinish={handleChangePassword}
         >
           <Form.Item
             label={<span className="text-gray-700 dark:text-gray-300">Mật khẩu hiện tại</span>}
@@ -400,17 +427,17 @@ export default function AdminSettings() {
               htmlType="submit"
               icon={<SaveOutlined />}
               size="large"
-              loading={saving}
+              loading={savingPassword}
               className="bg-blue-600 hover:bg-blue-700 border-none"
             >
               Đổi mật khẩu
             </Button>
           </div>
         </Form>
-      </CustomCard>
+      </SettingsCard>
 
       {/* Đăng xuất khỏi mọi thiết bị */}
-      <CustomCard
+      <SettingsCard
         title={
           <div className="flex items-center gap-3">
             <LogoutOutlined className="text-orange-500" />
@@ -427,30 +454,12 @@ export default function AdminSettings() {
           icon={<LogoutOutlined />}
           loading={logoutAllLoading}
           size="large"
-          onClick={() => {
-            Swal.fire({
-              title: "Đăng xuất mọi thiết bị?",
-              text: "Bạn sẽ bị đăng xuất ở tất cả thiết bị và cần đăng nhập lại.",
-              icon: "warning",
-              showCancelButton: true,
-              confirmButtonColor: "#dc2626",
-              cancelButtonColor: "#6b7280",
-              confirmButtonText: "Đăng xuất tất cả",
-              cancelButtonText: "Hủy",
-              background: theme === "dark" ? "#1e293b" : "#fff",
-              color: theme === "dark" ? "#fff" : "#000",
-            }).then((result) => {
-              if (result.isConfirmed) {
-                setLogoutAllLoading(true);
-                signOutAllDevices();
-              }
-            });
-          }}
+          onClick={handleSignOutAll}
           className="rounded-lg"
         >
           Đăng xuất ra tất cả thiết bị
         </Button>
-      </CustomCard>
+      </SettingsCard>
     </div>
   );
 }

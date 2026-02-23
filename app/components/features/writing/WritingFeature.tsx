@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
+import { useState, useMemo, useCallback, memo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   CommentOutlined,
@@ -14,16 +14,15 @@ import {
 } from "@ant-design/icons";
 import { Form, Spin, App, Modal, Pagination, Empty } from "antd";
 import {
-  getWritingTopics,
-  generateWritingContent,
-  getWritingHistory,
-  type WritingTopic,
-  type WritingGenerateConfig,
   type WritingHistoryItem,
 } from "@/lib/api/writing";
-import { getUsageStatusForFeature, type FeatureUsageStatus } from "@/lib/api/subscription";
 import { getUserIdFromCookie } from "@/lib/utils/cookies";
-import WritingFeatureSkeleton from "./WritingFeatureSkeleton";
+import {
+  useWritingTopicsQuery,
+  useWritingHistoryQuery,
+  useWritingUsageQuery,
+  useGenerateWritingMutation,
+} from "@/app/hooks/queries/useWritingQuery";
 
 // Memoized History Item Component with custom comparison
 const HistoryItem = memo(
@@ -145,31 +144,38 @@ export default function WritingFeature() {
   const router = useRouter();
   const { message } = App.useApp();
   const [form] = Form.useForm();
-  const [topics, setTopics] = useState<Record<string, WritingTopic[]>>({});
-  const [loadingTopics, setLoadingTopics] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isCreatingModalOpen, setIsCreatingModalOpen] = useState(false);
-
-  // History states
-  const [allHistories, setAllHistories] = useState<WritingHistoryItem[]>([]);
-  const [loadingAllHistories, setLoadingAllHistories] = useState(false);
-  const [historyPagination, setHistoryPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-  });
-
-  // Số lượt tạo bài còn lại (theo gói)
-  const [writingUsage, setWritingUsage] = useState<FeatureUsageStatus | null>(null);
-
-  // Refs for race condition protection
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const historyAbortControllerRef = useRef<AbortController | null>(null);
-  const isMountedRef = useRef(true);
   const isSubmittingRef = useRef(false);
 
-  // Map goal value to category - memoized
+  // ── React Query: Topics ──
+  const [activeCategory, setActiveCategory] = useState<"general" | "ielts" | "work">("general");
+  const { data: topics = {}, isLoading: loadingTopics } = useWritingTopicsQuery(activeCategory);
+
+  // ── React Query: History (paginated) ──
+  const [historyPage, setHistoryPage] = useState(1);
+  const HISTORY_PAGE_SIZE = 10;
+  const {
+    data: historyData,
+    isLoading: loadingAllHistories,
+  } = useWritingHistoryQuery(historyPage, HISTORY_PAGE_SIZE);
+  const allHistories = historyData?.histories ?? [];
+  const historyPagination = useMemo(() => ({
+    current: historyData?.page ?? 1,
+    pageSize: historyData?.limit ?? HISTORY_PAGE_SIZE,
+    total: historyData?.total ?? 0,
+  }), [historyData]);
+
+  // ── React Query: Usage status ──
+  const { data: writingUsage } = useWritingUsageQuery();
+
+  // ── React Query: Generate mutation ──
+  const generateMutation = useGenerateWritingMutation();
+  const submitting = generateMutation.isPending;
+
+  // Determine initial loading (first render)
+  const isInitialLoading = loadingTopics && loadingAllHistories;
+
+  // Map goal value to category
   const goalToCategory = useCallback((goal: string): "general" | "ielts" | "work" | undefined => {
     if (goal === "communication") return "general";
     if (goal === "ielts") return "ielts";
@@ -177,61 +183,7 @@ export default function WritingFeature() {
     return undefined;
   }, []);
 
-  // Fetch topics when goal changes - memoized with race condition protection
-  const fetchTopics = useCallback(
-    async (goal: string) => {
-      const category = goalToCategory(goal);
-      if (!category || !isMountedRef.current) return;
-
-      // Cancel previous request if exists
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
-
-      setLoadingTopics(true);
-      try {
-        const response = await getWritingTopics(category, abortController.signal);
-
-        // Check if component is still mounted and request not cancelled
-        if (!isMountedRef.current || abortController.signal.aborted) {
-          return;
-        }
-
-        if (response.status === 200 && response.data) {
-          setTopics(response.data);
-          // Reset topic_select when topics change
-          if (isMountedRef.current) {
-            form.setFieldsValue({ topic_select: undefined });
-          }
-        } else {
-          if (isMountedRef.current) {
-            message.warning("Không có dữ liệu chủ đề");
-            setTopics({});
-          }
-        }
-      } catch (error: any) {
-        // Ignore abort errors
-        if (error?.name === 'AbortError' || abortController.signal.aborted) {
-          return;
-        }
-
-        if (isMountedRef.current) {
-          message.error(error?.message || "Không thể tải danh sách chủ đề");
-          setTopics({});
-        }
-      } finally {
-        if (isMountedRef.current && !abortController.signal.aborted) {
-          setLoadingTopics(false);
-        }
-      }
-    },
-    [goalToCategory, message, form]
-  );
-
-  // Map goal to learningPurpose - memoized
+  // Map goal to learningPurpose
   const goalToLearningPurpose = useCallback((goal: string): "COMMUNICATION" | "IELTS" | "WORK" => {
     if (goal === "communication") return "COMMUNICATION";
     if (goal === "ielts") return "IELTS";
@@ -239,23 +191,23 @@ export default function WritingFeature() {
     return "COMMUNICATION";
   }, []);
 
-  // Watch for goal changes - memoized
+  // Watch for goal changes — trigger React Query refetch via category state
   const handleGoalChange = useCallback(
     (goal: string) => {
       form.setFieldsValue({ goal });
-      fetchTopics(goal);
+      const cat = goalToCategory(goal);
+      if (cat) {
+        setActiveCategory(cat);
+        form.setFieldsValue({ topic_select: undefined });
+      }
     },
-    [form, fetchTopics]
+    [form, goalToCategory]
   );
 
-  // Handle navigation to practice page - memoized
+  // Handle navigation to practice page
   const handleHistoryNavigate = useCallback(
     (item: WritingHistoryItem) => {
-      // Use history_id (item.id) from database as the navigation ID
-      // Practice page will fetch data from API using this ID
       if (item.id) {
-        // Navigate using history_id (number from database)
-        // No need to save to sessionStorage - practice page will fetch from API
         router.push(`/writing/${item.id}`);
       } else {
         message.error("Không tìm thấy ID của bài luyện tập");
@@ -264,147 +216,15 @@ export default function WritingFeature() {
     [router, message]
   );
 
-  // Fetch all histories with pagination - memoized
-  const fetchAllHistories = useCallback(
-    async (page: number = 1, pageSize: number = 10) => {
-      if (!isMountedRef.current) return;
-
-      // Cancel previous history request if exists
-      if (historyAbortControllerRef.current) {
-        historyAbortControllerRef.current.abort();
-      }
-
-      const abortController = new AbortController();
-      historyAbortControllerRef.current = abortController;
-
-      setLoadingAllHistories(true);
-      const userId = getUserIdFromCookie();
-      if (!userId) {
-        if (isMountedRef.current) {
-          setLoadingAllHistories(false);
-        }
-        return;
-      }
-
-      try {
-        const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
-        if (isNaN(userIdNumber) || userIdNumber <= 0) {
-          if (isMountedRef.current) {
-            setLoadingAllHistories(false);
-          }
-          return;
-        }
-
-        const historyResponse = await getWritingHistory({
-          user_id: userIdNumber,
-          limit: pageSize,
-          page: page,
-          order_by: "created_at",
-          order_desc: true,
-        }, abortController.signal);
-
-        // Check if component is still mounted and request not cancelled
-        if (!isMountedRef.current || abortController.signal.aborted) {
-          return;
-        }
-
-        if (historyResponse.status === 200 && historyResponse.data) {
-          // Map API response to WritingHistoryItem format
-          const mappedHistories: WritingHistoryItem[] = historyResponse.data.histories.map((item: any) => ({
-            id: item.id,
-            user_id: item.user_id,
-            current_index: item.current_index ?? 0,
-            created_at: item.created_at,
-            updated_at: item.updated_at,
-            language: (item.data?.language || "English") as "English",
-            topic: item.data?.topic || "",
-            difficulty: item.data?.difficulty || 2,
-            vietnameseSentences: item.data?.vietnameseSentences || [],
-            englishSentences: item.data?.englishSentences || [],
-            totalSentences: item.data?.totalSentences || 0,
-            practiceType: item.data?.practiceType || null,
-            contentType: (item.data?.contentType || "DIALOGUE") as "DIALOGUE",
-            userPoints: item.data?.userPoints || 0,
-          }));
-
-          if (isMountedRef.current) {
-            setAllHistories(mappedHistories);
-            setHistoryPagination({
-              current: historyResponse.data.page || page,
-              pageSize: historyResponse.data.limit || pageSize,
-              total: historyResponse.data.total || 0,
-            });
-          }
-        }
-      } catch (error: any) {
-        // Ignore abort errors
-        if (error?.name === 'AbortError' || abortController.signal.aborted) {
-          return;
-        }
-
-        if (isMountedRef.current) {
-          console.error("Error fetching all histories:", error);
-          message.error("Không thể tải lịch sử luyện tập");
-        }
-      } finally {
-        if (isMountedRef.current && !abortController.signal.aborted) {
-          setLoadingAllHistories(false);
-        }
-      }
-    },
-    [message]
-  );
-
-
-
-  // Handle pagination change
+  // Handle pagination change — just update page state, React Query refetches automatically
   const handleHistoryPaginationChange = useCallback(
-    (page: number, pageSize: number) => {
-      fetchAllHistories(page, pageSize);
+    (page: number) => {
+      setHistoryPage(page);
     },
-    [fetchAllHistories]
+    []
   );
 
-  // Initial load - Nhiều luồng chạy song song để tăng tốc màn hình tạo bài
-  useEffect(() => {
-    isMountedRef.current = true;
-
-    const initData = async () => {
-      try {
-        const [_, __, usage] = await Promise.all([
-          fetchTopics("communication"),
-          fetchAllHistories(1, 10).catch((error) => {
-            if (isMountedRef.current) console.error("Error fetching history:", error);
-          }),
-          getUsageStatusForFeature("ai_writing").catch(() => ({
-            allowed: false,
-            currentCount: 0,
-            limit: 0,
-          })),
-        ]);
-        if (isMountedRef.current) {
-          if (usage) setWritingUsage(usage);
-          setIsInitialLoading(false);
-        }
-      } catch (error) {
-        if (isMountedRef.current) {
-          console.error("Error initializing data:", error);
-          setIsInitialLoading(false);
-        }
-      }
-    };
-
-    initData();
-
-    return () => {
-      isMountedRef.current = false;
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [fetchTopics, fetchAllHistories]);
-
-  // Handle form submit - memoized with double submit prevention
+  // Handle form submit with double-submit prevention
   const handleSubmit = useCallback(
     async (values: {
       goal?: string;
@@ -412,117 +232,72 @@ export default function WritingFeature() {
       topic_select?: string;
       language?: string;
     }) => {
-      // Lock synchronously so double-click / Strict Mode second invoke cannot pass
-      if (isSubmittingRef.current) return;
+      if (isSubmittingRef.current || submitting) return;
       isSubmittingRef.current = true;
 
-      if (submitting) {
-        isSubmittingRef.current = false;
-        return;
-      }
-
-      if (!isMountedRef.current) {
-        isSubmittingRef.current = false;
-        return;
-      }
-
       try {
-        setSubmitting(true);
-        setIsCreatingModalOpen(true); // Open modal when starting
+        setIsCreatingModalOpen(true);
 
-        // Get user_id from cookie
         const userId = getUserIdFromCookie();
         if (!userId) {
-          if (isMountedRef.current) {
-            message.error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
-            setSubmitting(false);
-            setIsCreatingModalOpen(false);
-          }
+          message.error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
+          setIsCreatingModalOpen(false);
           isSubmittingRef.current = false;
           return;
         }
 
         const topicValue = values.topic_select;
         if (!topicValue) {
-          if (isMountedRef.current) {
-            message.warning("Vui lòng chọn chủ đề");
-            setSubmitting(false);
-            setIsCreatingModalOpen(false);
-          }
+          message.warning("Vui lòng chọn chủ đề");
+          setIsCreatingModalOpen(false);
           isSubmittingRef.current = false;
           return;
         }
 
         const userIdNumber = typeof userId === "string" ? parseInt(userId, 10) : userId;
-
         if (isNaN(userIdNumber) || userIdNumber <= 0) {
-          if (isMountedRef.current) {
-            message.error("User ID không hợp lệ");
-            setSubmitting(false);
-            setIsCreatingModalOpen(false);
-          }
+          message.error("User ID không hợp lệ");
+          setIsCreatingModalOpen(false);
           isSubmittingRef.current = false;
           return;
         }
 
-        const config: WritingGenerateConfig = {
+        // Use React Query mutation
+        const response = await generateMutation.mutateAsync({
           difficulty: values.difficulty || 2,
           learningPurpose: goalToLearningPurpose(values.goal || "communication"),
           topic: topicValue,
           user_id: userIdNumber,
           targetLanguage: values.language || "English",
-        };
+        });
 
-        const response = await generateWritingContent(config);
-
-        // Check if component is still mounted
-        if (!isMountedRef.current) {
-          isSubmittingRef.current = false;
-          return;
-        }
-
-        // Validate response has ID before proceeding
         if (!response?.id) {
           message.error("Không nhận được ID từ server. Vui lòng thử lại.");
-          setSubmitting(false);
           setIsCreatingModalOpen(false);
           isSubmittingRef.current = false;
           return;
         }
 
-        // Store data in sessionStorage to pass to practice page
+        // Store in sessionStorage for immediate practice page access
         try {
           sessionStorage.setItem(`writing_${response.id}`, JSON.stringify(response));
         } catch (storageError) {
           console.warn("Failed to save to sessionStorage:", storageError);
-          // Continue anyway - practice page can fetch from API
         }
 
-        // Refresh history and lượt tạo bài còn lại (non-blocking)
-        fetchAllHistories(1, 10).catch((error) => {
-          if (isMountedRef.current) {
-            console.error("Error refreshing history:", error);
-          }
-        });
-        getUsageStatusForFeature("ai_writing").then(setWritingUsage).catch(() => {});
+        // React Query mutation onSuccess already invalidates history & usage queries
 
-        // Close modal and navigate to practice page
         setIsCreatingModalOpen(false);
         router.push(`/writing/${response.id}`);
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : "Không thể tạo bài luyện viết";
-        if (isMountedRef.current) {
-          message.error(errorMessage);
-          setIsCreatingModalOpen(false);
-        }
+        message.error(errorMessage);
+        setIsCreatingModalOpen(false);
       } finally {
-        if (isMountedRef.current) {
-          setSubmitting(false);
-        }
         isSubmittingRef.current = false;
       }
     },
-    [goalToLearningPurpose, message, fetchAllHistories, router, submitting]
+    [goalToLearningPurpose, message, generateMutation, router, submitting]
   );
 
   const goalOptions = useMemo(
@@ -559,7 +334,7 @@ export default function WritingFeature() {
   // Memoized topic options from topics state
 
   return (
-    <div className="container mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       {/* Left Column: Configuration Form */}
       <div className="lg:col-span-4">
         {isInitialLoading ? (

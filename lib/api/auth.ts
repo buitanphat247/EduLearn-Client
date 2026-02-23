@@ -3,8 +3,10 @@ import { clearUserCache, clearCookieCache, saveUserDataToSession } from "@/lib/u
 import type { SignInRequest, SignInResponse, SignUpRequest, SignUpResponse } from "@/interface/auth";
 
 /**
- * Helper function to set cookies from response body
- * Next.js rewrite doesn't forward Set-Cookie headers automatically
+ * Trên production (www + api cùng domain edulearning.io.vn), backend đã gửi Set-Cookie
+ * với domain=.edulearning.io.vn. Nếu frontend còn set thêm bằng document.cookie (không
+ * chỉ định domain) thì browser lưu thêm bản domain=www.edulearning.io.vn → trùng cookie.
+ * Chỉ set fallback khi local/dev hoặc khi API khác origin (Set-Cookie có thể không được gửi).
  */
 function setCookiesFromResponse(response: any): void {
   const isDev = process.env.NODE_ENV === "development";
@@ -15,6 +17,11 @@ function setCookiesFromResponse(response: any): void {
     if (isDev) console.log("[API] No cookies found in response", body);
     return;
   }
+
+  const hostname = typeof window !== "undefined" ? window.location.hostname : "";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+  const isProdSameSite = !isDev && hostname.endsWith("edulearning.io.vn") && apiUrl.includes("api.edulearning.io.vn");
+  if (isProdSameSite) return;
 
   if (isDev) console.log("[API] Setting cookies from response:", Object.keys(cookies));
 
@@ -158,6 +165,13 @@ export const signOutAllDevices = async (): Promise<void> => {
     clearAuthState();
   }
   if (typeof window !== "undefined") {
+    // Signal other tabs to logout (StorageEvent fires cross-tab)
+    try {
+      localStorage.setItem("edulearn_logout", Date.now().toString());
+      localStorage.removeItem("edulearn_logout");
+    } catch {
+      /* ignore */
+    }
     window.location.href = "/auth";
   }
 };

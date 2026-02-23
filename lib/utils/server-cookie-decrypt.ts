@@ -1,62 +1,56 @@
-import * as crypto from 'crypto';
+import * as crypto from "crypto";
 
 /**
  * Giải mã cookie ở server-side (Next.js)
- * Sử dụng cùng algorithm và key như backend NestJS
+ * Sử dụng cùng algorithm và key derivation như backend NestJS (EncryptionService)
+ *
+ * Backend dùng: direct key with pad/truncate to 32 bytes
+ * → Server-side decrypt PHẢI dùng cùng phương pháp để SSR không bị fail
  */
 export function decryptCookie(encryptedText: string): string {
   const ENCRYPTION_KEY = process.env.COOKIE_ENCRYPTION_KEY;
-    
-  // ✅ Validate encryption key
+
   if (!ENCRYPTION_KEY) {
-    throw new Error('COOKIE_ENCRYPTION_KEY environment variable is required');
+    throw new Error("COOKIE_ENCRYPTION_KEY environment variable is required");
   }
 
-    if (ENCRYPTION_KEY.length < 32) {
-    throw new Error('COOKIE_ENCRYPTION_KEY must be at least 32 characters');
-    }
+  const algorithm = "aes-256-cbc";
 
-    const algorithm = 'aes-256-cbc';
-    
-    // Tách IV và encrypted data (format: iv:encryptedData)
-    const parts = encryptedText.split(':');
-    if (parts.length !== 2) {
-      throw new Error('Invalid encrypted format');
-    }
+  // Tách IV và encrypted data (format: iv:encryptedData)
+  const parts = encryptedText.split(":");
+  if (parts.length !== 2) {
+    throw new Error("Invalid encrypted format");
+  }
 
-    const iv = Buffer.from(parts[0], 'hex');
-    const encrypted = parts[1];
-    
-  // ✅ Try new method first (scryptSync - more secure)
+  const iv = Buffer.from(parts[0], "hex");
+  const encrypted = parts[1];
+
+  // ✅ Primary method: Direct key (MUST match backend EncryptionService exactly)
+  // Backend uses: key = Buffer.from(key.padEnd(32,'0')) or substring(0,32)
+  let key: Buffer;
+  if (ENCRYPTION_KEY.length < 32) {
+    key = Buffer.from(ENCRYPTION_KEY.padEnd(32, "0"));
+  } else if (ENCRYPTION_KEY.length > 32) {
+    key = Buffer.from(ENCRYPTION_KEY.substring(0, 32));
+  } else {
+    key = Buffer.from(ENCRYPTION_KEY);
+  }
+
   try {
-    const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
     const decipher = crypto.createDecipheriv(algorithm, key, iv);
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
     return decrypted;
-  } catch (scryptError: any) {
-    // ✅ Fallback to old method for backward compatibility
-    // This handles cookies encrypted with the old key derivation method
+  } catch (primaryError: any) {
+    // Fallback: scryptSync (in case future backend upgrades to this method)
     try {
-      // Old method: direct key with padding/substring (matching backend behavior)
-      let key: Buffer;
-      if (ENCRYPTION_KEY.length < 32) {
-        key = Buffer.from(ENCRYPTION_KEY.padEnd(32, '0'));
-      } else if (ENCRYPTION_KEY.length > 32) {
-        key = Buffer.from(ENCRYPTION_KEY.substring(0, 32));
-      } else {
-        key = Buffer.from(ENCRYPTION_KEY);
-      }
-      
-      const decipher = crypto.createDecipheriv(algorithm, key, iv);
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
+      const scryptKey = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32);
+      const decipher = crypto.createDecipheriv(algorithm, scryptKey, iv);
+      let decrypted = decipher.update(encrypted, "hex", "utf8");
+      decrypted += decipher.final("utf8");
       return decrypted;
     } catch (fallbackError: any) {
-      // If both methods fail, throw error with both messages
-      throw new Error(
-        `Decryption failed with both methods. ScryptSync error: ${scryptError.message}. Fallback error: ${fallbackError.message}`
-      );
+      throw new Error(`Cookie decryption failed. Primary: ${primaryError.message}. Fallback: ${fallbackError.message}`);
     }
   }
 }

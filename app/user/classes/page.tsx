@@ -5,7 +5,6 @@ import { Table, Tag, Button, App, Modal, Form, Input, Tooltip, Select } from "an
 import { EyeOutlined, UserOutlined, KeyOutlined, StopOutlined, SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { getClassStudentsByUser, joinClassByCode, type ClassStudentRecord } from "@/lib/api/classes";
-import { getCurrentUser } from "@/lib/api/users";
 import type { ColumnsType } from "antd/es/table";
 import { useUserId } from "@/app/hooks/useUserId";
 
@@ -120,7 +119,7 @@ export default function UserClasses() {
     // Tạo AbortController mới cho request này
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
-    
+
     // Tăng request ID để track latest request
     const currentRequestId = ++requestIdRef.current;
 
@@ -153,7 +152,7 @@ export default function UserClasses() {
       if (error?.name === 'AbortError' || abortController.signal.aborted) {
         return;
       }
-      
+
       if (isMountedRef.current && currentRequestId === requestIdRef.current) {
         message.error(error?.message || "Không thể tải danh sách lớp học");
         setClasses([]);
@@ -163,7 +162,7 @@ export default function UserClasses() {
       if (isMountedRef.current && currentRequestId === requestIdRef.current) {
         setLoading(false);
       }
-      
+
       // Cleanup AbortController nếu đây là latest request
       if (abortControllerRef.current === abortController) {
         abortControllerRef.current = null;
@@ -197,11 +196,10 @@ export default function UserClasses() {
 
   const handleJoinByCode = useCallback(async (values: { code: string }) => {
     if (!isMountedRef.current) return;
-    
+
     try {
       setJoining(true);
-      const user = getCurrentUser();
-      if (!user || !user.user_id) {
+      if (!userId) {
         if (isMountedRef.current) {
           message.error("Vui lòng đăng nhập để thực hiện hành động này");
         }
@@ -209,7 +207,7 @@ export default function UserClasses() {
       }
 
       await joinClassByCode({
-        user_id: Number(user.user_id),
+        user_id: Number(userId),
         code: values.code,
       });
 
@@ -229,22 +227,22 @@ export default function UserClasses() {
           errorResponse?.error ||
           error?.message ||
           "Không thể tham gia lớp học";
-        
+
         // Check if it's a conflict error (already a member)
         // Backend returns: { status: false, message: "Bạn đã tham gia lớp học này rồi", statusCode: 409 }
         const statusCode = error?.response?.status || errorResponse?.statusCode;
-        const isConflict = 
+        const isConflict =
           statusCode === 409 ||
           errorMessage.toLowerCase().includes("đã tham gia") ||
           errorMessage.toLowerCase().includes("đã là thành viên") ||
           errorMessage.toLowerCase().includes("already") ||
           errorMessage.toLowerCase().includes("conflict");
-        
+
         if (isConflict) {
           // Use backend message if available, otherwise use default
-          const conflictMessage = 
-            errorMessage.toLowerCase().includes("đã tham gia") || 
-            errorMessage.toLowerCase().includes("đã là thành viên")
+          const conflictMessage =
+            errorMessage.toLowerCase().includes("đã tham gia") ||
+              errorMessage.toLowerCase().includes("đã là thành viên")
               ? errorMessage
               : "Bạn đã là thành viên của lớp học này rồi";
           message.warning(conflictMessage);

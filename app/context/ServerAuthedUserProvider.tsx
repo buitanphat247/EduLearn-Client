@@ -18,7 +18,9 @@ export function ServerAuthedUserProvider({
     children: ReactNode;
     user: ServerAuthedUser | null;
 }) {
-    const value = useMemo(() => user, [user]);
+    // ✅ Memoize based on scalar primitive properties instead of the object reference itself
+    // Prevents unnecessary re-renders when the Server Component passes a new object reference with the same data
+    const value = useMemo(() => user, [user?.userId, user?.username, user?.roleName, user?.avatar]);
 
     return (
         <ServerAuthedUserContext.Provider value={value}>

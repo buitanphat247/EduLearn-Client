@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Modal, Form, Input, Button, Typography, App } from "antd";
+import { Modal, Form, Input, Button } from "antd";
 import { MailOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import apiClient from "@/app/config/api";
-
-const { Text } = Typography;
 
 interface ForgotPasswordModalProps {
     open: boolean;
@@ -17,7 +15,6 @@ export default function ForgotPasswordModal({ open, onCancel }: ForgotPasswordMo
     const [isSuccess, setIsSuccess] = useState(false);
     const [email, setEmail] = useState("");
     const [form] = Form.useForm();
-    const { message } = App.useApp();
 
     // Reset state when modal closes
     const handleCancel = () => {
@@ -34,8 +31,9 @@ export default function ForgotPasswordModal({ open, onCancel }: ForgotPasswordMo
             await apiClient.post("/auth/forgot-password", { email: values.email });
             setEmail(values.email);
             setIsSuccess(true);
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Still show success to prevent email enumeration
+            console.error("Forgot password error", error);
             setEmail(values.email);
             setIsSuccess(true);
         } finally {

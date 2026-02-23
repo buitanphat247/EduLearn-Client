@@ -148,6 +148,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
       }
 
       // Prepare promises
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const promises: Promise<any>[] = [
         getAssignmentsByClass(numericClassId, {
           page: currentPage,
@@ -176,6 +177,7 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
         // Process Submissions First (to be ready before render)
         if (submissionsResult && submissionsResult.data) {
           const newMap = new Map<string, { status: string; score: number | null }>();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           submissionsResult.data.forEach((record: any) => {
             if (String(record.student_id) === String(userId)) {
               newMap.set(String(record.assignment_id), {
@@ -194,9 +196,9 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
         setExercises(mappedExercises);
         setTotal(result.total);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (latestRequestRef.current === timestamp) {
-        message.error(error?.message || "Không thể tải danh sách bài tập");
+        message.error(error instanceof Error ? error.message : "Không thể tải danh sách bài tập");
         setExercises([]);
         setTotal(0);
       }
@@ -277,8 +279,8 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
 
         const assignmentDetail = await getAssignmentById(numericAssignmentId);
         setSelectedAssignment(assignmentDetail);
-      } catch (error: any) {
-        message.error(error?.message || "Không thể tải thông tin chi tiết bài tập");
+      } catch (error: unknown) {
+        message.error(error instanceof Error ? error.message : "Không thể tải thông tin chi tiết bài tập");
         setIsDetailModalOpen(false);
         setSelectedExercise(null);
       } finally {
@@ -322,9 +324,9 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
 
             // Refresh list to ensure consistency
             await fetchAssignments();
-          } catch (error: any) {
+          } catch (error: unknown) {
             // Rollback on error: refresh to get correct state
-            message.error(error?.message || "Không thể xóa bài tập");
+            message.error(error instanceof Error ? error.message : "Không thể xóa bài tập");
             await fetchAssignments();
           } finally {
             setDeletingId(null);
@@ -401,8 +403,8 @@ const ClassExercisesTab = memo(function ClassExercisesTab({
 
         // Clean up blob URL
         URL.revokeObjectURL(blobUrl);
-      } catch (error: any) {
-        message.error(`Không thể tải file ${attachment.file_name}: ${error?.message || "Lỗi không xác định"}`);
+      } catch (error: unknown) {
+        message.error(`Không thể tải file ${attachment.file_name}: ${error instanceof Error ? error.message : "Lỗi không xác định"}`);
       }
     }
 

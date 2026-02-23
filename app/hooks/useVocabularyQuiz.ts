@@ -1,6 +1,9 @@
 import { useState, useCallback, useMemo, useRef } from "react";
 import { message } from "antd";
+import { useQueryClient } from "@tanstack/react-query";
 import { VocabularyResponse } from "@/lib/api/vocabulary";
+import { vocabularyKeys, reviewStatsKeys } from "@/app/hooks/queries/useVocabularyQuery";
+import { useUserId } from "@/app/hooks/useUserId";
 
 interface QuizQuestion {
   id: number;
@@ -21,6 +24,9 @@ export function useVocabularyQuiz(vocabularies: VocabularyResponse[]) {
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
+  const { userId: rawUserId } = useUserId();
+  const userId = rawUserId ? Number(rawUserId) : null;
+  const queryClient = useQueryClient();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -100,19 +106,20 @@ export function useVocabularyQuiz(vocabularies: VocabularyResponse[]) {
       // Gửi kết quả về Server để tính toán SM-2
       const syncReview = async () => {
         try {
-          const { getProfile } = await import("@/lib/api/auth");
           const { reviewWord, createUserVocabulary } = await import("@/lib/api/vocabulary");
-          const profile = await getProfile();
-          if (profile?.user_id && currentQuestion) {
-            const userIdNum = Number(profile.user_id);
+          if (userId && currentQuestion) {
             const wordId = currentQuestion.word.sourceWordId;
 
             // Gửi review
             await reviewWord({
-              user_id: userIdNum,
+              user_id: userId,
               sourceWordId: wordId,
               grade: isCorrect ? 3 : 1, // Đúng = Grade 3 (Good), Sai = Grade 1 (Again)
             });
+
+            // ✅ Invalidate caches so other pages show fresh data
+            queryClient.invalidateQueries({ queryKey: vocabularyKeys.all });
+            queryClient.invalidateQueries({ queryKey: reviewStatsKeys.all });
           }
         } catch (error) {
           console.error("Failed to sync review result:", error);
@@ -120,11 +127,12 @@ export function useVocabularyQuiz(vocabularies: VocabularyResponse[]) {
       };
       syncReview();
 
-      if (isCorrect) {
-        message.success("Chính xác! 🎉");
-      } else {
-        message.error(`Sai rồi! Đáp án đúng là: ${currentQuestion?.options[currentQuestion?.correctAnswer]?.translation}`);
-      }
+      // Removing redundant success/error messages as the UI displays it.
+      // if (isCorrect) {
+      //   message.success("Chính xác! 🎉");
+      // } else {
+      //   message.error(`Sai rồi! Đáp án đúng là: ${currentQuestion?.options[currentQuestion?.correctAnswer]?.translation}`);
+      // }
 
       timeoutRef.current = setTimeout(() => {
         if (currentQuestionIndex < questions.length - 1) {
@@ -140,7 +148,7 @@ export function useVocabularyQuiz(vocabularies: VocabularyResponse[]) {
         }
       }, 1500);
     },
-    [selectedAnswer, currentQuestionIndex, showResult, currentQuestion, questions, userAnswers, playResultAudio],
+    [selectedAnswer, currentQuestionIndex, showResult, currentQuestion, questions, userAnswers, playResultAudio, userId],
   );
 
   const handleNext = useCallback(() => {

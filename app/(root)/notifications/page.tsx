@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Typography, message, Empty, App } from "antd";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Empty, App } from "antd";
 import {
     SyncOutlined
 } from "@ant-design/icons";
@@ -13,9 +13,11 @@ import {
     type NotificationRecipientResponse
 } from "@/lib/api/notifications";
 import { useUserId } from "@/app/hooks/useUserId";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useDebounce } from "@/app/hooks/useDebounce";
+import { useNotificationsQuery } from "@/app/hooks/queries/useNotificationQuery";
 import { getClassesByUser, getClassById } from "@/lib/api/classes";
-import { useTheme } from "@/app/context/ThemeContext";
+import { useQueryClient } from "@tanstack/react-query";
 import DarkPagination from "@/app/components/common/DarkPagination";
 import CustomInput from "@/app/components/common/CustomInput";
 import CustomSelect from "@/app/components/common/CustomSelect";
@@ -23,28 +25,51 @@ import NotificationsSkeleton from "@/app/components/notifications/NotificationsS
 import NotificationCard, { NotificationItem } from "@/app/components/notifications/NotificationCard";
 import NotificationDetailModal from "@/app/components/notifications/NotificationDetailModal";
 
-// const { Title, Text, Paragraph } = Typography;
-const { Text, Paragraph } = Typography;
-
-
 
 export default function NotificationsPage() {
     const router = useRouter();
-    useTheme();
+    const { message } = App.useApp();
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+
     const { userId, loading: userIdLoading } = useUserId();
 
-    const [loading, setLoading] = useState(true);
-    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-    const [page, setPage] = useState(1);
-    const [total, setTotal] = useState(0);
+    const initialPage = Number(searchParams.get("page")) || 1;
+    const initialTab = searchParams.get("tab") || "all";
+    const initialSearch = searchParams.get("search") || "";
+
+    const [page, setPage] = useState(initialPage);
+    const [searchText, setSearchText] = useState(initialSearch);
+    const [activeTab, setActiveTab] = useState(initialTab);
+    const debouncedSearchQuery = useDebounce(searchText, 500);
+    const pageSize = 12;
+
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
     const [classMap, setClassMap] = useState<Record<string, string>>({});
+    const classMapRef = useRef<Record<string, string>>({});
 
-    // Filters
-    const [searchText, setSearchText] = useState("");
-    const [activeTab, setActiveTab] = useState("all");
-    const pageSize = 12;
+    // Sync state changes to URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        let changed = false;
+
+        if (page > 1) {
+            if (params.get("page") !== String(page)) { params.set("page", String(page)); changed = true; }
+        } else if (params.has("page")) { params.delete("page"); changed = true; }
+
+        if (activeTab !== "all") {
+            if (params.get("tab") !== activeTab) { params.set("tab", activeTab); changed = true; }
+        } else if (params.has("tab")) { params.delete("tab"); changed = true; }
+
+        if (debouncedSearchQuery) {
+            if (params.get("search") !== debouncedSearchQuery) { params.set("search", debouncedSearchQuery); changed = true; }
+        } else if (params.has("search")) { params.delete("search"); changed = true; }
+
+        if (changed) {
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+        }
+    }, [page, activeTab, debouncedSearchQuery, pathname, router, searchParams]);
 
     // Fetch classes when userId becomes available
     useEffect(() => {
@@ -57,88 +82,70 @@ export default function NotificationsPage() {
                 result.classes.forEach((c: any) => {
                     mapping[String(c.class_id)] = c.name;
                 });
+                classMapRef.current = mapping;
                 setClassMap(mapping);
             } catch (e) {
-                console.error("Error fetching classes for mapping:", e);
+                // Silently handle — classMap will show fallback IDs
             }
         };
         fetchClasses();
     }, [userId, userIdLoading]);
 
-    const fetchNotifications = useCallback(async () => {
-        if (!userId) return;
-        setLoading(true);
-        try {
-            const params: any = {
-                page,
-                limit: pageSize,
-                search: searchText || undefined,
-            };
+    // React Query
+    const queryParams: any = {
+        page,
+        limit: pageSize,
+        search: debouncedSearchQuery || undefined,
+    };
+    if (activeTab === "unread") {
+        queryParams.is_read = false;
+    }
 
-            if (activeTab === "unread") {
-                params.is_read = false;
-            }
+    const {
+        data: notificationsData,
+        isLoading: notificationsLoading,
+        isRefetching,
+        refetch,
+    } = useNotificationsQuery(userId, queryParams);
 
-            const result = await getNotificationsByUserId(userId, params);
-            const recipients = await getNotificationRecipientsByUserId(userId);
-            const readStatusMap = new Map<number | string, boolean>();
-            recipients.forEach((recipient: NotificationRecipientResponse) => {
-                const notifId = recipient.notification_id || recipient.notification?.notification_id;
-                if (notifId) {
-                    readStatusMap.set(notifId, recipient.is_read === true);
-                }
-            });
+    const notifications = notificationsData?.data || [];
+    const total = notificationsData?.total || 0;
+    const loading = notificationsLoading || (!notifications.length && isRefetching);
 
-            const mappedNotifications = result.data.map((notif: NotificationResponse) => {
-                const notifId = notif.notification_id;
-                const isRead = readStatusMap.get(notifId) || false;
-                return {
-                    ...notif,
-                    is_read: isRead,
-                };
-            });
+    // Fetch missing class names for notifications directly inside useEffect watching the data
+    useEffect(() => {
+        if (!notifications.length) return;
 
-            setNotifications(mappedNotifications);
-            setTotal(result.total || result.data.length);
-
-            // Dynamically fetch names for classes not in classMap
+        const fetchMissingClasses = async () => {
+            const currentMap = classMapRef.current;
             const missingClassIds = [...new Set(
-                mappedNotifications
-                    .filter(n => n.scope === 'class' && n.scope_id && !classMap[String(n.scope_id)])
-                    .map(n => String(n.scope_id))
+                notifications
+                    .filter((n: any) => n.scope === 'class' && n.scope_id && !currentMap[String(n.scope_id)])
+                    .map((n: any) => String(n.scope_id))
             )];
 
             if (missingClassIds.length > 0) {
-
-                const newMapping = { ...classMap };
+                const newMapping: Record<string, string> = { ...currentMap };
                 await Promise.all(missingClassIds.map(async (id) => {
+                    const strId = String(id);
                     try {
-                        const classData = await getClassById(id);
-                        newMapping[id] = classData.name;
-                    } catch (err) {
-                        console.error(`Failed to fetch class name for ${id}:`, err);
-                        newMapping[id] = `#${id}`;
+                        const classData = await getClassById(strId);
+                        newMapping[strId] = classData.name;
+                    } catch {
+                        newMapping[strId] = `#${strId}`;
                     }
                 }));
+                classMapRef.current = newMapping;
                 setClassMap(newMapping);
             }
-        } catch (error: any) {
-            console.error("Error fetching notifications:", error);
-            message.error("Không thể tải danh sách thông báo");
-        } finally {
-            setLoading(false);
-        }
-    }, [userId, page, searchText, activeTab, classMap]);
+        };
 
-    useEffect(() => {
-        if (userId) {
-            fetchNotifications();
-        }
-    }, [userId, fetchNotifications]);
+        fetchMissingClasses();
+    }, [notifications]);
 
     const handleFastRefresh = () => {
         const hide = message.loading("Đang làm mới thông báo...", 0);
-        fetchNotifications().finally(() => {
+        refetch().finally(() => {
             hide();
             message.success("Đã cập nhật thông báo mới nhất");
         });
@@ -148,9 +155,7 @@ export default function NotificationsPage() {
         if (!userId) return;
         try {
             await markNotificationAsRead(notificationId, userId);
-            setNotifications((prev) => prev.map((n) =>
-                n.notification_id === notificationId ? { ...n, is_read: true } : n
-            ));
+            refetch(); // Simply refetch to let React Query sync state seamlessly
         } catch (error) {
             console.error("Error marking read:", error);
         }
@@ -164,7 +169,7 @@ export default function NotificationsPage() {
         }
     };
 
-    const formatCardTime = (dateString: string) => {
+    const formatCardTime = useCallback((dateString: string) => {
         try {
             const date = new Date(dateString);
             const hours = String(date.getHours()).padStart(2, '0');
@@ -176,9 +181,9 @@ export default function NotificationsPage() {
         } catch {
             return dateString;
         }
-    };
+    }, []);
 
-    const getScopeTag = (item: NotificationItem) => {
+    const getScopeTag = useCallback((item: NotificationItem) => {
         const { scope, scope_id } = item;
         switch (scope) {
             case 'all':
@@ -207,7 +212,7 @@ export default function NotificationsPage() {
                     </span>
                 );
         }
-    };
+    }, [classMap]);
 
     return (
         <App>

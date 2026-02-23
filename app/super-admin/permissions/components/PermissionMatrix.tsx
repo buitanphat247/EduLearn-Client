@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Card, Button, Typography, Table, Tag, Checkbox, Tabs, Switch, Badge, Collapse, Space, App, message } from "antd";
+import { Card, Button, Typography, Table, Tag, Checkbox, Tabs, Switch, Badge, Collapse, Space, App } from "antd";
 import { SaveOutlined, ApiOutlined, LockOutlined, GlobalOutlined, RightOutlined, SafetyOutlined } from "@ant-design/icons";
 import { Role } from "@/app/super-admin/permissions/types";
 import { getPermissions, bulkSyncPermissions } from "@/lib/api/permissions";
@@ -17,9 +17,8 @@ const ApiEndpointCard = React.memo(({ api, roleId, isAllowed, isDisabled, onTogg
 
   return (
     <div
-      className={`group relative p-3 rounded-xl border transition-all duration-200 flex flex-col justify-between h-28 ${
-        isAllowed ? "bg-white border-slate-200 hover:border-blue-400" : "bg-slate-50 border-slate-100 opacity-60"
-      }`}
+      className={`group relative p-3 rounded-xl border transition-all duration-200 flex flex-col justify-between h-28 ${isAllowed ? "bg-white border-slate-200 hover:border-blue-400" : "bg-slate-50 border-slate-100 opacity-60"
+        }`}
     >
       <div className="flex justify-between items-start mb-1">
         <div className="flex items-center gap-1.5">
@@ -86,6 +85,7 @@ const scanRoutes = [
 ];
 
 export default function PermissionMatrix({ selectedRole, roles, modules, actions, onSave }: PermissionMatrixProps) {
+  const { message } = App.useApp();
   const [endpoints, setEndpoints] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -298,23 +298,22 @@ export default function PermissionMatrix({ selectedRole, roles, modules, actions
                       return (
                         <div key={method} className="p-6 border-b border-slate-100 last:border-0">
                           <div className="flex items-center gap-3 mb-4">
-                            <div 
-                              className={`w-1.5 h-5 rounded-full ${
-                                method === "GET" ? "bg-blue-500" : 
-                                method === "POST" ? "bg-green-500" : 
-                                method === "PATCH" ? "bg-orange-500" : 
-                                method === "PUT" ? "bg-cyan-500" : "bg-red-500"
-                              }`} 
+                            <div
+                              className={`w-1.5 h-5 rounded-full ${method === "GET" ? "bg-blue-500" :
+                                  method === "POST" ? "bg-green-500" :
+                                    method === "PATCH" ? "bg-orange-500" :
+                                      method === "PUT" ? "bg-cyan-500" : "bg-red-500"
+                                }`}
                             />
                             <Text className="font-extrabold text-slate-800 text-[13px] tracking-wider uppercase">
                               DANH SÁCH {method} API
                             </Text>
-                            <Badge 
-                              count={methodEndpoints.length} 
-                              style={{ 
+                            <Badge
+                              count={methodEndpoints.length}
+                              style={{
                                 backgroundColor: method === "GET" ? "#3b82f6" : method === "POST" ? "#22c55e" : method === "PATCH" ? "#f59e0b" : method === "PUT" ? "#06b6d4" : "#ef4444",
                                 boxShadow: 'none'
-                              }} 
+                              }}
                             />
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">

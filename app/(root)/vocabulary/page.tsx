@@ -1,27 +1,15 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useMemo, Suspense } from "react";
 import FeaturesHeader from "@/app/components/features/FeaturesHeader";
 import VocabularyFeature from "@/app/components/features/vocabulary/VocabularyFeature";
-import { getSubscriptionStatus } from "@/lib/api/subscription";
+import { useSubscriptionQuery } from "@/app/hooks/queries";
 
 export default function VocabularyPage() {
-    const [subscriptionLabel, setSubscriptionLabel] = useState<"Free" | "Pro" | null>(null);
-    const isMountedRef = useRef(true);
+    const { data: subscriptionData, isLoading: subLoading } = useSubscriptionQuery();
+    const subscriptionLabel = subLoading ? null : (subscriptionData?.isPro ? "Pro" : "Free");
 
-    useEffect(() => {
-        isMountedRef.current = true;
-        getSubscriptionStatus()
-            .then(({ isPro }) => {
-                if (isMountedRef.current) setSubscriptionLabel(isPro ? "Pro" : "Free");
-            })
-            .catch(() => {
-                if (isMountedRef.current) setSubscriptionLabel("Free");
-            });
-        return () => { isMountedRef.current = false; };
-    }, []);
-
-    const badge =
+    const badge = useMemo(() =>
         subscriptionLabel !== null ? (
             <span
                 className={
@@ -32,7 +20,8 @@ export default function VocabularyPage() {
             >
                 {subscriptionLabel}
             </span>
-        ) : null;
+        ) : null
+        , [subscriptionLabel]);
 
     return (
         <main className="h-full bg-slate-50 dark:bg-[#0f172a] transition-colors duration-300">
@@ -42,7 +31,9 @@ export default function VocabularyPage() {
                     description="Học từ vựng theo chủ đề và chuyên ngành"
                     badge={badge}
                 />
-                <VocabularyFeature />
+                <Suspense fallback={<div className="h-64 flex items-center justify-center">Đang tải dữ liệu...</div>}>
+                    <VocabularyFeature />
+                </Suspense>
             </div>
         </main>
     );

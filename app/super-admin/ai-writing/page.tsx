@@ -1,32 +1,25 @@
 "use client";
 
-import { Table, Tag, Card, Typography, Row, Col, Statistic, Space, Divider, Button } from "antd";
+import { Table, Tag, Card, Typography, Row, Col, Statistic, Space, Divider, Button, App } from "antd";
 import { FireOutlined, ThunderboltOutlined, UserOutlined, ReloadOutlined } from "@ant-design/icons";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getUsageStats, UsageStat } from "@/lib/api/subscription";
 import dayjs from "dayjs";
+import { useMemo } from "react";
 
 const { Title, Text } = Typography;
 
 export default function AIWritingAdminPage() {
-    const [stats, setStats] = useState<UsageStat[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { message } = App.useApp();
 
-    const fetchStats = useCallback(async () => {
-        setLoading(true);
-        try {
+    const { data: stats = [], isLoading, isFetching, refetch } = useQuery({
+        queryKey: ["admin_ai_usage_stats", "ai_writing"],
+        queryFn: async () => {
             const data = await getUsageStats("ai_writing");
-            setStats(Array.isArray(data) ? data : []);
-        } catch {
-            setStats([]);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchStats();
-    }, [fetchStats]);
+            return Array.isArray(data) ? data : [];
+        },
+        staleTime: 5 * 60 * 1000,
+    });
 
     const columns = useMemo(() => [
         {
@@ -36,11 +29,13 @@ export default function AIWritingAdminPage() {
             width: "15%",
             render: (date: string) => <Text strong>{dayjs(date).format("DD/MM/YYYY")}</Text>,
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         {
             title: "Người dùng",
             dataIndex: "user",
             key: "user",
-            render: (user: any, record: UsageStat) => (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            render: (user: any, _record: UsageStat) => (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <Text strong>{user?.username || "N/A"}</Text>
                     <Text type="secondary" style={{ fontSize: '12px' }}>{user?.email || "N/A"}</Text>
@@ -60,8 +55,8 @@ export default function AIWritingAdminPage() {
         },
     ], []);
 
-    const totalToday = (stats || []).filter(s => dayjs(s.usage_date).isSame(dayjs(), 'day')).reduce((acc, curr) => acc + (curr.usage_count || 0), 0);
-    const activeUsersToday = (stats || []).filter(s => dayjs(s.usage_date).isSame(dayjs(), 'day')).length;
+    const totalToday = stats.filter(s => dayjs(s.usage_date).isSame(dayjs(), 'day')).reduce((acc, curr) => acc + (curr.usage_count || 0), 0);
+    const activeUsersToday = stats.filter(s => dayjs(s.usage_date).isSame(dayjs(), 'day')).length;
 
     return (
         <div>
@@ -70,7 +65,7 @@ export default function AIWritingAdminPage() {
                     <Title level={4} style={{ margin: 0, marginBottom: "8px" }}>Giám sát & Sử dụng AI Writing</Title>
                     <Text type="secondary">Theo dõi giới hạn và lượt sử dụng trợ lý AI của người dùng trong ngày</Text>
                 </div>
-                <Button type="default" icon={<ReloadOutlined />} onClick={fetchStats} loading={loading}>
+                <Button type="default" icon={<ReloadOutlined />} onClick={() => refetch()} loading={isFetching}>
                     Làm mới
                 </Button>
             </div>
@@ -111,7 +106,7 @@ export default function AIWritingAdminPage() {
                     <Table
                         dataSource={stats}
                         columns={columns}
-                        loading={loading}
+                        loading={isLoading || isFetching}
                         rowKey="id"
                         size="middle"
                         pagination={{

@@ -42,7 +42,7 @@ export default function SystemStatusPage() {
 
         // Randomize latency
         const latencyChange = Math.floor(Math.random() * 10) - 5;
-        let newLatency = Math.max(5, service.latency + latencyChange);
+        const newLatency = Math.max(5, service.latency + latencyChange);
 
         // Randomize uptime slightly
         let newUptime = service.uptime;

@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import AdminSidebar from "../components/layout/AdminSidebar";
 import { usePathname } from "next/navigation";
-import { Spin, message, Modal, Avatar } from "antd";
+import { Spin, Modal, Avatar } from "antd";
 import { UserOutlined } from "@ant-design/icons";
-import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
-import { useUserId } from "@/app/hooks/useUserId";
 import { ServerAuthedUserProvider } from "../context/ServerAuthedUserProvider";
 import { useUserProfile } from "@/app/hooks/useUserProfile";
 
@@ -29,9 +27,9 @@ interface InitialUserData {
 
 function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | null }) {
   const pathname = usePathname();
-  const { userId } = useUserId();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [imgError, setImgError] = useState(false);
+  const [headerImgError, setHeaderImgError] = useState(false);
+  const [modalImgError, setModalImgError] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -53,14 +51,14 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
 
   useEffect(() => {
     if (isProfileModalOpen && !userInfo) {
-      fetchUserInfo(true);
+      fetchUserInfo();
     }
   }, [isProfileModalOpen, userInfo, fetchUserInfo]);
 
   // Handle user-updated event to sync avatar
   useEffect(() => {
     const handleUpdate = () => {
-      fetchUserInfo(false);
+      fetchUserInfo();
     };
     window.addEventListener("user-updated", handleUpdate);
     return () => window.removeEventListener("user-updated", handleUpdate);
@@ -92,12 +90,11 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
     return `${day} ${month} ${year}`;
   }, [userInfo?.created_at]);
 
-  const avatarUrl = useMemo(() => {
-    // Server safe URL calculation
-    if (imgError) return undefined;
+  const headerAvatarUrl = useMemo(() => {
+    if (headerImgError) return undefined;
     const url = userInfo?.avatar || initialUserData?.avatar;
     return url ? getMediaUrl(url) : undefined;
-  }, [userInfo?.avatar, initialUserData?.avatar, imgError]);
+  }, [userInfo?.avatar, initialUserData?.avatar, headerImgError]);
 
   return (
     <>
@@ -120,9 +117,9 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
             <div className="relative p-0.5 rounded-full bg-blue-500 dark:bg-blue-600">
               <Avatar
                 size={40}
-                src={avatarUrl ? (mounted ? getCachedImageUrl(avatarUrl) : avatarUrl) : undefined}
+                src={headerAvatarUrl ? (mounted ? getCachedImageUrl(headerAvatarUrl) : headerAvatarUrl) : undefined}
                 onError={() => {
-                  setImgError(true);
+                  setHeaderImgError(true);
                   return true;
                 }}
                 className="flex items-center justify-center bg-blue-600"
@@ -145,9 +142,9 @@ function AdminHeader({ initialUserData }: { initialUserData: InitialUserData | n
                 <div className="relative p-1 rounded-full bg-blue-500 dark:bg-blue-600">
                   <Avatar
                     size={80}
-                    src={userInfo.avatar && !imgError ? (mounted ? getCachedImageUrl(getMediaUrl(userInfo.avatar)) : getMediaUrl(userInfo.avatar)) : undefined}
+                    src={userInfo.avatar && !modalImgError ? (mounted ? getCachedImageUrl(getMediaUrl(userInfo.avatar)) : getMediaUrl(userInfo.avatar)) : undefined}
                     onError={() => {
-                      setImgError(true);
+                      setModalImgError(true);
                       return true;
                     }}
                     className="flex items-center justify-center bg-blue-600"
@@ -199,7 +196,7 @@ export default function AdminLayoutClient({ children, initialUserData }: { child
       roleName: initialUserData.role_name,
       avatar: initialUserData.avatar
     };
-  }, [initialUserData]);
+  }, [initialUserData?.user_id, initialUserData?.username, initialUserData?.role_name, initialUserData?.avatar]);
 
   return (
     <ServerAuthedUserProvider user={serverUser}>

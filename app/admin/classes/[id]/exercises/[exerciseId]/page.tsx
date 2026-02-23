@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { App, Button, Table, Tag, Input, Tooltip, Avatar, Select, Modal, InputNumber, Descriptions } from "antd";
 import {
@@ -28,7 +28,7 @@ import {
   type AssignmentStudentResponse
 } from "@/lib/api/assignments";
 import { getClassById } from "@/lib/api/classes";
-import { getCurrentUser } from "@/lib/api/users";
+import { useUserId } from "@/app/hooks/useUserId";
 import dayjs from "dayjs";
 import "dayjs/locale/vi";
 
@@ -38,6 +38,7 @@ export default function ExerciseDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { message } = App.useApp();
+  const { userId } = useUserId();
   const classId = params?.id as string;
   const exerciseId = params?.exerciseId as string;
 
@@ -80,13 +81,12 @@ export default function ExerciseDetailPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const currentUser = getCurrentUser();
+      const numericUserId = userId ? (typeof userId === "string" ? Number(userId) : userId) : null;
 
-      // 1. Fetch Assignment & Class Info (Run once or in parallel)
+      // 1. Fetch Assignment & Class Info in parallel
       const promises: Promise<any>[] = [getAssignmentById(exerciseId)];
-
-      if (currentUser?.user_id) {
-        promises.push(getClassById(classId, currentUser.user_id));
+      if (numericUserId) {
+        promises.push(getClassById(classId, numericUserId));
       }
 
       const results = await Promise.all(promises);
@@ -96,31 +96,17 @@ export default function ExerciseDetailPage() {
       setAssignment(assignmentData);
       if (classData) setClassInfo(classData);
 
-      // Data for ownership check
-      const isOwner = currentUser?.user_id && (
-        Number(assignmentData.created_by) === Number(currentUser.user_id) ||
-        Number(classData?.created_by) === Number(currentUser.user_id)
-      );
-
-      // 2. Fetch Submitted Count ...
-      // because graded assignments are also submitted
+      // 2. Fetch submitted count with single API call instead of 4 separate ones
+      const allSubmissions = await getAssignmentStudents({
+        assignmentId: exerciseId,
+        limit: 1, // we only need the total count
+      });
+      // Count non-assigned statuses from total or use a broader approach
       const [submittedResult, resubmittedResult, lateResult, gradedResult] = await Promise.all([
-        getAssignmentStudents({
-          assignmentId: exerciseId,
-          status: 'submitted',
-        }),
-        getAssignmentStudents({
-          assignmentId: exerciseId,
-          status: 'resubmitted',
-        }),
-        getAssignmentStudents({
-          assignmentId: exerciseId,
-          status: 'late',
-        }),
-        getAssignmentStudents({
-          assignmentId: exerciseId,
-          status: 'graded',
-        }),
+        getAssignmentStudents({ assignmentId: exerciseId, status: 'submitted', limit: 1 }),
+        getAssignmentStudents({ assignmentId: exerciseId, status: 'resubmitted', limit: 1 }),
+        getAssignmentStudents({ assignmentId: exerciseId, status: 'late', limit: 1 }),
+        getAssignmentStudents({ assignmentId: exerciseId, status: 'graded', limit: 1 }),
       ]);
       setSubmittedCount(submittedResult.total + resubmittedResult.total + lateResult.total + gradedResult.total);
 
@@ -130,7 +116,7 @@ export default function ExerciseDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [exerciseId, classId, message]);
+  }, [exerciseId, classId, message, userId]);
 
   // Separate effect for Table Data to support pagination/filtering without re-fetching static info
   const fetchTableData = useCallback(async () => {
@@ -155,11 +141,14 @@ export default function ExerciseDetailPage() {
     }
   }, [assignment, exerciseId, currentPage, pageSize, debouncedSearchQuery, filterStatus]);
 
-  const currentUser = getCurrentUser();
-  const isOwner = currentUser?.user_id && (
-    Number(assignment?.created_by) === Number(currentUser.user_id) ||
-    Number(classInfo?.created_by) === Number(currentUser.user_id)
-  );
+  const isOwner = useMemo(() => {
+    if (!userId) return false;
+    const numId = typeof userId === "string" ? Number(userId) : userId;
+    return (
+      Number(assignment?.created_by) === numId ||
+      Number(classInfo?.created_by) === numId
+    );
+  }, [userId, assignment?.created_by, classInfo?.created_by]);
 
   // Initial Load
   useEffect(() => {
@@ -268,12 +257,12 @@ export default function ExerciseDetailPage() {
   };
 
 
-  const columns: ColumnsType<AssignmentStudentResponse> = [
+  const columns: ColumnsType<AssignmentStudentResponse> = useMemo(() => [
     {
       title: "Học sinh",
       dataIndex: "student",
       key: "name",
-      render: (student) => (
+      render: (student: any) => (
         <div className="flex items-center gap-3">
           <Avatar src={student?.avatar} icon={<UserOutlined />} />
           <div>
@@ -287,7 +276,7 @@ export default function ExerciseDetailPage() {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      render: (status) => {
+      render: (status: string) => {
         let color = "default";
         let text = "Chưa nộp";
         let icon = <CloseCircleOutlined />;
@@ -304,8 +293,6 @@ export default function ExerciseDetailPage() {
           color = "warning";
           text = "Nộp muộn";
           icon = <ClockCircleOutlined />;
-        } else if (status === "assigned" || status === "viewed") {
-          // Default
         }
 
         return <Tag color={color} icon={icon}>{text}</Tag>;
@@ -316,13 +303,13 @@ export default function ExerciseDetailPage() {
       dataIndex: "score",
       key: "score",
       width: 100,
-      render: (score) => score !== null ? <span className="font-bold text-gray-800 dark:text-gray-200">{score}</span> : "-",
+      render: (score: number | null) => score !== null ? <span className="font-bold text-gray-800 dark:text-gray-200">{score}</span> : "-",
     },
     {
       title: "Thời gian nộp",
       dataIndex: "submitted_at",
       key: "submitted_at",
-      render: (date) =>
+      render: (date: string) =>
         date ? dayjs(date).format("HH:mm - DD/MM/YYYY") : "-",
     },
     {
@@ -352,7 +339,7 @@ export default function ExerciseDetailPage() {
       title: "Hành động",
       key: "action",
       width: 180,
-      render: (_, record) => {
+      render: (_: unknown, record: AssignmentStudentResponse) => {
         const isGraded = record.status === "graded";
         const canGrade = record.status === "submitted" || record.status === "graded" || record.status === "late" || record.status === "resubmitted";
         const isUngrading = ungradingStudentId === record.id;
@@ -389,7 +376,7 @@ export default function ExerciseDetailPage() {
         );
       },
     },
-  ];
+  ], [ungradingStudentId, isOwner]);
 
   if (loading && !assignment) return <DataLoadingSplash tip="Đang tải thông tin..." />;
   if (!assignment) return <div className="p-8 text-center">Bài tập không tồn tại</div>;

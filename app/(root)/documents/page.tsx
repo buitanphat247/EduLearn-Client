@@ -1,89 +1,83 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import {
-    Empty,
-    message,
-    Skeleton
-} from "antd";
-import { getDocuments, DocumentResponse } from "@/lib/api/documents";
-import { useTheme } from "@/app/context/ThemeContext";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { Empty, message } from "antd";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useUserId } from "@/app/hooks/useUserId";
-import { useRouter } from "next/navigation";
+import { useDocumentsQuery } from "@/app/hooks/queries";
+import { useDebounce } from "@/app/hooks/useDebounce";
 import FeaturesHeader from "@/app/components/features/FeaturesHeader";
 import DocumentCard from "@/app/components/documents/DocumentCard";
 import DarkPagination from "@/app/components/common/DarkPagination";
 import CustomInput from "@/app/components/common/CustomInput";
-import { useDebounce } from "@/app/hooks/useDebounce";
 import DocumentFeatureSkeleton from "@/app/components/features/documents/DocumentFeatureSkeleton";
 
 const PAGE_SIZE = 20;
 
 export default function PublicDocumentsPage() {
-    const { theme } = useTheme();
-    const { userId, loading: authLoading } = useUserId();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
 
-    const [documents, setDocuments] = useState<DocumentResponse[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchText, setSearchText] = useState("");
+    // Context / Auth
+    const { userId, loading: authLoading } = useUserId();
+
+    // Redirect if not authenticated
+    if (!authLoading && !userId) {
+        router.push("/auth");
+        message.info("Vui lòng đăng nhập để xem tài liệu");
+    }
+
+    // Initialize from URL
+    const initialPage = Number(searchParams.get("page")) || 1;
+    const initialSearch = searchParams.get("search") || "";
+
+    const [searchText, setSearchText] = useState(initialSearch);
     const debouncedSearchQuery = useDebounce(searchText, 500);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [total, setTotal] = useState(0);
+    const [currentPage, setCurrentPage] = useState(initialPage);
 
-    const isFetching = useRef(false);
-    const isMountedRef = useRef(true);
-
+    // Sync state changes to URL
     useEffect(() => {
-        isMountedRef.current = true;
-        return () => { isMountedRef.current = false; };
-    }, []);
+        const params = new URLSearchParams(searchParams.toString());
+        let changed = false;
 
-    useEffect(() => {
-        if (!authLoading && !userId) {
-            router.push("/auth");
-            message.info("Vui lòng đăng nhập để xem tài liệu");
+        if (currentPage > 1) {
+            if (params.get("page") !== String(currentPage)) { params.set("page", String(currentPage)); changed = true; }
+        } else if (params.has("page")) { params.delete("page"); changed = true; }
+
+        if (debouncedSearchQuery) {
+            if (params.get("search") !== debouncedSearchQuery) { params.set("search", debouncedSearchQuery); changed = true; }
+        } else if (params.has("search")) { params.delete("search"); changed = true; }
+
+        if (changed) {
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
         }
-    }, [userId, authLoading, router]);
+    }, [currentPage, debouncedSearchQuery, pathname, router, searchParams]);
 
-    const fetchDocuments = useCallback(async (page: number = 1) => {
-        if (isFetching.current) return;
-        isFetching.current = true;
-        setLoading(true);
-
-        try {
-            const result = await getDocuments({
-                page,
-                limit: PAGE_SIZE,
-                search: debouncedSearchQuery || undefined,
-            });
-
-            if (!isMountedRef.current) return;
-
-            setDocuments(result.data);
-            setTotal(result.total);
-            setCurrentPage(result.page);
-        } catch (error: any) {
-            if (!isMountedRef.current) return;
-            console.error("Error fetching documents:", error);
-            message.error(error?.message || "Không thể tải danh sách tài liệu");
-        } finally {
-            if (isMountedRef.current) {
-                setLoading(false);
-                isFetching.current = false;
-            }
-        }
-    }, [debouncedSearchQuery, message]);
-
+    // Reset pagination to page 1 if search query changes
+    const prevSearchRef = useRef(debouncedSearchQuery);
     useEffect(() => {
-        fetchDocuments(1);
-    }, [fetchDocuments]);
+        if (prevSearchRef.current !== debouncedSearchQuery) {
+            setCurrentPage(1);
+            prevSearchRef.current = debouncedSearchQuery;
+        }
+    }, [debouncedSearchQuery]);
+
+    // React Query
+    const { data, isLoading } = useDocumentsQuery({
+        page: currentPage,
+        limit: PAGE_SIZE,
+        search: debouncedSearchQuery,
+        enabled: !!userId,
+    });
+
+    const documents = data?.data ?? [];
+    const total = data?.total ?? 0;
 
     const handlePageChange = useCallback((page: number) => {
         setCurrentPage(page);
         window.scrollTo({ top: 0, behavior: "smooth" });
-        fetchDocuments(page);
-    }, [fetchDocuments]);
+    }, []);
 
     if (authLoading) {
         return (
@@ -120,7 +114,7 @@ export default function PublicDocumentsPage() {
                     />
                 </div>
 
-                {loading ? (
+                {isLoading ? (
                     <DocumentFeatureSkeleton />
                 ) : documents.length > 0 ? (
                     <>

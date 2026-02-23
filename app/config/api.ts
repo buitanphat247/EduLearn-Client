@@ -269,6 +269,22 @@ apiClient.interceptors.request.use(
       if (auth) config.headers.Authorization = auth;
     }
 
+    // ✅ Attach CSRF Token for mutating requests (POST, PUT, DELETE, PATCH)
+    const method = (config.method || "get").toLowerCase();
+    const url = config.url || "";
+
+    // Only attach if method requires it and it doesn't already have one (like in retry)
+    if (requiresCsrfToken(method) && !config.headers["X-CSRF-Token"]) {
+      try {
+        const csrfToken = await getCsrfToken();
+        if (csrfToken) {
+          config.headers["X-CSRF-Token"] = csrfToken;
+        }
+      } catch (error) {
+        console.warn("[API] Failed to get CSRF token for request", error);
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error),

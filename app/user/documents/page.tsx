@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Table, Tag, Button, Input, Space, App, Select } from "antd";
 import { SearchOutlined, EyeOutlined, DownloadOutlined } from "@ant-design/icons";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 const { Option } = Select;
 import type { ColumnsType } from "antd/es/table";
 import DocumentPreviewModal from "@/app/components/documents/DocumentPreviewModal";
 import { getDocumentAttachmentsCrawl, type DocumentAttachmentCrawl } from "@/lib/api/documents";
 import { useDocumentPreview } from "@/app/components/documents/useDocumentPreview";
+import { useDebounce } from "@/app/hooks/useDebounce";
 
 interface DocumentTableType {
   key: string;
@@ -29,135 +31,64 @@ export default function UserDocuments() {
   const { message: messageApi } = App.useApp();
   const { previewDoc, openPreview, closePreview, handleAfterClose, isOpen } = useDocumentPreview();
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedFileType, setSelectedFileType] = useState<string | undefined>();
-  const [documents, setDocuments] = useState<DocumentTableType[]>([]);
-  const [loading, setLoading] = useState(true);
+
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
-    total: 0,
   });
-  const hasFetched = useRef(false);
-  const isFetching = useRef(false);
-  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const pageSizeRef = useRef(20);
-  const prevSearchQueryRef = useRef("");
-  const prevFileTypeRef = useRef<string | undefined>(undefined);
-  const initialFetchDone = useRef(false);
 
-  const fetchDocuments = useCallback(async (page: number = 1, limit: number = 10, fileName?: string, fileType?: string) => {
-    // Prevent multiple simultaneous fetches
-    if (isFetching.current) {
-      return;
-    }
+  // Reset to page 1 unconditionally when search or filters change
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  }, [debouncedSearchQuery, selectedFileType]);
 
-    isFetching.current = true;
-    isFetching.current = true;
-    setLoading(true);
-
-    try {
-      const result = await getDocumentAttachmentsCrawl({ page, limit, fileName, fileType });
-
-      const formattedData: DocumentTableType[] = result.documents.map((doc: DocumentAttachmentCrawl) => ({
-        key: doc.id.toString(),
-        id: doc.id,
-        attachment_id: doc.attachment_id,
-        fileName: doc.fileName,
-        link: doc.link,
-        fileType: doc.fileType,
-        fileSize: doc.fileSize,
-        createdAt: doc.created_at || doc.createdAt,
-        documentTitle: doc.document?.ten_tai_lieu || "",
-        documentKhoi: doc.document?.khoi || "",
-        documentMonHoc: doc.document?.mon_hoc || "",
-        documentLink: doc.document?.link || "",
-      }));
-
-      // Ensure minimum loading time
-
-
-      setDocuments(formattedData);
-      setPagination((prev) => ({
-        ...prev,
-        current: page,
-        pageSize: limit,
+  const { data, isLoading, isError, error, isPlaceholderData } = useQuery({
+    queryKey: [
+      "documentAttachments",
+      pagination.current,
+      pagination.pageSize,
+      debouncedSearchQuery,
+      selectedFileType,
+    ],
+    queryFn: async () => {
+      const result = await getDocumentAttachmentsCrawl({
+        page: pagination.current,
+        limit: pagination.pageSize,
+        fileName: debouncedSearchQuery.trim() || undefined,
+        fileType: selectedFileType,
+      });
+      return {
+        documents: result.documents.map((doc: DocumentAttachmentCrawl) => ({
+          key: doc.id.toString(),
+          id: doc.id,
+          attachment_id: doc.attachment_id,
+          fileName: doc.fileName,
+          link: doc.link,
+          fileType: doc.fileType,
+          fileSize: doc.fileSize,
+          createdAt: doc.created_at || doc.createdAt,
+          documentTitle: doc.document?.ten_tai_lieu || "",
+          documentKhoi: doc.document?.khoi || "",
+          documentMonHoc: doc.document?.mon_hoc || "",
+          documentLink: doc.document?.link || "",
+        })),
         total: result.total,
-      }));
-      pageSizeRef.current = limit;
-    } catch (error: any) {
-      messageApi.error(error?.message || "Không thể tải danh sách tài liệu");
-      setDocuments([]);
-    } finally {
-      setLoading(false);
-      isFetching.current = false;
-    }
-  }, []);
+      };
+    },
+    placeholderData: keepPreviousData,
+  });
 
-  // Initial fetch only once on mount - prevent double fetch even in Strict Mode
-  useEffect(() => {
-    // Double check to prevent fetch in Strict Mode double render
-    if (initialFetchDone.current || hasFetched.current) {
-      return;
-    }
-
-    initialFetchDone.current = true;
-    hasFetched.current = true;
-    fetchDocuments(1, pageSizeRef.current, undefined, undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Debounce search query and fileType - only after initial fetch and when values actually change
-  useEffect(() => {
-    // Skip on initial mount
-    if (!hasFetched.current) {
-      // Store initial values
-      prevSearchQueryRef.current = searchQuery;
-      prevFileTypeRef.current = selectedFileType;
-      return;
-    }
-
-    // Check if values actually changed
-    const searchChanged = prevSearchQueryRef.current !== searchQuery;
-    const fileTypeChanged = prevFileTypeRef.current !== selectedFileType;
-
-    // Only proceed if something actually changed
-    if (!searchChanged && !fileTypeChanged) {
-      return;
-    }
-
-    // Update refs
-    prevSearchQueryRef.current = searchQuery;
-    prevFileTypeRef.current = selectedFileType;
-
-    // Clear previous timeout
-    if (searchDebounceRef.current) {
-      clearTimeout(searchDebounceRef.current);
-    }
-
-    // Set new timeout
-    searchDebounceRef.current = setTimeout(() => {
-      // Reset to page 1 when search query or fileType changes
-      setPagination((prev) => ({ ...prev, current: 1 }));
-      fetchDocuments(1, pageSizeRef.current, searchQuery.trim() || undefined, selectedFileType);
-    }, 500); // 500ms debounce
-
-    return () => {
-      if (searchDebounceRef.current) {
-        clearTimeout(searchDebounceRef.current);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, selectedFileType]);
+  if (isError) {
+    messageApi.error(error instanceof Error ? error.message : "Không thể tải danh sách tài liệu");
+  }
 
   const handleTableChange = useCallback(
     (page: number, pageSize: number) => {
-      if (!isFetching.current) {
-        pageSizeRef.current = pageSize;
-        fetchDocuments(page, pageSize, searchQuery.trim() || undefined, selectedFileType);
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+      setPagination({ current: page, pageSize });
     },
-    [searchQuery, selectedFileType]
+    []
   );
 
   const formatFileSize = (bytes: string) => {
@@ -197,8 +128,9 @@ export default function UserDocuments() {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
         messageApi.success("Đã tải file thành công!");
-      } catch (error: any) {
-        messageApi.error(error?.message || "Không thể tải file");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
+        messageApi.error(err?.message || "Không thể tải file");
       }
     },
     [messageApi]
@@ -224,10 +156,9 @@ export default function UserDocuments() {
         title: "STT",
         key: "stt",
         width: 80,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         render: (_: any, __: DocumentTableType, index: number) => {
-          const currentPage = pagination.current;
-          const pageSize = pagination.pageSize;
-          const stt = (currentPage - 1) * pageSize + index + 1;
+          const stt = (pagination.current - 1) * pagination.pageSize + index + 1;
           return <span className="text-gray-600 dark:text-gray-400 font-mono text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">{stt}</span>;
         },
       },
@@ -271,6 +202,7 @@ export default function UserDocuments() {
         title: "HÀNH ĐỘNG",
         key: "action",
         width: 200,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         render: (_: any, record: DocumentTableType) => {
           return (
             <Space size="small">
@@ -297,7 +229,7 @@ export default function UserDocuments() {
         },
       },
     ],
-    [pagination.current, pagination.pageSize, handleView, handleDownload]
+    [pagination, handleView, handleDownload]
   );
 
   return (
@@ -374,12 +306,12 @@ export default function UserDocuments() {
       <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm">
         <Table
           columns={columns}
-          dataSource={documents}
-          loading={loading}
+          dataSource={data?.documents || []}
+          loading={isLoading || isPlaceholderData}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
-            total: pagination.total,
+            total: data?.total || 0,
             showSizeChanger: false,
             showTotal: (total) => <span className="text-gray-500 dark:text-gray-400 font-medium">Tổng {total} tài liệu</span>,
             onChange: handleTableChange,

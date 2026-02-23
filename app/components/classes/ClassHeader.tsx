@@ -13,7 +13,7 @@ interface ClassHeaderProps {
   refreshing?: boolean;
 }
 
-function ClassHeader({ className, onEdit, onDelete, onRefresh, refreshing = false }: ClassHeaderProps) {
+function ClassHeader({ className: _className, onEdit, onDelete, onRefresh, refreshing = false }: ClassHeaderProps) {
   const router = useRouter();
 
   return (
@@ -25,9 +25,9 @@ function ClassHeader({ className, onEdit, onDelete, onRefresh, refreshing = fals
       </div>
       <Space>
         {onRefresh && (
-          <Button 
-            icon={<ReloadOutlined />} 
-            onClick={onRefresh} 
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={onRefresh}
             loading={refreshing}
             className="cursor-pointer"
           >

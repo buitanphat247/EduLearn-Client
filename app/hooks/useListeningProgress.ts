@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { saveListeningProgress, getListeningProgress } from "@/lib/api/lessons";
+import { listeningKeys } from "@/app/hooks/queries/useListeningQuery";
 import { message } from "antd";
 
 interface UseListeningProgressProps {
@@ -19,6 +21,7 @@ export function useListeningProgress({
   setCurrentTime,
   totalChallenges,
 }: UseListeningProgressProps) {
+  const queryClient = useQueryClient();
   const isInitialLoad = useRef(true);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasRestoredRef = useRef(false);
@@ -115,6 +118,9 @@ export function useListeningProgress({
           currentTime: time,
           isCompleted: totalChals > 0 && idx >= totalChals - 1 && time > 0,
         });
+
+        // ✅ Invalidate lessons list cache so progress shows on list page
+        queryClient.invalidateQueries({ queryKey: listeningKeys.all });
       } catch (error) {
         console.error("Failed to save progress:", error);
       } finally {
@@ -128,7 +134,7 @@ export function useListeningProgress({
         saveTimeoutRef.current = null;
       }
     };
-  }, [lessonId, currentIdx]);
+  }, [lessonId, currentIdx, queryClient]);
 
   // Save on unmount (capture final state)
   useEffect(() => {
@@ -147,6 +153,5 @@ export function useListeningProgress({
         isCompleted: totalChals > 0 && idx >= totalChals - 1 && time > 0,
       }).catch(() => {});
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessonId]);
 }

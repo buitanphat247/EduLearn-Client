@@ -1,14 +1,15 @@
 "use client";
 
 import { Table, Tag, Button, App, Space, Input, Select, Popconfirm, Modal, Form, Upload } from "antd";
-import { SearchOutlined, EyeOutlined, DownloadOutlined, BookOutlined, FileTextOutlined, DeleteOutlined, PlusOutlined, QuestionCircleOutlined, InboxOutlined } from "@ant-design/icons";
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { SearchOutlined, EyeOutlined, DownloadOutlined, FileTextOutlined, DeleteOutlined, PlusOutlined, QuestionCircleOutlined, InboxOutlined } from "@ant-design/icons";
+import { useState } from "react";
 import type { ColumnsType } from "antd/es/table";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { getDocuments, deleteDocument, createDocument, type DocumentResponse } from "@/lib/api/documents";
 import DocumentPreviewModal from "@/app/components/documents/DocumentPreviewModal";
 import { useDocumentPreview } from "@/app/components/documents/useDocumentPreview";
 import { useUserId } from "@/app/hooks/useUserId";
+import { useDebounce } from "@/app/hooks/useDebounce";
 
 const { Option } = Select;
 const { Dragger } = Upload;
@@ -28,32 +29,31 @@ interface DocumentTableType {
 export default function WebsiteDocumentationPage() {
     const { userId } = useUserId();
     const { message } = App.useApp();
+    const queryClient = useQueryClient();
     const { previewDoc, openPreview, closePreview, handleAfterClose, isOpen } = useDocumentPreview();
+
     const [searchQuery, setSearchQuery] = useState("");
-    const [documents, setDocuments] = useState<DocumentTableType[]>([]);
-    const [loading, setLoading] = useState(true);
+    const debouncedSearchQuery = useDebounce(searchQuery, 400);
+
+    const [statusFilter, setStatusFilter] = useState("all");
+
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [uploadLoading, setUploadLoading] = useState(false);
     const [form] = Form.useForm();
     const [fileList, setFileList] = useState<any[]>([]);
 
     const [pagination, setPagination] = useState({
         current: 1,
         pageSize: 20,
-        total: 0,
     });
 
-    const isFetching = useRef(false);
-    const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
-
-    const fetchDocuments = useCallback(async (page: number = 1, limit: number = 20, search?: string) => {
-        if (isFetching.current) return;
-
-        isFetching.current = true;
-        setLoading(true);
-
-        try {
-            const result = await getDocuments({ page, limit, search });
+    const { data: documentData, isLoading, isFetching } = useQuery({
+        queryKey: ['admin_website_docs_list', pagination.current, pagination.pageSize, debouncedSearchQuery],
+        queryFn: async () => {
+            const result = await getDocuments({
+                page: pagination.current,
+                limit: pagination.pageSize,
+                search: debouncedSearchQuery.trim() || undefined
+            });
 
             const formattedData: DocumentTableType[] = result.data.map((doc: DocumentResponse) => ({
                 key: doc.document_id,
@@ -67,69 +67,36 @@ export default function WebsiteDocumentationPage() {
                 uploaderEmail: doc.uploader?.email || "",
             }));
 
-            setDocuments(formattedData);
-            setPagination((prev) => ({
-                ...prev,
-                current: page,
-                pageSize: limit,
+            return {
+                documents: formattedData,
                 total: result.total,
-            }));
-        } catch (error: any) {
-            message.error(error?.message || "Không thể tải danh sách tài liệu trang web");
-            setDocuments([]);
-        } finally {
-            setLoading(false);
-            isFetching.current = false;
-        }
-    }, [message]);
+            };
+        },
+        placeholderData: keepPreviousData,
+        staleTime: 5 * 60 * 1000,
+    });
 
-    useEffect(() => {
-        fetchDocuments(1, 20);
-    }, []);
+    const safeDocuments = documentData?.documents || [];
+    const filteredDocuments = statusFilter === "all" ? safeDocuments : safeDocuments.filter(doc => doc.status === statusFilter);
 
-    useEffect(() => {
-        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-
-        searchDebounceRef.current = setTimeout(() => {
-            fetchDocuments(1, pagination.pageSize, searchQuery.trim() || undefined);
-        }, 500);
-
-        return () => {
-            if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-        };
-    }, [searchQuery, pagination.pageSize, fetchDocuments]);
-
-    const handleTableChange = (page: number, pageSize: number) => {
-        fetchDocuments(page, pageSize, searchQuery.trim() || undefined);
-    };
-
-    const handleDelete = async (id: string) => {
-        try {
-            await deleteDocument(id);
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            return deleteDocument(id);
+        },
+        onSuccess: () => {
             message.success("Xóa tài liệu thành công");
-            fetchDocuments(pagination.current, pagination.pageSize, searchQuery.trim() || undefined);
-        } catch (error: any) {
+            queryClient.invalidateQueries({ queryKey: ['admin_website_docs_list'] });
+        },
+        onError: (error: any) => {
             message.error(error?.message || "Không thể xóa tài liệu");
         }
-    };
+    });
 
-    const handleUpload = async (values: any) => {
-        if (!userId) {
-            message.error("Không tìm thấy thông tin người dùng");
-            return;
-        }
-
-        if (fileList.length === 0) {
-            message.error("Vui lòng chọn file để tải lên");
-            return;
-        }
-
-        setUploadLoading(true);
-        try {
+    const createMutation = useMutation({
+        mutationFn: async (values: any) => {
             const originalFile = fileList[0];
             const extension = originalFile.name.split('.').pop() || '';
 
-            // Format: YYYYMMDD_HHmmss_SSS
             const now = new Date();
             const timestamp = now.getFullYear().toString() +
                 (now.getMonth() + 1).toString().padStart(2, '0') +
@@ -140,28 +107,45 @@ export default function WebsiteDocumentationPage() {
                 now.getMilliseconds().toString().padStart(3, '0');
 
             const newFileName = `${timestamp}.${extension}`;
-
-            // Create a new file object with the new name
             const renamedFile = new File([originalFile], newFileName, {
                 type: originalFile.type,
             });
 
-            await createDocument({
+            return createDocument({
                 title: values.title,
                 file: renamedFile,
                 uploaded_by: Number(userId),
                 status: "approved",
             });
+        },
+        onSuccess: () => {
             message.success("Tải lên tài liệu thành công");
             setIsModalOpen(false);
             form.resetFields();
             setFileList([]);
-            fetchDocuments(1, pagination.pageSize, searchQuery.trim() || undefined);
-        } catch (error: any) {
+            queryClient.invalidateQueries({ queryKey: ['admin_website_docs_list'] });
+        },
+        onError: (error: any) => {
             message.error(error?.message || "Không thể tải lên tài liệu");
-        } finally {
-            setUploadLoading(false);
         }
+    });
+
+    const handleDelete = (id: string) => {
+        deleteMutation.mutate(id);
+    };
+
+    const handleUpload = (values: any) => {
+        if (!userId) {
+            message.error("Không tìm thấy thông tin người dùng");
+            return;
+        }
+
+        if (fileList.length === 0) {
+            message.error("Vui lòng chọn file để tải lên");
+            return;
+        }
+
+        createMutation.mutate(values);
     };
 
     const formatDate = (dateString: string) => {
@@ -274,6 +258,7 @@ export default function WebsiteDocumentationPage() {
                             icon={<DeleteOutlined />}
                             size="small"
                             danger
+                            loading={deleteMutation.isPending && deleteMutation.variables === record.id}
                         >
                             Xóa
                         </Button>
@@ -291,11 +276,14 @@ export default function WebsiteDocumentationPage() {
                     prefix={<SearchOutlined className="text-gray-400" />}
                     size="large"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setPagination(prev => ({ ...prev, current: 1 }));
+                    }}
                     allowClear
                     className="flex-1"
                 />
-                <Select defaultValue="all" size="large" style={{ width: 150 }}>
+                <Select value={statusFilter} onChange={(v) => { setStatusFilter(v); setPagination(prev => ({ ...prev, current: 1 })); }} size="large" style={{ width: 150 }}>
                     <Option value="all">Tất cả</Option>
                     <Option value="active">Hoạt động</Option>
                     <Option value="draft">Bản nháp</Option>
@@ -312,16 +300,16 @@ export default function WebsiteDocumentationPage() {
 
             <Table
                 columns={columns}
-                dataSource={documents}
-                loading={loading}
+                dataSource={filteredDocuments}
+                loading={isLoading || isFetching}
                 pagination={{
                     current: pagination.current,
                     pageSize: pagination.pageSize,
-                    total: pagination.total,
+                    total: statusFilter === "all" ? (documentData?.total || 0) : filteredDocuments.length,
                     showSizeChanger: false,
                     showTotal: (total) => `Tổng cộng ${total} tài liệu`,
                     size: "small",
-                    onChange: handleTableChange,
+                    onChange: (page, pageSize) => setPagination({ current: page, pageSize }),
                 }}
                 className="news-table"
                 rowClassName="group hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 cursor-pointer border-b border-gray-100"
@@ -331,10 +319,10 @@ export default function WebsiteDocumentationPage() {
             <Modal
                 title={null}
                 open={isModalOpen}
-                maskClosable={!uploadLoading}
-                closable={!uploadLoading}
+                maskClosable={!createMutation.isPending}
+                closable={!createMutation.isPending}
                 onCancel={() => {
-                    if (uploadLoading) return;
+                    if (createMutation.isPending) return;
                     setIsModalOpen(false);
                     form.resetFields();
                     setFileList([]);
@@ -357,7 +345,7 @@ export default function WebsiteDocumentationPage() {
                         <Input
                             placeholder="Nhập tiêu đề cho tài liệu..."
                             size="large"
-                            disabled={uploadLoading}
+                            disabled={createMutation.isPending}
                         />
                     </Form.Item>
 
@@ -371,11 +359,11 @@ export default function WebsiteDocumentationPage() {
                                 onRemove={() => setFileList([])}
                                 beforeUpload={(file) => {
                                     setFileList([file]);
-                                    return false; // Không tự động tải lên
+                                    return false;
                                 }}
                                 maxCount={1}
                                 accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
-                                disabled={uploadLoading}
+                                disabled={createMutation.isPending}
                             >
                                 <p className="ant-upload-drag-icon">
                                     <InboxOutlined className="text-blue-500" />
@@ -405,7 +393,7 @@ export default function WebsiteDocumentationPage() {
                                     danger
                                     icon={<DeleteOutlined className="text-lg" />}
                                     onClick={() => setFileList([])}
-                                    disabled={uploadLoading}
+                                    disabled={createMutation.isPending}
                                     className="opacity-50 group-hover:opacity-100 hover:bg-red-50 p-2 h-auto flex items-center justify-center disabled:opacity-30"
                                 />
                             </div>
@@ -420,14 +408,14 @@ export default function WebsiteDocumentationPage() {
                                 setFileList([]);
                             }}
                             size="large"
-                            disabled={uploadLoading}
+                            disabled={createMutation.isPending}
                         >
                             Hủy
                         </Button>
                         <Button
                             type="primary"
                             htmlType="submit"
-                            loading={uploadLoading}
+                            loading={createMutation.isPending}
                             size="large"
                             icon={<PlusOutlined />}
                         >

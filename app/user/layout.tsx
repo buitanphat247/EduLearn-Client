@@ -25,7 +25,7 @@ async function getInitialUserData() {
         // ✅ Giải mã cookie
         const decryptedUser = decryptCookie(userCookie.value);
         const userData = JSON.parse(decryptedUser);
-        console.log("DEBUG SSR Cookie Data:", JSON.stringify(userData, null, 2)); // <--- Debug Log
+
 
         // ✅ Validate decrypted data to prevent XSS
         if (typeof userData !== 'object' || userData === null) {
@@ -51,7 +51,7 @@ async function getInitialUserData() {
         const role_name = typeof rawRole === 'string' ? rawRole : (rawRole?.role_name || null);
         const avatar = finalData.avatar || null;
 
-        console.log("DEBUG SSR Extracted:", { user_id, username });
+
 
         return {
           user_id,

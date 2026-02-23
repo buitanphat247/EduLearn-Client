@@ -28,9 +28,9 @@ import {
   deleteSubmissionAttachment,
   type StudentSubmission,
 } from "@/lib/api/submissions";
-import { getUserIdFromCookie, getUserIdFromCookieAsync } from "@/lib/utils/cookies";
 import { getMediaUrl } from "@/lib/utils/media";
 import { sanitizeForDisplay } from "@/lib/utils/sanitize";
+import { useUserId } from "@/app/hooks/useUserId";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/vi";
@@ -44,6 +44,7 @@ export default function SubmitExercisePage() {
   const { message } = App.useApp();
   const classId = params?.id as string;
   const exerciseId = params?.exerciseId as string;
+  const { userId } = useUserId();
 
   const [loading, setLoading] = useState(true);
   const [assignment, setAssignment] = useState<AssignmentDetailResponse | null>(null);
@@ -89,16 +90,6 @@ export default function SubmitExercisePage() {
         setRefreshing(true);
       } else {
         setLoading(true);
-      }
-
-      let userId: string | number | null = getUserIdFromCookie();
-
-      if (!userId) {
-        try {
-          userId = await getUserIdFromCookieAsync();
-        } catch (e) {
-          console.error("Async user fetch failed:", e);
-        }
       }
 
       if (!userId) {
@@ -190,10 +181,6 @@ export default function SubmitExercisePage() {
 
     try {
       setUploadLoading(true);
-      let userId: string | number | null = getUserIdFromCookie();
-      if (!userId) {
-        userId = await getUserIdFromCookieAsync();
-      }
 
       // Upload file
       await createSubmissionAttachment(submission.submission_id, file);
@@ -260,10 +247,7 @@ export default function SubmitExercisePage() {
         return false;
       }
 
-      let userId: string | number | null = getUserIdFromCookie();
-      if (!userId) {
-        userId = await getUserIdFromCookieAsync();
-      }
+
 
       await deleteSubmissionAttachment(Number(file.uid));
 
@@ -336,13 +320,6 @@ export default function SubmitExercisePage() {
     try {
       setSubmitting(true);
       setUploadLoading(true);
-      let userId: string | number | null = getUserIdFromCookie();
-
-      if (!userId) {
-        try {
-          userId = await getUserIdFromCookieAsync();
-        } catch (e) { }
-      }
 
       // 1. Create Submission
       const newSubmission = await createSubmission({

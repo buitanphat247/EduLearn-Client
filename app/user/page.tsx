@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { FileTextOutlined, UserOutlined, AppstoreOutlined, CloudDownloadOutlined, ArrowRightOutlined, SettingOutlined } from "@ant-design/icons";
+import { FileTextOutlined, AppstoreOutlined, ArrowRightOutlined, SettingOutlined } from "@ant-design/icons";
 import { IoBookOutline } from "react-icons/io5";
 import { App } from "antd";
 import { useRouter } from "next/navigation";

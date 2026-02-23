@@ -12,8 +12,9 @@ import {
 } from "@ant-design/icons";
 import { Card } from "antd";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
+import { Suspense } from "react";
 import dynamic from "next/dynamic";
+import { useQuery } from "@tanstack/react-query";
 import { getStats } from "@/lib/api/stats";
 import { App } from "antd";
 
@@ -88,10 +89,6 @@ const dashboardItems = [
   },
 ];
 
-// Stats sẽ được fetch từ API
-
-// ... (previous imports)
-
 function WelcomeBanner() {
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -155,46 +152,26 @@ function StatisticsCards({ stats }: { stats: any[] }) {
 export default function SuperAdminDashboard() {
   const router = useRouter();
   const { message } = App.useApp();
-  const [stats, setStats] = useState({
-    documents: 0,
-    users: 0,
-    news: 0,
-    events: 0,
+
+  const { data: statsData, isError, error } = useQuery({
+    queryKey: ['admin_dashboard_stats'],
+    queryFn: async () => {
+      const stats = await getStats();
+      return stats;
+    },
+    staleTime: 5 * 60 * 1000,
   });
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+  if (isError) {
+    setTimeout(() => message.error((error as Error)?.message || "Không thể tải thống kê"), 0);
+  }
 
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        const data = await getStats();
-        if (isMounted) {
-          setStats(data);
-        }
-      } catch (error: any) {
-        if (isMounted) {
-          message.error(error?.message || "Không thể tải thống kê");
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchStats();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []); // Remove message dependency
+  const safeStats = statsData || { documents: 0, users: 0, news: 0, events: 0 };
 
   const statsCards = [
     {
       label: "Tài liệu Crawl",
-      value: stats.documents,
+      value: safeStats.documents,
       icon: CloudDownloadOutlined,
       color: "text-blue-600 dark:text-blue-400",
       bgColor: "bg-blue-50",
@@ -202,7 +179,7 @@ export default function SuperAdminDashboard() {
     },
     {
       label: "Tài khoản",
-      value: stats.users,
+      value: safeStats.users,
       icon: UserOutlined,
       color: "text-green-600 dark:text-green-400",
       bgColor: "bg-green-50",
@@ -210,7 +187,7 @@ export default function SuperAdminDashboard() {
     },
     {
       label: "Tin tức",
-      value: stats.news,
+      value: safeStats.news,
       icon: BellOutlined,
       color: "text-purple-600 dark:text-purple-400",
       bgColor: "bg-purple-50",
@@ -218,7 +195,7 @@ export default function SuperAdminDashboard() {
     },
     {
       label: "Sự kiện",
-      value: stats.events,
+      value: safeStats.events,
       icon: CalendarOutlined,
       color: "text-pink-600 dark:text-pink-400",
       bgColor: "bg-pink-50",
@@ -237,9 +214,6 @@ export default function SuperAdminDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {dashboardItems.map((item, index) => {
             const IconComponent = item.icon;
-            // Map light icon bg to a suitable dark one
-            // We can infer dark classes or add them to dashboardItems.
-            // For simplicity, let's just make the card body dark.
 
             return (
               <Card

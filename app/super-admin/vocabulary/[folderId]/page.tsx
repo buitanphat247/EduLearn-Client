@@ -1,12 +1,13 @@
 "use client";
 
-import { Table, Tag, Button, App, Space, Input, Breadcrumb, Avatar, Tooltip, Popconfirm, Modal, Select } from "antd";
-import { SearchOutlined, ArrowLeftOutlined, PlusOutlined, EditOutlined, DeleteOutlined, SoundOutlined, TranslationOutlined, QuestionCircleOutlined } from "@ant-design/icons";
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Table, Tag, Button, App, Space, Input, Breadcrumb, Popconfirm, Modal, Select } from "antd";
+import { SearchOutlined, ArrowLeftOutlined, PlusOutlined, EditOutlined, DeleteOutlined, SoundOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import { useState, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import type { ColumnsType } from "antd/es/table";
 import Papa from "papaparse";
-import { getVocabulariesByFolder, getFolderDetail, bulkCreateVocabulary, getVocabularyGroups, type VocabularyResponse, type FolderResponse, type VocabularyGroupItem } from "@/lib/api/vocabulary";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getVocabulariesByFolder, getFolderDetail, bulkCreateVocabulary, getVocabularyGroups, type VocabularyResponse, type FolderResponse } from "@/lib/api/vocabulary";
 
 interface VocabularyTableType extends VocabularyResponse {
     key: number;
@@ -25,26 +26,64 @@ export default function VocabularyDetailPage() {
     const params = useParams();
     const folderId = Number(params.folderId);
     const { message } = App.useApp();
+    const queryClient = useQueryClient();
 
-    const [vocabularies, setVocabularies] = useState<VocabularyTableType[]>([]);
-    const [folder, setFolder] = useState<FolderResponse | null>(null);
-    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
 
     // Import state
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importData, setImportData] = useState<ImportVocabularyType[]>([]);
     const [fileInfo, setFileInfo] = useState<File | null>(null);
-    const [importing, setImporting] = useState(false);
 
     const [pagination, setPagination] = useState({
         current: 1,
         pageSize: 20,
-        total: 0,
     });
 
-    const [groups, setGroups] = useState<VocabularyGroupItem[]>([]);
     const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+
+    const { data: groups = [] } = useQuery({
+        queryKey: ['admin_vocabulary_groups'],
+        queryFn: getVocabularyGroups,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const { data: folderData, isLoading: isLoadingFolder } = useQuery({
+        queryKey: ['admin_vocabulary_folder_detail', folderId],
+        queryFn: async () => {
+            const result = await getFolderDetail(folderId);
+            return result;
+        },
+        enabled: !!folderId,
+    });
+
+    const { data: vocabularies = [], isLoading: isLoadingVocab, isFetching: isFetchingVocab } = useQuery({
+        queryKey: ['admin_vocabulary_list', folderId],
+        queryFn: async () => {
+            const vocabData = await getVocabulariesByFolder(folderId);
+            return vocabData.map(v => ({ ...v, key: v.sourceWordId }));
+        },
+        enabled: !!folderId,
+    });
+
+    const bulkImportMutation = useMutation({
+        mutationFn: async () => {
+            if (!folderId || importData.length === 0) throw new Error("Missing data");
+            return bulkCreateVocabulary(folderId, selectedGroupId, importData);
+        },
+        onSuccess: () => {
+            message.success(`Đã import thành công ${importData.length} từ vựng`);
+            setIsImportModalOpen(false);
+            setImportData([]);
+            setFileInfo(null);
+            setSelectedGroupId(null);
+            queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_list', folderId] });
+            queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_folders'] }); // invalidate folders to update count
+        },
+        onError: (error: any) => {
+            message.error(error?.message || "Lỗi khi import dữ liệu");
+        }
+    });
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -74,55 +113,9 @@ export default function VocabularyDetailPage() {
         });
     };
 
-    const handleBulkImport = async () => {
-        if (!folderId || importData.length === 0) return;
-
-        setImporting(true);
-        try {
-            await bulkCreateVocabulary(folderId, selectedGroupId, importData);
-            message.success(`Đã import thành công ${importData.length} từ vựng`);
-            setIsImportModalOpen(false);
-            setImportData([]);
-            setFileInfo(null);
-            setSelectedGroupId(null);
-            fetchDetail(); // Refresh list
-        } catch (error: any) {
-            message.error(error?.message || "Lỗi khi import dữ liệu");
-        } finally {
-            setImporting(false);
-        }
+    const handleBulkImport = () => {
+        bulkImportMutation.mutate();
     };
-
-    const fetchDetail = useCallback(async () => {
-        setLoading(true);
-        try {
-            const [folderData, vocabData] = await Promise.all([
-                getFolderDetail(folderId),
-                getVocabulariesByFolder(folderId)
-            ]);
-
-            setFolder(folderData);
-            setVocabularies(vocabData.map(v => ({ ...v, key: v.sourceWordId })));
-            setPagination(prev => ({ ...prev, total: vocabData.length }));
-        } catch (error: any) {
-            message.error(error?.message || "Không thể tải dữ liệu");
-        } finally {
-            setLoading(false);
-        }
-    }, [folderId, message]);
-
-    useEffect(() => {
-        if (folderId) fetchDetail();
-    }, [folderId, fetchDetail]);
-
-    const isMountedRef = useRef(true);
-    useEffect(() => {
-        isMountedRef.current = true;
-        getVocabularyGroups().then((data) => {
-            if (isMountedRef.current) setGroups(data);
-        });
-        return () => { isMountedRef.current = false; };
-    }, []);
 
     const filteredVocab = useMemo(() => {
         if (!searchQuery.trim()) return vocabularies;
@@ -200,12 +193,7 @@ export default function VocabularyDetailPage() {
             align: "right",
             render: () => (
                 <Space size="small">
-                    <Button
-                        icon={<EditOutlined />}
-                        size="small"
-                    >
-                        Sửa
-                    </Button>
+                    <Button icon={<EditOutlined />} size="small">Sửa</Button>
                     <Popconfirm
                         title="Xóa từ vựng"
                         description="Bạn có chắc muốn xóa từ này?"
@@ -215,13 +203,7 @@ export default function VocabularyDetailPage() {
                         okButtonProps={{ danger: true }}
                         icon={<QuestionCircleOutlined style={{ color: "red" }} />}
                     >
-                        <Button
-                            icon={<DeleteOutlined />}
-                            size="small"
-                            danger
-                        >
-                            Xóa
-                        </Button>
+                        <Button icon={<DeleteOutlined />} size="small" danger>Xóa</Button>
                     </Popconfirm>
                 </Space>
             )
@@ -230,7 +212,6 @@ export default function VocabularyDetailPage() {
 
     return (
         <div className="space-y-4">
-            {/* Top Navigation & Breadcrumb */}
             <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-gray-100 shadow-xs">
                 <div className="flex items-center gap-4">
                     <Button
@@ -242,17 +223,17 @@ export default function VocabularyDetailPage() {
                     <div>
                         <div className="flex items-center gap-2">
                             <h1 className="text-base font-bold text-gray-900 m-0 uppercase line-clamp-1">
-                                {folder?.folderName || "Đang tải..."}
+                                {folderData?.folderName || "Đang tải..."}
                             </h1>
                             <Tag color="purple" className="m-0 rounded border-0 bg-purple-50 text-purple-600 font-bold text-[10px]">
-                                {(folder as any)?.scope === "system" ? "HỆ THỐNG" : "NGƯỜI DÙNG"}
+                                {(folderData as any)?.scope === "system" ? "HỆ THỐNG" : "NGƯỜI DÙNG"}
                             </Tag>
                         </div>
                         <Breadcrumb
                             className="text-[11px] font-medium mt-0.5"
                             items={[
                                 { title: "Quản lý từ vựng", href: "#", onClick: (e) => { e.preventDefault(); router.push("/super-admin/vocabulary"); } },
-                                { title: folder?.folderName || "..." }
+                                { title: folderData?.folderName || "..." }
                             ]}
                         />
                     </div>
@@ -279,14 +260,13 @@ export default function VocabularyDetailPage() {
                 </div>
             </div>
 
-            {/* Import Modal */}
             <Modal
                 title={null}
                 open={isImportModalOpen}
-                maskClosable={!importing}
-                closable={!importing}
+                maskClosable={!bulkImportMutation.isPending}
+                closable={!bulkImportMutation.isPending}
                 onCancel={() => {
-                    if (importing) return;
+                    if (bulkImportMutation.isPending) return;
                     setIsImportModalOpen(false);
                     setImportData([]);
                     setFileInfo(null);
@@ -305,7 +285,7 @@ export default function VocabularyDetailPage() {
                         <Button
                             type="primary"
                             disabled={importData.length === 0 || !selectedGroupId}
-                            loading={importing}
+                            loading={bulkImportMutation.isPending}
                             onClick={handleBulkImport}
                             icon={<PlusOutlined />}
                         >
@@ -315,9 +295,9 @@ export default function VocabularyDetailPage() {
 
                     {!fileInfo ? (
                         <div
-                            className={`border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center transition-all group ${importing ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-400 hover:bg-blue-50 cursor-pointer'}`}
+                            className={`border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center transition-all group ${bulkImportMutation.isPending ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-400 hover:bg-blue-50 cursor-pointer'}`}
                             onClick={() => {
-                                if (importing) return;
+                                if (bulkImportMutation.isPending) return;
                                 document.getElementById("csv-upload")?.click();
                             }}
                         >
@@ -348,7 +328,7 @@ export default function VocabularyDetailPage() {
                                         options={groups.map(g => ({ label: g.groupName, value: g.vocabularyGroupId }))}
                                         value={selectedGroupId}
                                         onChange={setSelectedGroupId}
-                                        disabled={importing}
+                                        disabled={bulkImportMutation.isPending}
                                     />
                                 </div>
                                 <div className="flex-1">
@@ -368,7 +348,7 @@ export default function VocabularyDetailPage() {
                                             type="text"
                                             danger
                                             className="text-[10px]"
-                                            disabled={importing}
+                                            disabled={bulkImportMutation.isPending}
                                             onClick={() => {
                                                 setFileInfo(null);
                                                 setImportData([]);
@@ -409,11 +389,10 @@ export default function VocabularyDetailPage() {
                 </div>
             </Modal>
 
-            {/* Table Section */}
             <Table
                 columns={columns}
                 dataSource={filteredVocab}
-                loading={loading}
+                loading={isLoadingFolder || isLoadingVocab || isFetchingVocab}
                 pagination={{
                     current: pagination.current,
                     pageSize: pagination.pageSize,

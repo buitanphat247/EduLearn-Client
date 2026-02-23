@@ -2,107 +2,112 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { App, Empty } from "antd";
 import { BarChartOutlined, ReloadOutlined } from "@ant-design/icons";
 import Swal from "sweetalert2";
 import { useTheme } from "@/app/context/ThemeContext";
-import {
-  getFolders,
-  getVocabularyGroups,
-  resetVocabularyProgress,
-  type FolderResponse,
-  type VocabularyGroupItem,
-} from "@/lib/api/vocabulary";
+import { resetVocabularyProgress } from "@/lib/api/vocabulary";
 import { useDebounce } from "@/app/hooks/useDebounce";
 import { useServerAuthedUser } from "@/app/context/ServerAuthedUserProvider";
 import VocabularyCard from "@/app/components/vocabulary/VocabularyCard";
 import DarkPagination from "@/app/components/common/DarkPagination";
 import CustomInput from "@/app/components/common/CustomInput";
 import VocabularyFeatureSkeleton from "./VocabularyFeatureSkeleton";
+import { useVocabularyGroupsQuery, useVocabularyFoldersQuery } from "@/app/hooks/queries/useVocabularyQuery";
 
 const PAGE_SIZE = 20;
 
 export default function VocabularyFeature() {
   const { message } = App.useApp();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { theme } = useTheme();
+
   const user = useServerAuthedUser();
   const userId = user?.userId ? Number(user.userId) : undefined;
 
-  const [folders, setFolders] = useState<FolderResponse[]>([]);
-  const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [vocabularyGroups, setVocabularyGroups] = useState<VocabularyGroupItem[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState<number | undefined>(undefined);
-  const [searchText, setSearchText] = useState("");
+
+  // ✅ Initialize states from URL parameters to persist pagination/search on reload
+  const initialPage = Number(searchParams.get("page")) || 1;
+  const initialGroup = searchParams.get("group") ? Number(searchParams.get("group")) : undefined;
+  const initialSearch = searchParams.get("search") || "";
+
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | undefined>(initialGroup);
+  const [searchText, setSearchText] = useState(initialSearch);
   const debouncedSearchQuery = useDebounce(searchText, 500);
+
+  // ✅ Auto sync state changes back to URL silently without full page scroll/reload
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    let changed = false;
+
+    if (currentPage > 1) {
+      if (params.get("page") !== String(currentPage)) { params.set("page", String(currentPage)); changed = true; }
+    } else if (params.has("page")) { params.delete("page"); changed = true; }
+
+    if (selectedGroupId) {
+      if (params.get("group") !== String(selectedGroupId)) { params.set("group", String(selectedGroupId)); changed = true; }
+    } else if (params.has("group")) { params.delete("group"); changed = true; }
+
+    if (debouncedSearchQuery) {
+      if (params.get("search") !== debouncedSearchQuery) { params.set("search", debouncedSearchQuery); changed = true; }
+    } else if (params.has("search")) { params.delete("search"); changed = true; }
+
+    if (changed) {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+  }, [currentPage, selectedGroupId, debouncedSearchQuery, pathname, router, searchParams]);
+
+  // Reset page when filter changes
   const prevSearchRef = useRef(debouncedSearchQuery);
   const prevGroupRef = useRef(selectedGroupId);
-  const isMountedRef = useRef(true);
-
   useEffect(() => {
-    isMountedRef.current = true;
-    getVocabularyGroups().then(data => {
-      if (isMountedRef.current) setVocabularyGroups(data);
-    });
-    return () => { isMountedRef.current = false; };
-  }, []);
+    if (prevSearchRef.current !== debouncedSearchQuery || prevGroupRef.current !== selectedGroupId) {
+      setCurrentPage(1);
+      prevSearchRef.current = debouncedSearchQuery;
+      prevGroupRef.current = selectedGroupId;
+    }
+  }, [debouncedSearchQuery, selectedGroupId]);
 
-  const fetchFolders = useCallback(
-    async (page?: number) => {
-      const searchChanged = prevSearchRef.current !== debouncedSearchQuery;
-      const groupChanged = prevGroupRef.current !== selectedGroupId;
+  // Use React Query hooks
+  const { data: groupsData = [] } = useVocabularyGroupsQuery();
+  const vocabularyGroups = Array.isArray(groupsData) ? groupsData : [];
 
-      if (searchChanged || groupChanged) {
-        prevSearchRef.current = debouncedSearchQuery;
-        prevGroupRef.current = selectedGroupId;
-        setCurrentPage(1);
-      }
-      const pageToFetch = page ?? (searchChanged || groupChanged ? 1 : currentPage);
+  const {
+    data: foldersResult,
+    isLoading: foldersLoading,
+    isRefetching,
+    error,
+    refetch,
+  } = useVocabularyFoldersQuery({
+    page: currentPage,
+    limit: PAGE_SIZE,
+    search: debouncedSearchQuery || undefined,
+    vocabularyGroupId: selectedGroupId,
+    userId,
+  });
 
-      setLoading(true);
-      setFolders([]);
-      try {
-        const result = await getFolders({
-          page: pageToFetch,
-          limit: PAGE_SIZE,
-          search: debouncedSearchQuery || undefined,
-          vocabularyGroupId: selectedGroupId,
-          userId,
-        });
+  const folders = foldersResult?.data || [];
+  const total = foldersResult?.total || 0;
+  const loading = foldersLoading || (!folders.length && isRefetching);
 
-        if (!isMountedRef.current) return;
-
-        setFolders(result.data);
-        setTotal(result.total);
-      } catch (error: unknown) {
-        if (!isMountedRef.current) return;
-
-        const err = error as { response?: { status?: number; data?: { message?: string } } };
-        if (err?.response?.status === 403) {
-          message.warning(err?.response?.data?.message || "Bạn cần gói Pro để truy cập từ vựng.");
-          router.back();
-          return;
-        }
+  // Handle errors from query
+  useEffect(() => {
+    if (error) {
+      const err = error as { response?: { status?: number; data?: { message?: string } } };
+      if (err?.response?.status === 403) {
+        message.warning(err?.response?.data?.message || "Bạn cần gói Pro để truy cập từ vựng.");
+        router.back();
+      } else {
         const msg = error instanceof Error ? error.message : "Không thể tải danh sách folders";
         message.error(msg);
-        setFolders([]);
-        setTotal(0);
-      } finally {
-        if (isMountedRef.current) {
-          setLoading(false);
-        }
       }
-    },
-    [currentPage, debouncedSearchQuery, selectedGroupId, message, userId, router]
-  );
-
-  useEffect(() => {
-    fetchFolders();
-  }, [fetchFolders]);
+    }
+  }, [error, message, router]);
 
   const handleReset = useCallback(async () => {
     const isDark = theme === "dark";
@@ -127,8 +132,6 @@ export default function VocabularyFeature() {
       setResetting(true);
       await resetVocabularyProgress();
 
-      if (!isMountedRef.current) return;
-
       await Swal.fire({
         title: "Thành công!",
         text: "Tiến trình học từ vựng đã được đặt lại.",
@@ -139,10 +142,8 @@ export default function VocabularyFeature() {
         color: isDark ? "#f8fafc" : "#1e293b",
       });
 
-      fetchFolders();
+      refetch();
     } catch (error) {
-      if (!isMountedRef.current) return;
-
       Swal.fire({
         title: "Lỗi!",
         text: "Không thể đặt lại tiến trình. Vui lòng thử lại.",
@@ -152,11 +153,9 @@ export default function VocabularyFeature() {
         color: isDark ? "#f8fafc" : "#1e293b",
       });
     } finally {
-      if (isMountedRef.current) {
-        setResetting(false);
-      }
+      setResetting(false);
     }
-  }, [fetchFolders, theme]);
+  }, [refetch, theme]);
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
@@ -164,7 +163,7 @@ export default function VocabularyFeature() {
   }, []);
 
   return (
-    <div className="container mx-auto">
+    <div>
       {/* Search + Actions */}
       <div className="mx-auto mb-12">
         <div className="flex flex-col md:flex-row gap-4 items-center">

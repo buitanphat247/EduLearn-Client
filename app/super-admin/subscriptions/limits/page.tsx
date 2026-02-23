@@ -11,7 +11,6 @@ import {
     Divider,
     Tag,
     Alert,
-    Tooltip,
     Row,
     Col,
 } from "antd";
@@ -19,12 +18,12 @@ import {
     SaveOutlined,
     ReloadOutlined,
     SettingOutlined,
-    QuestionCircleOutlined,
     InfoCircleOutlined,
     CheckCircleOutlined,
     CloseCircleOutlined
 } from "@ant-design/icons";
 import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     getSubscriptionPlans,
     updatePlanLimit,
@@ -41,7 +40,6 @@ const FEATURES = [
     { value: 'digital_document', label: 'Digital Document', desc: 'Số hóa tài liệu (AI PDF)' },
 ];
 
-// Helper component to manage state for each feature limit row
 const FeatureLimitRow = ({
     feature,
     existingLimitValue,
@@ -123,33 +121,33 @@ const FeatureLimitRow = ({
 
 export default function PlanLimitsPage() {
     const { message } = App.useApp();
-    const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-    const [loading, setLoading] = useState(false);
+    const queryClient = useQueryClient();
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    const { data: plans = [], isLoading, isFetching, refetch, isError, error } = useQuery({
+        queryKey: ['admin_subscription_plans'],
+        queryFn: getSubscriptionPlans,
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const data = await getSubscriptionPlans();
-            setPlans(data || []);
-        } catch {
-            message.error("Không thể tải danh sách gói cước");
-        } finally {
-            setLoading(false);
+    if (isError) {
+        message.error((error as Error)?.message || "Không thể tải danh sách gói cước");
+    }
+
+    const updateLimitMutation = useMutation({
+        mutationFn: async ({ planId, featureCode, limitValue }: { planId: number, featureCode: string, limitValue: number }) => {
+            return updatePlanLimit(planId, featureCode, limitValue);
+        },
+        onSuccess: () => {
+            message.success("Cập nhật thành công");
+            queryClient.invalidateQueries({ queryKey: ['admin_subscription_plans'] });
+        },
+        onError: () => {
+            message.error("Lỗi khi cập nhật");
         }
-    };
+    });
 
     const handleUpdateLimit = async (planId: number, featureCode: string, limitValue: number) => {
-        try {
-            await updatePlanLimit(planId, featureCode, limitValue);
-            message.success("Cập nhật thành công");
-        } catch {
-            message.error("Lỗi khi cập nhật");
-            throw new Error("Update failed");
-        }
+        await updateLimitMutation.mutateAsync({ planId, featureCode, limitValue });
     };
 
     const columns = [
@@ -160,7 +158,7 @@ export default function PlanLimitsPage() {
             render: (_: any, record: SubscriptionPlan) => (
                 <Space direction="vertical" size={4}>
                     <Text strong style={{ fontSize: '16px', color: record.name === 'FREE_BASE' ? '#64748b' : '#0f172a' }}>
-                        {record.name?.replace('_', ' ')}
+                        {record.name?.replace('_', ' ').toUpperCase()}
                     </Text>
                     <Space split={<Divider type="vertical" />}>
                         <Text type="secondary">{new Intl.NumberFormat('vi-VN').format(record.price || 0)}đ</Text>
@@ -200,14 +198,14 @@ export default function PlanLimitsPage() {
                     </Title>
                     <Text type="secondary">Thiết lập hạn mức sử dụng tính năng AI cho từng gói dịch vụ</Text>
                 </div>
-                <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>Làm mới</Button>
+                <Button icon={<ReloadOutlined />} onClick={() => refetch()} loading={isFetching}>Làm mới</Button>
             </div>
 
             <Table
-                dataSource={plans || []}
+                dataSource={plans}
                 columns={columns}
                 rowKey="id"
-                loading={loading}
+                loading={isLoading || isFetching}
                 pagination={false}
                 bordered
                 style={{
@@ -218,7 +216,6 @@ export default function PlanLimitsPage() {
                 }}
             />
 
-            {/* Configuration Guide */}
             <Card
                 style={{
                     marginTop: '32px',

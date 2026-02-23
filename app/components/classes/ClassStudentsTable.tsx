@@ -89,7 +89,7 @@ function ClassStudentsTable({ students, onViewStudent, onRemoveStudent, onBanStu
       title: "Trạng thái",
       key: "status",
       width: 120,
-      render: (_: any, record: StudentItem) => {
+      render: (_: unknown, record: StudentItem) => {
         const isBanned = record.apiStatus === "banned";
         return isBanned ? (
           <Tag icon={<StopOutlined />} color="error">Bị cấm</Tag>
@@ -102,27 +102,27 @@ function ClassStudentsTable({ students, onViewStudent, onRemoveStudent, onBanStu
       title: "Hành động",
       key: "action",
       width: 220,
-      render: (_: any, record: StudentItem) => {
+      render: (_: unknown, record: StudentItem) => {
         const isBanned = record.apiStatus === "banned";
         const isLoading = loadingStudentId === String(record.userId);
-        
+
         return (
           <Space size="small">
-            <Button 
-              icon={<EyeOutlined />} 
-              size="small" 
-              onClick={() => onViewStudent(record)} 
+            <Button
+              icon={<EyeOutlined />}
+              size="small"
+              onClick={() => onViewStudent(record)}
               className="cursor-pointer"
             >
               Xem
             </Button>
             {isBanned ? (
               onUnbanStudent && (
-                <Button 
-                  icon={isLoading ? <LoadingOutlined /> : <CheckCircleOutlined />} 
-                  size="small" 
+                <Button
+                  icon={isLoading ? <LoadingOutlined /> : <CheckCircleOutlined />}
+                  size="small"
                   type="primary"
-                  onClick={() => handleUnban(record)} 
+                  onClick={() => handleUnban(record)}
                   className="cursor-pointer"
                   loading={isLoading}
                   style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
@@ -132,24 +132,24 @@ function ClassStudentsTable({ students, onViewStudent, onRemoveStudent, onBanStu
               )
             ) : (
               onBanStudent && (
-              <Button 
-                icon={<StopOutlined />} 
-                size="small" 
-                danger 
-                onClick={() => onBanStudent(record)} 
-                className="cursor-pointer"
-              >
-                Cấm
-              </Button>
+                <Button
+                  icon={<StopOutlined />}
+                  size="small"
+                  danger
+                  onClick={() => onBanStudent(record)}
+                  className="cursor-pointer"
+                >
+                  Cấm
+                </Button>
               )
             )}
-              <Button 
-              icon={<DeleteOutlined />} 
-                size="small" 
-                danger 
-              onClick={() => onRemoveStudent(record)} 
-                className="cursor-pointer"
-              >
+            <Button
+              icon={<DeleteOutlined />}
+              size="small"
+              danger
+              onClick={() => onRemoveStudent(record)}
+              className="cursor-pointer"
+            >
               Xóa
             </Button>
           </Space>
@@ -177,15 +177,15 @@ function ClassStudentsTable({ students, onViewStudent, onRemoveStudent, onBanStu
   ), [statusFilter, handleFilterChange, filterOptions]);
 
   return (
-    <CustomCard 
-      title="Danh sách học sinh" 
+    <CustomCard
+      title="Danh sách học sinh"
       bodyClassName="py-6"
       extra={cardExtra}
     >
-      <Table 
-        columns={studentColumns} 
-        dataSource={filteredStudents} 
-        pagination={false} 
+      <Table
+        columns={studentColumns}
+        dataSource={filteredStudents}
+        pagination={false}
         rowClassName="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800"
         locale={{ emptyText }}
       />

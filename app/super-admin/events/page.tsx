@@ -7,15 +7,16 @@ import {
   DeleteOutlined,
   EyeOutlined,
   PlusOutlined,
-  CalendarOutlined,
   LoadingOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
-import { useState, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnsType } from "antd/es/table";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { createEvent, getEvents, getEventById, deleteEvent, type EventResponse } from "@/lib/api/events";
-import { getCurrentUser } from "@/lib/api/users";
+import { useUserId } from "@/app/hooks/useUserId";
+import { useDebounce } from "@/app/hooks/useDebounce";
 import EventDetailModal from "@/app/components/super-admin/EventDetailModal";
 import UpdateEventModal from "@/app/components/super-admin/UpdateEventModal";
 
@@ -45,43 +46,24 @@ export default function SuperAdminEvents() {
   const router = useRouter();
   const { modal, message } = App.useApp();
   const [form] = Form.useForm();
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
   const [isViewDetailModalOpen, setIsViewDetailModalOpen] = useState(false);
   const [isUpdateEventModalOpen, setIsUpdateEventModalOpen] = useState(false);
+
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [eventDetail, setEventDetail] = useState<EventResponse | null>(null);
   const [loadingEventDetail, setLoadingEventDetail] = useState(false);
   const [selectedEventForUpdate, setSelectedEventForUpdate] = useState<EventResponse | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
-  const [submitting, setSubmitting] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");
-  const [events, setEvents] = useState<EventType[]>([]);
-  const [loading, setLoading] = useState(true);
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
-    total: 0,
   });
-  const hasFetched = useRef(false);
-  const isFetching = useRef(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setIsSearchModalOpen(true);
-      }
-      if (e.key === "Escape" && isSearchModalOpen) {
-        setIsSearchModalOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isSearchModalOpen]);
 
   const getEventStatus = (startDate: string, endDate: string): string => {
     const now = new Date();
@@ -97,17 +79,14 @@ export default function SuperAdminEvents() {
     }
   };
 
-  const fetchEvents = async (page: number = 1, limit: number = 10, search?: string) => {
-    if (isFetching.current) {
-      return;
-    }
-
-    isFetching.current = true;
-    setLoading(true);
-    const startTime = Date.now();
-
-    try {
-      const result = await getEvents({ page, limit, search });
+  const { data, isLoading, isFetching, isError, error } = useQuery({
+    queryKey: ['admin_events', pagination.current, pagination.pageSize, debouncedSearchQuery],
+    queryFn: async () => {
+      const result = await getEvents({
+        page: pagination.current,
+        limit: pagination.pageSize,
+        search: debouncedSearchQuery.trim() || undefined
+      });
 
       const formattedData: EventType[] = result.events.map((event: EventResponse) => ({
         key: event.event_id.toString(),
@@ -123,76 +102,27 @@ export default function SuperAdminEvents() {
         updated_at: event.updated_at,
       }));
 
-      // Ensure minimum loading time
-      const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 250;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
+      return {
+        events: formattedData,
+        total: result.total || 0,
+      };
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
+  });
 
-      setEvents(formattedData);
-      setPagination((prev) => ({
-        ...prev,
-        current: page,
-        pageSize: limit,
-        total: result.total,
-      }));
-    } catch (error: any) {
-      // Ensure minimum loading time even on error
-      const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 250;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
-      message.error(error?.message || "Không thể tải danh sách sự kiện");
-      setEvents([]);
-    } finally {
-      setLoading(false);
-      isFetching.current = false;
-    }
-  };
-
-  // Debounce search query
-  useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 500);
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, [searchQuery]);
-
-  useEffect(() => {
-    if (!hasFetched.current) {
-      hasFetched.current = true;
-      fetchEvents(pagination.current, pagination.pageSize, debouncedSearchQuery);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Reset to page 1 when debounced search changes
-    if (hasFetched.current) {
-      setPagination((prev) => ({ ...prev, current: 1 }));
-      fetchEvents(1, pagination.pageSize, debouncedSearchQuery);
-    }
-  }, [debouncedSearchQuery]);
+  if (isError) {
+    message.error((error as Error)?.message || "Không thể tải danh sách sự kiện");
+  }
 
   const handleTableChange = (page: number, pageSize: number) => {
-    if (!isFetching.current) {
-      fetchEvents(page, pageSize, debouncedSearchQuery);
-    }
+    setPagination({ current: page, pageSize });
   };
 
-  const handleSearch = (value: string) => {
+  const handleSearch = useCallback((value: string) => {
     setSearchQuery(value);
     setPagination((prev) => ({ ...prev, current: 1 }));
-  };
+  }, []);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
@@ -209,12 +139,11 @@ export default function SuperAdminEvents() {
     try {
       const eventData = await getEventById(eventId);
       setEventDetail(eventData);
-      setLoadingEventDetail(false);
     } catch (error: any) {
       message.error(error?.message || "Không thể tải thông tin sự kiện");
       setIsViewDetailModalOpen(false);
       setSelectedEventId(null);
-      setEventDetail(null);
+    } finally {
       setLoadingEventDetail(false);
     }
   };
@@ -224,19 +153,25 @@ export default function SuperAdminEvents() {
   };
 
   const handleAfterClose = () => {
-    // Reset state sau khi animation đóng hoàn tất
     setSelectedEventId(null);
     setEventDetail(null);
     setLoadingEventDetail(false);
   };
 
-  const filteredData = events.filter((item) => {
-    const status = getEventStatus(item.start_event_date, item.end_event_date);
-    const matchesStatus = !selectedStatus || status === selectedStatus;
-    return matchesStatus;
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return deleteEvent(id);
+    },
+    onSuccess: () => {
+      message.success("Xóa sự kiện thành công!");
+      queryClient.invalidateQueries({ queryKey: ['admin_events'] });
+    },
+    onError: (error: Error) => {
+      message.error(error?.message || "Không thể xóa sự kiện");
+    }
   });
 
-  const columns: ColumnsType<EventType> = [
+  const columns: ColumnsType<EventType> = useMemo(() => [
     {
       title: "STT",
       dataIndex: "event_id",
@@ -255,7 +190,6 @@ export default function SuperAdminEvents() {
       key: "title",
       render: (text: string) => <span className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors duration-200">{text}</span>,
     },
-
     {
       title: "Địa điểm",
       dataIndex: "location",
@@ -330,15 +264,8 @@ export default function SuperAdminEvents() {
             okText: "Xóa",
             okType: "danger",
             cancelText: "Hủy",
-            async onOk() {
-              try {
-                await deleteEvent(record.event_id);
-                message.success("Xóa sự kiện thành công!");
-                // Refresh danh sách events
-                fetchEvents(pagination.current, pagination.pageSize, debouncedSearchQuery);
-              } catch (error: any) {
-                message.error(error?.message || "Không thể xóa sự kiện");
-              }
+            onOk() {
+              deleteMutation.mutate(record.event_id);
             },
           });
         };
@@ -370,6 +297,7 @@ export default function SuperAdminEvents() {
               danger
               className="hover:bg-red-50 hover:border-red-400 transition-all duration-200"
               onClick={handleDelete}
+              loading={deleteMutation.isPending}
             >
               Xóa
             </Button>
@@ -377,14 +305,14 @@ export default function SuperAdminEvents() {
         );
       },
     },
-  ];
+  ], [pagination.current, pagination.pageSize, message, modal, deleteMutation, handleViewEvent]);
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <div className="flex flex-wrap gap-3 items-center flex-1">
           <Input
-            prefix={loading ? <LoadingOutlined spin /> : <SearchOutlined />}
+            prefix={isFetching ? <LoadingOutlined spin /> : <SearchOutlined />}
             placeholder="Tìm kiếm theo tên sự kiện..."
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
@@ -418,12 +346,12 @@ export default function SuperAdminEvents() {
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <Table
           columns={columns}
-          dataSource={filteredData}
-          loading={loading}
+          dataSource={data?.events || []}
+          loading={isLoading || isFetching}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
-            total: pagination.total,
+            total: data?.total || 0,
             showSizeChanger: false,
             showTotal: (total) => `Tổng ${total} sự kiện`,
             size: "small",
@@ -435,7 +363,6 @@ export default function SuperAdminEvents() {
         />
       </div>
 
-      {/* Add Event Modal */}
       <Modal
         title="Thêm sự kiện"
         open={isAddEventModalOpen}
@@ -451,13 +378,11 @@ export default function SuperAdminEvents() {
           onSuccess={() => {
             setIsAddEventModalOpen(false);
             form.resetFields();
-            // Refresh events list
-            fetchEvents(pagination.current, pagination.pageSize, debouncedSearchQuery);
+            queryClient.invalidateQueries({ queryKey: ['admin_events'] });
           }}
         />
       </Modal>
 
-      {/* Event Detail Modal */}
       <EventDetailModal
         open={isViewDetailModalOpen}
         onCancel={handleCloseEventModal}
@@ -466,7 +391,6 @@ export default function SuperAdminEvents() {
         afterClose={handleAfterClose}
       />
 
-      {/* Update Event Modal */}
       <UpdateEventModal
         open={isUpdateEventModalOpen}
         onCancel={() => {
@@ -478,8 +402,7 @@ export default function SuperAdminEvents() {
           setIsUpdateEventModalOpen(false);
           setSelectedEventForUpdate(null);
           setSelectedEventId(null);
-          // Refresh danh sách events
-          fetchEvents(pagination.current, pagination.pageSize, debouncedSearchQuery);
+          queryClient.invalidateQueries({ queryKey: ['admin_events'] });
         }}
         eventId={selectedEventId || 0}
         eventData={selectedEventForUpdate}
@@ -490,34 +413,34 @@ export default function SuperAdminEvents() {
 
 function AddEventForm({ form, onSuccess }: { form: any; onSuccess: () => void }) {
   const { message } = App.useApp();
-  const [submitting, setSubmitting] = useState(false);
+  const { userId } = useUserId();
 
-  const handleSubmit = async (values: any) => {
-    setSubmitting(true);
-    try {
-      const user = getCurrentUser();
-      if (!user || !user.user_id) {
-        message.error("Không thể lấy thông tin người dùng. Vui lòng đăng nhập lại!");
-        return;
+  const mutation = useMutation({
+    mutationFn: async (values: any) => {
+      if (!userId) {
+        throw new Error("Không thể lấy thông tin người dùng. Vui lòng đăng nhập lại!");
       }
-
       const eventData = {
         title: values.title,
         description: values.description,
         start_event_date: values.start_event_date.format("YYYY-MM-DD"),
         end_event_date: values.end_event_date.format("YYYY-MM-DD"),
         location: values.location,
-        created_by: Number(user.user_id),
+        created_by: Number(userId),
       };
-
-      await createEvent(eventData);
+      return createEvent(eventData);
+    },
+    onSuccess: () => {
       message.success("Tạo sự kiện thành công!");
       onSuccess();
-    } catch (error: any) {
+    },
+    onError: (error: Error) => {
       message.error(error?.message || "Không thể tạo sự kiện");
-    } finally {
-      setSubmitting(false);
     }
+  });
+
+  const handleSubmit = (values: any) => {
+    mutation.mutate(values);
   };
 
   return (
@@ -561,7 +484,7 @@ function AddEventForm({ form, onSuccess }: { form: any; onSuccess: () => void })
 
       <Form.Item>
         <Space>
-          <Button type="primary" htmlType="submit" loading={submitting}>
+          <Button type="primary" htmlType="submit" loading={mutation.isPending}>
             Tạo sự kiện
           </Button>
           <Button onClick={() => form.resetFields()}>Làm mới</Button>

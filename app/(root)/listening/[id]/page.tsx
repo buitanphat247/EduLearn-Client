@@ -3,11 +3,11 @@
 import ListeningDetailSkeleton from "@/app/components/features/listening/ListeningDetailSkeleton";
 import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
 import AudioPlayer from "@/app/components/features/listening/AudioPlayer";
-import TranscriptPanel from "@/app/components/features/listening/TranscriptPanel";
 import InputArea from "@/app/components/features/listening/InputArea";
 import { useListeningAudio } from "@/app/hooks/useListeningAudio";
 import { useListeningChallenge } from "@/app/hooks/useListeningChallenge";
 import { useListeningProgress } from "@/app/hooks/useListeningProgress";
+import { useListeningLessonDetailQuery } from "@/app/hooks/queries/useListeningQuery";
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { FaKeyboard } from "react-icons/fa";
@@ -59,59 +59,25 @@ export default function ListeningPage() {
   }, [params?.id]);
 
   // Data State
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [lessonInfo, setLessonInfo] = useState<Lesson | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [dataReady, setDataReady] = useState(false);
+  // Fetch Data via React Query
+  const { data, isLoading: loading, error } = useListeningLessonDetailQuery(lessonIdStr);
+  const challenges = data || [];
+  const lessonInfo = challenges.length > 0 && challenges[0].lesson ? challenges[0].lesson : null;
+  const dataReady = challenges.length > 0;
 
   // UI State
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [showAppTranscript, setShowAppTranscript] = useState(false);
-  const [showAppTranslation, setShowAppTranslation] = useState(false);
 
   // Progress Restore State
   const [pendingRestoreTime, setPendingRestoreTime] = useState<number | null>(null);
 
-  // Fetch Data - depends on stable lessonIdStr, not params object
+  // Handle Query Errors
   useEffect(() => {
-    if (!lessonIdStr) return;
-
-    let cancelled = false;
-
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setDataReady(false);
-        setChallenges([]);
-        setLessonInfo(null);
-        const response = await apiClient.get<ApiResponse>(`/challenges/by-lesson/${lessonIdStr}`);
-
-        if (cancelled) return;
-
-        if (response.data?.status && response.data?.data && response.data.data.length > 0) {
-          const sortedData = response.data.data.sort((a, b) => a.position_challenges - b.position_challenges);
-          setChallenges(sortedData);
-          if (sortedData[0].lesson) {
-            setLessonInfo(sortedData[0].lesson);
-          }
-          setDataReady(true);
-        } else {
-          message.error("Không thể tải bài học hoặc bài học chưa có nội dung");
-        }
-      } catch (error) {
-        if (cancelled) return;
-        console.error("Error fetching lesson:", error);
-        message.error("Có lỗi xảy ra khi tải bài học");
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchData();
-    return () => { cancelled = true; };
-  }, [lessonIdStr]);
+    if (error) {
+      console.error("Error fetching lesson:", error);
+      message.error(error instanceof Error ? error.message : "Có lỗi xảy ra khi tải bài học");
+    }
+  }, [error]);
 
   // Challenge hook
   const {
@@ -258,80 +224,66 @@ export default function ListeningPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* LEFT COLUMN - MAIN INTERACTION */}
-            <div className="lg:col-span-7 space-y-6">
-              {/* Shortcuts Bar */}
-              <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-3 flex flex-wrap items-center gap-4 text-sm text-slate-500 dark:text-slate-400 shadow-sm">
-                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-                  <FaKeyboard className="text-xl" />
-                  <span className="font-semibold">Phím tắt</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <kbd className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-2 py-0.5 rounded text-xs font-bold font-mono border border-slate-300 dark:border-slate-600">
-                    Enter
-                  </kbd>
-                  <span>Kiểm tra / Tiếp tục</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <kbd className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-2 py-0.5 rounded text-xs font-bold font-mono border border-slate-300 dark:border-slate-600">
-                    Ctrl
-                  </kbd>
-                  <span>Phát lại âm thanh</span>
-                </div>
+          <div className="space-y-6">
+            {/* Shortcuts Bar */}
+            <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-3 flex flex-wrap items-center gap-4 text-sm text-slate-500 dark:text-slate-400 shadow-sm">
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                <FaKeyboard className="text-xl" />
+                <span className="font-semibold">Phím tắt</span>
               </div>
-
-              {/* Progress Badge */}
-              <div className="flex items-center gap-3">
-                <span className="bg-blue-600 shadow-lg shadow-blue-900/20 text-white text-xs font-bold px-3 py-1 rounded-full">
-                  CÂU {currentIdx + 1}/{challenges.length}
-                </span>
+              <div className="flex items-center gap-2">
+                <kbd className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-2 py-0.5 rounded text-xs font-bold font-mono border border-slate-300 dark:border-slate-600">
+                  Enter
+                </kbd>
+                <span>Kiểm tra / Tiếp tục</span>
               </div>
-
-              {/* Audio Player Card */}
-              {currentChallengeData && (
-                <AudioPlayer
-                  audioRef={audioRef}
-                  audioSrc={currentChallengeData.audioSrc_challenges}
-                  isPlaying={isPlaying}
-                  currentTime={currentTime}
-                  duration={duration}
-                  playbackSpeed={playbackSpeed}
-                  onTogglePlay={togglePlay}
-                  onTimeUpdate={handleTimeUpdate}
-                  onLoadedMetadata={handleLoadedMetadata}
-                  onEnded={handleAudioEnded}
-                  onChangeSpeed={handleSpeedChange}
-                  onSeek={handleSeek}
-                  formatTime={formatTime}
-                />
-              )}
-
-              {/* Input Area */}
-              {currentChallengeData && (
-                <InputArea
-                  userInput={userInput}
-                  feedback={feedback}
-                  currentChallengeContent={currentChallengeData.content_challenges}
-                  currentChallengeTranslation={currentChallengeData.translateText_challenges}
-                  currentHistorySubmittedInput={currentHistory.submittedInput}
-                  onInputChange={handleInputChange}
-                  onCheck={checkAnswer}
-                  onSkip={skipSentence}
-                />
-              )}
+              <div className="flex items-center gap-2">
+                <kbd className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-2 py-0.5 rounded text-xs font-bold font-mono border border-slate-300 dark:border-slate-600">
+                  Ctrl
+                </kbd>
+                <span>Phát lại âm thanh</span>
+              </div>
             </div>
 
-            {/* RIGHT COLUMN - TRANSCRIPT */}
-            <TranscriptPanel
-              challenges={challenges}
-              currentIdx={currentIdx}
-              history={history}
-              showAppTranscript={showAppTranscript}
-              showAppTranslation={showAppTranslation}
-              onToggleTranscript={() => setShowAppTranscript(!showAppTranscript)}
-              onToggleTranslation={() => setShowAppTranslation(!showAppTranslation)}
-            />
+            {/* Progress Badge */}
+            <div className="flex items-center gap-3">
+              <span className="bg-blue-600 shadow-lg shadow-blue-900/20 text-white text-xs font-bold px-3 py-1 rounded-full">
+                CÂU {currentIdx + 1}/{challenges.length}
+              </span>
+            </div>
+
+            {/* Audio Player Card */}
+            {currentChallengeData && (
+              <AudioPlayer
+                audioRef={audioRef}
+                audioSrc={currentChallengeData.audioSrc_challenges}
+                isPlaying={isPlaying}
+                currentTime={currentTime}
+                duration={duration}
+                playbackSpeed={playbackSpeed}
+                onTogglePlay={togglePlay}
+                onTimeUpdate={handleTimeUpdate}
+                onLoadedMetadata={handleLoadedMetadata}
+                onEnded={handleAudioEnded}
+                onChangeSpeed={handleSpeedChange}
+                onSeek={handleSeek}
+                formatTime={formatTime}
+              />
+            )}
+
+            {/* Input Area */}
+            {currentChallengeData && (
+              <InputArea
+                userInput={userInput}
+                feedback={feedback}
+                currentChallengeContent={currentChallengeData.content_challenges}
+                currentChallengeTranslation={currentChallengeData.translateText_challenges}
+                currentHistorySubmittedInput={currentHistory.submittedInput}
+                onInputChange={handleInputChange}
+                onCheck={checkAnswer}
+                onSkip={skipSentence}
+              />
+            )}
           </div>
         </div>
       </div>

@@ -261,3 +261,137 @@ html.dark header nav .ant-avatar .anticon,
 html.dark header nav .ant-avatar-icon .anticon {
   color: #ffffff !important;
 }
+
+/* ============================================
+   MOBILE DRAWER — GPU-Accelerated Animations
+   ============================================ */
+
+/* Backdrop: fade in */
+.mobile-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0);
+  pointer-events: none;
+  transition: background 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-drawer-backdrop.open {
+  background: rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+}
+
+/* Drawer Panel: slide from right with GPU acceleration */
+.mobile-drawer-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 300px;
+  max-width: 85vw;
+  z-index: 70;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+
+  /* GPU compositing layer */
+  transform: translate3d(100%, 0, 0);
+  will-change: transform;
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Prevent repaint flicker on iOS */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.mobile-drawer-panel.open {
+  transform: translate3d(0, 0, 0);
+}
+
+/* Staggered nav link entrance animation */
+.mobile-drawer-panel.open .mobile-nav-item {
+  animation: mobileNavSlideIn 0.3s ease forwards;
+  opacity: 0;
+}
+
+.mobile-drawer-panel.open .mobile-nav-item:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.mobile-drawer-panel.open .mobile-nav-item:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.mobile-drawer-panel.open .mobile-nav-item:nth-child(3) {
+  animation-delay: 0.11s;
+}
+.mobile-drawer-panel.open .mobile-nav-item:nth-child(4) {
+  animation-delay: 0.14s;
+}
+.mobile-drawer-panel.open .mobile-nav-item:nth-child(5) {
+  animation-delay: 0.17s;
+}
+.mobile-drawer-panel.open .mobile-nav-item:nth-child(6) {
+  animation-delay: 0.2s;
+}
+.mobile-drawer-panel.open .mobile-nav-item:nth-child(7) {
+  animation-delay: 0.23s;
+}
+.mobile-drawer-panel.open .mobile-nav-item:nth-child(8) {
+  animation-delay: 0.26s;
+}
+.mobile-drawer-panel.open .mobile-nav-item:nth-child(9) {
+  animation-delay: 0.29s;
+}
+.mobile-drawer-panel.open .mobile-nav-item:nth-child(10) {
+  animation-delay: 0.32s;
+}
+
+@keyframes mobileNavSlideIn {
+  from {
+    opacity: 0;
+    transform: translate3d(16px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Close button spin on hover */
+.mobile-drawer-close:active {
+  transform: rotate(90deg);
+  transition: transform 0.2s ease;
+}
+
+/* Active link pulse dot */
+.mobile-nav-active-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3b82f6;
+  animation: activePulse 2s ease-in-out infinite;
+}
+
+@keyframes activePulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.3);
+  }
+}
+
+html.dark .mobile-nav-active-dot {
+  background: #60a5fa;
+}
+
+/* Hide drawer entirely on desktop — no rendering cost */
+@media (min-width: 768px) {
+  .mobile-drawer-backdrop,
+  .mobile-drawer-panel {
+    display: none !important;
+  }
+}

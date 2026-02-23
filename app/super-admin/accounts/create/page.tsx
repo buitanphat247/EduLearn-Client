@@ -6,10 +6,12 @@ import { Button, Upload, Table, App, Progress } from "antd";
 import { UploadOutlined, DownloadOutlined, InboxOutlined, CloudUploadOutlined, TableOutlined, CheckCircleOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd";
 import { createUser } from "@/lib/api/users";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function CreateAccountPage() {
   const router = useRouter();
   const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const [csvPreviewData, setCsvPreviewData] = useState<any[]>([]);
   const [uploadFileList, setUploadFileList] = useState<UploadFile[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -23,6 +25,7 @@ export default function CreateAccountPage() {
       submitting={submitting}
       setSubmitting={setSubmitting}
       onSuccess={() => {
+        queryClient.invalidateQueries({ queryKey: ['admin_users'] });
         router.push("/super-admin/accounts");
       }}
     />
@@ -284,15 +287,15 @@ function FileUploadForm({
   const columns =
     csvPreviewData.length > 0
       ? [
-          { title: "#", key: "index", width: 60, render: (_: any, __: any, index: number) => index + 1 },
-          ...Object.keys(csvPreviewData[0]).map((key) => ({
-            title: key,
-            dataIndex: key,
-            key: key,
-            width: 150,
-            ellipsis: true,
-          })),
-        ]
+        { title: "#", key: "index", width: 60, render: (_: any, __: any, index: number) => index + 1 },
+        ...Object.keys(csvPreviewData[0]).map((key) => ({
+          title: key,
+          dataIndex: key,
+          key: key,
+          width: 150,
+          ellipsis: true,
+        })),
+      ]
       : templateColumns;
 
   return (
@@ -426,10 +429,10 @@ function FileUploadForm({
               pagination={
                 csvPreviewData.length > 20
                   ? {
-                      pageSize: 20,
-                      showSizeChanger: false,
-                      showTotal: (total, range) => `Showing ${range[0]} to ${range[1]} of ${total} entries`,
-                    }
+                    pageSize: 20,
+                    showSizeChanger: false,
+                    showTotal: (total, range) => `Showing ${range[0]} to ${range[1]} of ${total} entries`,
+                  }
                   : false
               }
               size="small"

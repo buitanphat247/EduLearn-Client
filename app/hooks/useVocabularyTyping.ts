@@ -1,6 +1,9 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { message } from "antd";
+import { useQueryClient } from "@tanstack/react-query";
 import { VocabularyResponse } from "@/lib/api/vocabulary";
+import { vocabularyKeys, reviewStatsKeys } from "@/app/hooks/queries/useVocabularyQuery";
+import { useUserId } from "@/app/hooks/useUserId";
 
 interface TypingQuestion {
   id: number;
@@ -21,6 +24,9 @@ export function useVocabularyTyping(vocabularies: VocabularyResponse[]) {
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
   const [isChecking, setIsChecking] = useState(false);
+  const { userId: rawUserId } = useUserId();
+  const userId = rawUserId ? Number(rawUserId) : null;
+  const queryClient = useQueryClient();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastQuestionIdRef = useRef<number | null>(null);
   const inputRef = useRef<any>(null);
@@ -114,19 +120,20 @@ export function useVocabularyTyping(vocabularies: VocabularyResponse[]) {
     // Gửi kết quả về Server để tính toán SM-2
     const syncReview = async () => {
       try {
-        const { getProfile } = await import("@/lib/api/auth");
         const { reviewWord, createUserVocabulary } = await import("@/lib/api/vocabulary");
-        const profile = await getProfile();
-        if (profile?.user_id && currentQuestion) {
-          const userIdNum = Number(profile.user_id);
+        if (userId && currentQuestion) {
           const wordId = currentQuestion.word.sourceWordId;
 
           // Gửi review
           await reviewWord({
-            user_id: userIdNum,
+            user_id: userId,
             sourceWordId: wordId,
             grade: isCorrect ? 5 : 1,
           });
+
+          // ✅ Invalidate caches so other pages show fresh data
+          queryClient.invalidateQueries({ queryKey: vocabularyKeys.all });
+          queryClient.invalidateQueries({ queryKey: reviewStatsKeys.all });
         }
       } catch (error) {
         console.error("Failed to sync review result:", error);
@@ -134,11 +141,12 @@ export function useVocabularyTyping(vocabularies: VocabularyResponse[]) {
     };
     syncReview();
 
-    if (isCorrect) {
-      message.success("Chính xác! 🎉");
-    } else {
-      message.error(`Sai rồi! Đáp án đúng là: "${currentQuestion.sentence}"`);
-    }
+    // Removing redundant success/error messages as the UI displays it.
+    // if (isCorrect) {
+    //   message.success("Chính xác! 🎉");
+    // } else {
+    //   message.error(`Sai rồi! Đáp án đúng là: "${currentQuestion.sentence}"`);
+    // }
 
     setTimeout(() => {
       setIsChecking(false);
@@ -154,7 +162,7 @@ export function useVocabularyTyping(vocabularies: VocabularyResponse[]) {
         setShowResult(true);
       }
     }, 1500);
-  }, [currentQuestion, userInput, isChecking, currentQuestionIndex, questions, userAnswers, message, playResultAudio, normalizeText]);
+  }, [currentQuestion, userInput, isChecking, currentQuestionIndex, questions, userAnswers, message, playResultAudio, normalizeText, userId]);
 
   const handleNext = useCallback(() => {
     if (currentQuestionIndex < questions.length - 1) {

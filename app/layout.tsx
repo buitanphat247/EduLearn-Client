@@ -17,7 +17,7 @@ const isVercel = process.env.VERCEL === "1";
 // Optimize font loading - chỉ load weights cần thiết
 const roboto = Roboto({
   weight: ['400', '500', '700'], // Chỉ load 3 weights thay vì toàn bộ
-  subsets: ["latin"], // Chỉ load latin subset
+  subsets: ["latin", "vietnamese"], // ✅ Thêm 'vietnamese' subset tránh lỗi font tiếng Việt
   display: "swap", // Hiển thị fallback font ngay, swap khi font load xong
   variable: "--font-roboto",
   preload: true, // Preload font files
@@ -27,6 +27,10 @@ const roboto = Roboto({
 export const metadata: Metadata = {
   title: "Thư viện số - Nền tảng học tập trực tuyến",
   description: "Thư viện số - Nền tảng học tập và tài liệu trực tuyến",
+  icons: {
+    icon: "/images/logo/main.png",
+    apple: "/images/logo/main.png",
+  },
   other: {
     "font-awesome": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css",
   },

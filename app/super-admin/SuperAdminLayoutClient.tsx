@@ -3,10 +3,9 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import SuperAdminSidebar from "../components/layout/SuperAdminSidebar";
 import { usePathname } from "next/navigation";
-import { Modal, Spin, message, Breadcrumb, Avatar } from "antd";
+import { Modal, Spin, Breadcrumb, Avatar } from "antd";
 import { UserOutlined } from "@ant-design/icons";
-import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
-import { useUserId } from "@/app/hooks/useUserId";
+import { type UserInfoResponse } from "@/lib/api/users";
 import Link from "next/link";
 import { ServerAuthedUserProvider } from "../context/ServerAuthedUserProvider";
 import { useUserProfile } from "@/app/hooks/useUserProfile";
@@ -56,7 +55,7 @@ function SuperAdminHeader({ initialUserData }: { initialUserData: InitialUserDat
 
   useEffect(() => {
     if (isProfileModalOpen && !userInfo) {
-      fetchUserInfo(true);
+      fetchUserInfo();
     }
   }, [isProfileModalOpen, userInfo, fetchUserInfo]);
 
@@ -175,7 +174,7 @@ export default function SuperAdminLayoutClient({
       roleName: initialUserData.role_name,
       avatar: initialUserData.avatar
     };
-  }, [initialUserData, initialUserData]);
+  }, [initialUserData]);
 
   return (
     <ServerAuthedUserProvider user={serverUser}>

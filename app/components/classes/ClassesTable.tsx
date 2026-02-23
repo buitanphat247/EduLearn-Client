@@ -23,13 +23,13 @@ interface ClassesTableProps {
 function ClassesTable({ data, loading, pagination, onEdit, onDelete }: ClassesTableProps) {
   const router = useRouter();
   const { modal, message } = App.useApp();
-  
+
   // Stable refs to avoid re-renders
   const modalRef = useRef(modal);
   const messageRef = useRef(message);
   const onEditRef = useRef(onEdit);
   const onDeleteRef = useRef(onDelete);
-  
+
   useEffect(() => {
     modalRef.current = modal;
     messageRef.current = message;
@@ -78,7 +78,7 @@ function ClassesTable({ data, loading, pagination, onEdit, onDelete }: ClassesTa
       title: "Hành động",
       key: "action",
       width: 250,
-      render: (_: any, record: ClassItem) => {
+      render: (_: unknown, record: ClassItem) => {
         const handleEdit = (e: React.MouseEvent) => {
           e.stopPropagation();
           if (onEditRef.current) {
@@ -144,9 +144,14 @@ function ClassesTable({ data, loading, pagination, onEdit, onDelete }: ClassesTa
     },
   ], [router]);
 
+  const current = pagination?.current;
+  const pageSize = pagination?.pageSize;
+  const total = pagination?.total;
+  const onChange = pagination?.onChange;
+
   // Memoize pagination config
   const paginationConfig = useMemo(() => {
-    if (!pagination) {
+    if (!current || !pageSize || !total || !onChange) {
       return {
         showSizeChanger: false,
         showTotal: (total: number) => <span className="text-gray-600 dark:text-gray-400">Tổng {total} lớp học</span>,
@@ -154,15 +159,15 @@ function ClassesTable({ data, loading, pagination, onEdit, onDelete }: ClassesTa
       };
     }
     return {
-      current: pagination.current,
-      pageSize: pagination.pageSize,
-      total: pagination.total,
+      current,
+      pageSize,
+      total,
       showSizeChanger: false,
       showTotal: (total: number) => <span className="text-gray-600 dark:text-gray-400">Tổng {total} lớp học</span>,
       size: "small" as const,
-      onChange: pagination.onChange,
+      onChange,
     };
-  }, [pagination]);
+  }, [current, pageSize, total, onChange]);
 
   return (
     <Table

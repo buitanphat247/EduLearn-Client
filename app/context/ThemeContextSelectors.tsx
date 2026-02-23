@@ -7,40 +7,34 @@
 
 import { useContext, useMemo } from "react";
 import { ThemeContext } from "./ThemeContext";
+import { useThemeStore } from "@/lib/stores/themeStore";
 
 /**
- * Hook để chỉ lấy theme value (không re-render khi toggleTheme thay đổi)
+ * Hook để chỉ lấy theme value
+ * ✅ Tối ưu: Dùng trực tiếp Zustand selector để ngăn re-render toàn diện ở những component
+ * chỉ muốn lắng nghe CSS theme thay vì toàn bộ ThemeContext
  */
 export function useThemeValue() {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error("useThemeValue must be used within a ThemeProvider");
-  }
-  
-  // Chỉ return theme, không return toggleTheme
-  // Component sẽ không re-render khi toggleTheme function reference thay đổi
-  return context.theme;
+  return useThemeStore((state) => state.theme);
 }
 
 /**
- * Hook để chỉ lấy toggleTheme function (không re-render khi theme thay đổi)
- * ⚠️ Lưu ý: Thường không cần thiết vì toggleTheme thường được dùng cùng với theme
+ * Hook để chỉ lấy toggleTheme function
  */
 export function useToggleTheme() {
   const context = useContext(ThemeContext);
   if (context === undefined) {
     throw new Error("useToggleTheme must be used within a ThemeProvider");
   }
-  
-  // Memoize function để tránh re-render không cần thiết
-  return useMemo(() => context.toggleTheme, [context.toggleTheme]);
+  return context.toggleTheme;
 }
 
 /**
  * Hook để check isDark mode (derived value)
- * Optimize bằng cách memoize boolean value
+ * ✅ Đã gỡ bỏ useMemo vì primitive type (boolean) không hề cần tốn RAM và chi phí
+ * closure rác để memoize - So sánh trực tiếp là tốt nhất.
  */
 export function useIsDark() {
   const theme = useThemeValue();
-  return useMemo(() => theme === "dark", [theme]);
+  return theme === "dark";
 }

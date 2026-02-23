@@ -1,67 +1,67 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { Suspense, useState } from "react";
 import { Form, Input, Button, Card, Typography, Spin, App, Result } from "antd";
 import { LockOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import apiClient from "@/app/config/api";
 
 const { Title, Text } = Typography;
 
+// Helper error handler
+function getApiErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof Error) return error.message;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const axiosErr = error as any;
+    return axiosErr?.response?.data?.message || axiosErr?.message || fallback;
+}
+
 function ResetPasswordContent() {
     const searchParams = useSearchParams();
-    const router = useRouter();
     const token = searchParams.get("token");
 
     const [form] = Form.useForm();
-    const [loading, setLoading] = useState(false);
-    const [verifying, setVerifying] = useState(true);
-    const [isTokenValid, setIsTokenValid] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
-    const [email, setEmail] = useState("");
     const { message } = App.useApp();
 
-    // Verify token on mount
-    useEffect(() => {
-        const verifyToken = async () => {
-            if (!token) {
-                setVerifying(false);
-                return;
+    // Verify token query
+    const { data: verifyData, isLoading: verifying, isError: verifyError } = useQuery({
+        queryKey: ["verifyResetToken", token],
+        queryFn: async () => {
+            if (!token) throw new Error("No token provided");
+            const response = await apiClient.get(`/auth/verify-reset-token/${token}`);
+            if (!response.data?.data?.valid) {
+                throw new Error("Token invalid");
             }
+            return response.data.data as { valid: boolean; email: string };
+        },
+        enabled: !!token,
+        retry: false,
+    });
 
-            try {
-                const response = await apiClient.get(`/auth/verify-reset-token/${token}`);
-                if (response.data?.data?.valid) {
-                    setIsTokenValid(true);
-                    setEmail(response.data?.data?.email || "");
-                }
-            } catch (error) {
-                setIsTokenValid(false);
-            } finally {
-                setVerifying(false);
-            }
-        };
+    const isTokenValid = !verifyError && verifyData?.valid;
+    const email = verifyData?.email || "";
 
-        verifyToken();
-    }, [token]);
-
-    const handleResetPassword = async (values: { newPassword: string }) => {
-        setLoading(true);
-        try {
-            await apiClient.post("/auth/reset-password", {
+    // Reset password mutation
+    const resetMutation = useMutation({
+        mutationFn: async (values: { newPassword: string }) => {
+            const response = await apiClient.post("/auth/reset-password", {
                 token,
                 newPassword: values.newPassword,
             });
+            return response.data;
+        },
+        onSuccess: () => {
             setIsSuccess(true);
             message.success("Đặt lại mật khẩu thành công!");
-        } catch (error: any) {
-            const errorMessage = error.response?.data?.message || "Có lỗi xảy ra. Vui lòng thử lại.";
+        },
+        onError: (error: unknown) => {
+            const errorMessage = getApiErrorMessage(error, "Có lỗi xảy ra. Vui lòng thử lại.");
             message.error(errorMessage);
-        } finally {
-            setLoading(false);
-        }
-    };
+        },
+    });
 
     // Loading state
     if (verifying) {
@@ -89,7 +89,7 @@ function ResetPasswordContent() {
                         subTitle="Link đặt lại mật khẩu đã hết hạn hoặc không tồn tại. Vui lòng yêu cầu link mới."
                         extra={[
                             <Link href="/auth" key="back">
-                                <Button type="primary" size="large" className="rounded-lg">
+                                <Button type="primary" size="large" className="rounded-lg cursor-pointer">
                                     Quay lại đăng nhập
                                 </Button>
                             </Link>,
@@ -112,7 +112,7 @@ function ResetPasswordContent() {
                         subTitle="Mật khẩu của bạn đã được cập nhật. Bạn có thể đăng nhập bằng mật khẩu mới."
                         extra={[
                             <Link href="/auth" key="login">
-                                <Button type="primary" size="large" className="rounded-lg">
+                                <Button type="primary" size="large" className="rounded-lg cursor-pointer">
                                     Đăng nhập ngay
                                 </Button>
                             </Link>,
@@ -142,7 +142,7 @@ function ResetPasswordContent() {
                 <Form
                     form={form}
                     name="reset-password"
-                    onFinish={handleResetPassword}
+                    onFinish={(values) => resetMutation.mutate(values)}
                     layout="vertical"
                     autoComplete="off"
                 >
@@ -194,17 +194,17 @@ function ResetPasswordContent() {
                         <Button
                             type="primary"
                             htmlType="submit"
-                            loading={loading}
+                            loading={resetMutation.isPending}
                             block
                             size="large"
-                            className="rounded-lg h-12 font-medium"
+                            className="rounded-lg h-12 font-medium cursor-pointer"
                         >
                             Đặt lại mật khẩu
                         </Button>
                     </Form.Item>
 
                     <div className="text-center">
-                        <Link href="/auth" className="text-gray-500 hover:text-blue-500 text-sm">
+                        <Link href="/auth" className="text-gray-500 hover:text-blue-500 text-sm cursor-pointer border-none bg-transparent outline-none">
                             Quay lại đăng nhập
                         </Link>
                     </div>
@@ -225,3 +225,4 @@ export default function ResetPasswordPage() {
         </Suspense>
     );
 }
+

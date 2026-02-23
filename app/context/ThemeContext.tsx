@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useRef } from "react";
+import React, { createContext, useContext, useEffect, useRef, useCallback, useMemo } from "react";
 import { flushSync } from "react-dom";
 import { setThemeCookie } from "../actions/theme";
 import { useThemeStore, type Theme } from "@/lib/stores/themeStore";
@@ -47,7 +47,8 @@ export function ThemeProvider({ children, initialTheme }: { children: React.Reac
     hydrate(initialTheme);
   }, [initialTheme, hydrate]);
 
-  const toggleTheme = async (e?: React.MouseEvent) => {
+  // ✅ Wrap toggleTheme in useCallback to keep its reference stable across renders
+  const toggleTheme = useCallback(async (e?: React.MouseEvent) => {
     if (isToggling) {
       return;
     }
@@ -145,10 +146,15 @@ export function ThemeProvider({ children, initialTheme }: { children: React.Reac
         requestRef.current = null;
       }
     }
-  };
+  }, [isToggling, theme, transitionDuration, setTheme, setIsToggling]); // ✅ Dependencies for useCallback
+
+  // ✅ Wrap the completely stable context payload in useMemo
+  // This physically PREVENTS all components using useTheme() from re-rendering
+  // unless the actual 'theme' scalar string ('light' or 'dark') or the toggle logic changes
+  const contextValue = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

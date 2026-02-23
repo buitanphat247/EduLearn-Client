@@ -78,7 +78,7 @@ export default function CreateClassModal({ open, onCancel, onSuccess }: CreateCl
     }
   }, [open, form]);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: { name: string; code: string }) => {
     setSubmitting(true);
     try {
       const user = getCurrentUser();
@@ -99,8 +99,8 @@ export default function CreateClassModal({ open, onCancel, onSuccess }: CreateCl
       message.success("Tạo lớp học thành công!");
       form.resetFields();
       onSuccess();
-    } catch (error: any) {
-      message.error(error?.message || "Không thể tạo lớp học");
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : "Không thể tạo lớp học");
     } finally {
       setSubmitting(false);
     }

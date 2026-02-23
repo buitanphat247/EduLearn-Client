@@ -38,7 +38,7 @@ export default function UpdateClassModal({
     }
   }, [open, form, currentName]);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: { name: string }) => {
     setSubmitting(true);
     try {
       const user = getCurrentUser();
@@ -59,8 +59,8 @@ export default function UpdateClassModal({
       message.success("Cập nhật lớp học thành công!");
       form.resetFields();
       onSuccess(values.name.trim()); // Truyền tên mới vào callback
-    } catch (error: any) {
-      message.error(error?.message || "Không thể cập nhật lớp học");
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : "Không thể cập nhật lớp học");
     } finally {
       setSubmitting(false);
     }

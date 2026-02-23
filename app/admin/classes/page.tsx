@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { App, Button, Input } from "antd";
 import { ReloadOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import ClassesHeader from "@/app/components/classes/ClassesHeader";
 import ClassesTable from "@/app/components/classes/ClassesTable";
 import CreateClassModal from "@/app/components/classes/CreateClassModal";
 import UpdateClassModal from "@/app/components/classes/UpdateClassModal";
@@ -85,7 +84,7 @@ export default function AdminClasses() {
     // Tạo AbortController mới cho request này
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
-    
+
     // Tăng request ID để track latest request
     const currentRequestId = ++requestIdRef.current;
 
@@ -118,7 +117,7 @@ export default function AdminClasses() {
       if (error?.name === 'AbortError' || abortController.signal.aborted) {
         return;
       }
-      
+
       if (isMountedRef.current && currentRequestId === requestIdRef.current) {
         messageRef.current.error(error?.message || "Không thể tải danh sách lớp học");
       }
@@ -127,7 +126,7 @@ export default function AdminClasses() {
       if (isMountedRef.current && currentRequestId === requestIdRef.current) {
         setLoading(false);
       }
-      
+
       // Cleanup AbortController nếu đây là latest request
       if (abortControllerRef.current === abortController) {
         abortControllerRef.current = null;

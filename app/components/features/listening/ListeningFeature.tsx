@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { App, Empty } from "antd";
 import { getLessons, resetListeningProgress, type Lesson } from "@/lib/api/lessons";
+import { useQueryClient } from "@tanstack/react-query";
+import { useListeningLessonsQuery, listeningKeys } from "@/app/hooks/queries/useListeningQuery";
 import { ReloadOutlined } from "@ant-design/icons";
 import Swal from "sweetalert2";
 import { useTheme } from "@/app/context/ThemeContext";
@@ -36,55 +39,78 @@ const PAGE_SIZE = 20;
 
 export default function ListeningFeature() {
   const { message } = App.useApp();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { theme } = useTheme();
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
   const [resetting, setResetting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [searchText, setSearchText] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [selectedLevel, setSelectedLevel] = useState<string | undefined>(undefined);
-  const [selectedLanguage, setSelectedLanguage] = useState<string | undefined>(undefined);
 
-  // Prevent duplicate in-flight requests
-  const fetchIdRef = useRef(0);
-  const isMountedRef = useRef(true);
+  // ✅ Keep state synced with URL over page reloads
+  const initialPage = Number(searchParams.get("page")) || 1;
+  const initialLevel = searchParams.get("level") || undefined;
+  const initialLanguage = searchParams.get("language") || undefined;
+  const initialSearch = searchParams.get("search") || "";
 
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [selectedLevel, setSelectedLevel] = useState<string | undefined>(initialLevel);
+  const [selectedLanguage, setSelectedLanguage] = useState<string | undefined>(initialLanguage);
+  const [searchText, setSearchText] = useState(initialSearch);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(initialSearch);
+
+  // ✅ Auto sync state changes back to URL silently without full page scroll/reload
   useEffect(() => {
-    isMountedRef.current = true;
-    return () => { isMountedRef.current = false; };
-  }, []);
+    const params = new URLSearchParams(searchParams.toString());
+    let changed = false;
 
-  const fetchLessons = useCallback(async () => {
-    const id = ++fetchIdRef.current;
-    setLoading(true);
+    if (currentPage > 1) {
+      if (params.get("page") !== String(currentPage)) { params.set("page", String(currentPage)); changed = true; }
+    } else if (params.has("page")) { params.delete("page"); changed = true; }
 
-    try {
-      const result = await getLessons({
-        page: currentPage,
-        limit: PAGE_SIZE,
-        search: debouncedSearchQuery || undefined,
-        level: selectedLevel,
-        language: selectedLanguage,
-      });
+    if (selectedLevel) {
+      if (params.get("level") !== selectedLevel) { params.set("level", selectedLevel); changed = true; }
+    } else if (params.has("level")) { params.delete("level"); changed = true; }
 
-      if (fetchIdRef.current !== id || !isMountedRef.current) return;
+    if (selectedLanguage) {
+      if (params.get("language") !== selectedLanguage) { params.set("language", selectedLanguage); changed = true; }
+    } else if (params.has("language")) { params.delete("language"); changed = true; }
 
-      setLessons(result.data);
-      setTotal(result.total);
-    } catch (error: any) {
-      if (fetchIdRef.current !== id || !isMountedRef.current) return;
+    if (debouncedSearchQuery) {
+      if (params.get("search") !== debouncedSearchQuery) { params.set("search", debouncedSearchQuery); changed = true; }
+    } else if (params.has("search")) { params.delete("search"); changed = true; }
 
-      message.error(error?.message || "Không thể tải danh sách lessons");
-      setLessons([]);
-      setTotal(0);
-    } finally {
-      if (fetchIdRef.current === id && isMountedRef.current) {
-        setLoading(false);
-      }
+    if (changed) {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }
-  }, [currentPage, debouncedSearchQuery, selectedLevel, selectedLanguage, message]);
+  }, [currentPage, selectedLevel, selectedLanguage, debouncedSearchQuery, pathname, router, searchParams]);
+
+  // Use React Query hooks
+  const {
+    data: lessonsResult,
+    isLoading: lessonsLoading,
+    isRefetching,
+    error,
+    refetch,
+  } = useListeningLessonsQuery({
+    page: currentPage,
+    limit: PAGE_SIZE,
+    search: debouncedSearchQuery || undefined,
+    level: selectedLevel,
+    language: selectedLanguage,
+  });
+
+  const lessons = lessonsResult?.data || [];
+  const total = lessonsResult?.total || 0;
+  const loading = lessonsLoading || (!lessons.length && isRefetching);
+
+  // Handle errors from query
+  useEffect(() => {
+    if (error) {
+      console.error("Error fetching lessons:", error);
+      message.error(error instanceof Error ? error.message : "Không thể tải danh sách lessons");
+    }
+  }, [error, message]);
 
   const handleReset = useCallback(async () => {
     const isDark = theme === "dark";
@@ -109,8 +135,6 @@ export default function ListeningFeature() {
       setResetting(true);
       await resetListeningProgress();
 
-      if (!isMountedRef.current) return;
-
       await Swal.fire({
         title: "Thành công!",
         text: "Tiến trình luyện nghe đã được đặt lại.",
@@ -121,10 +145,9 @@ export default function ListeningFeature() {
         color: isDark ? "#f8fafc" : "#1e293b",
       });
 
-      fetchLessons();
+      // ✅ Invalidate ALL listening caches (lessons list + detail pages)
+      queryClient.invalidateQueries({ queryKey: listeningKeys.all });
     } catch (error) {
-      if (!isMountedRef.current) return;
-
       Swal.fire({
         title: "Lỗi!",
         text: "Không thể đặt lại tiến trình. Vui lòng thử lại.",
@@ -134,11 +157,9 @@ export default function ListeningFeature() {
         color: isDark ? "#f8fafc" : "#1e293b",
       });
     } finally {
-      if (isMountedRef.current) {
-        setResetting(false);
-      }
+      setResetting(false);
     }
-  }, [fetchLessons, theme]);
+  }, [queryClient, theme]);
 
   // Debounce search - skip on mount
   const isFirstMount = useRef(true);
@@ -154,10 +175,7 @@ export default function ListeningFeature() {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  // Fetch when dependencies change
-  useEffect(() => {
-    fetchLessons();
-  }, [fetchLessons]);
+
 
   const handleLevelChange = useCallback((value: string | undefined) => {
     setSelectedLevel(value);
@@ -175,7 +193,7 @@ export default function ListeningFeature() {
   }, []);
 
   return (
-    <div className="container mx-auto px-4">
+    <div>
       {/* Search and Filters */}
       <div className="mx-auto mb-12">
         <div className="flex flex-col md:flex-row gap-4 items-center">
@@ -229,7 +247,7 @@ export default function ListeningFeature() {
       ) : lessons.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
-            {lessons.map((lesson) => (
+            {lessons.map((lesson: Lesson) => (
               <LessonCard
                 key={lesson.id}
                 id={lesson.id}

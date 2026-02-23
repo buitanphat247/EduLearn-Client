@@ -20,113 +20,51 @@ const ForgettingCurveChart = dynamic(
 );
 
 import ReviewPageSkeleton from "@/app/components/features/vocabulary/review/ReviewPageSkeleton";
-import {
-    getUserVocabularyStats,
-    getUserActivityStats,
-    getDueWords,
-    getUserVocabularyByUser,
-    type UserVocabularyStats,
-    type ActivityStat,
-    type UserVocabularyResponse,
-} from "@/lib/api/vocabulary";
-import { getProfile } from "@/lib/api/auth";
+import { useUserId } from "@/app/hooks/useUserId";
+
+import { useUserVocabularyStatsQuery, useUserActivityStatsQuery, useDueWordsQuery, useLearnedVocabularyQuery } from "@/app/hooks/queries/useVocabularyQuery";
 
 const safeNum = (v: unknown): number => (typeof v === "number" && !Number.isNaN(v) ? v : 0);
 
 export default function StatisticsPage() {
     const { message } = App.useApp();
     const { theme } = useTheme();
-    const [stats, setStats] = useState<UserVocabularyStats | null>(null);
-    const [activity, setActivity] = useState<ActivityStat[]>([]);
-    const [dueWords, setDueWords] = useState<UserVocabularyResponse[]>([]);
-    const [dueTotal, setDueTotal] = useState(0);
-    const [learnedWords, setLearnedWords] = useState<UserVocabularyResponse[]>([]);
-    const [learnedTotal, setLearnedTotal] = useState(0);
+    const { userId: rawUserId, loading: userIdLoading } = useUserId();
+    const userId = rawUserId ? Number(rawUserId) : null;
+
     const [learnedPage, setLearnedPage] = useState(1);
-    const [learnedLoading, setLearnedLoading] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [userId, setUserId] = useState<number | null>(null);
     const [mounted, setMounted] = useState(false);
-    const isMountedRef = useRef(true);
 
     useEffect(() => {
         const timer = setTimeout(() => setMounted(true), 50);
         return () => clearTimeout(timer);
     }, []);
 
-    const fetchData = useCallback(async (id: number) => {
-        setLoading(true);
-        try {
-            const [statsData, activityData, dueData] = await Promise.all([
-                getUserVocabularyStats(id),
-                getUserActivityStats(id),
-                getDueWords(id, { limit: 20 }),
-            ]);
-            if (!isMountedRef.current) return;
-            setStats(statsData);
-            setActivity(activityData || []);
-            setDueWords(dueData?.data || []);
-            setDueTotal(dueData?.total || 0);
-        } catch (error: unknown) {
-            if (isMountedRef.current) message.error("Không thể tải thông tin thống kê");
-        } finally {
-            if (isMountedRef.current) setLoading(false);
-        }
-    }, [message]);
+    const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useUserVocabularyStatsQuery(userId);
+    const { refetch: refetchActivity } = useUserActivityStatsQuery(userId);
+    const { data: dueData, isLoading: dueLoading, refetch: refetchDue } = useDueWordsQuery(userId, 20);
+    const { data: learnedData, isLoading: learnedLoading, refetch: refetchLearned, isFetching: learnedFetching } = useLearnedVocabularyQuery(userId, learnedPage, 50);
 
-    useEffect(() => {
-        isMountedRef.current = true;
-        const init = async () => {
-            try {
-                const profile = await getProfile();
-                if (!isMountedRef.current) return;
-                if (profile && profile.user_id) {
-                    setUserId(Number(profile.user_id));
-                    await fetchData(Number(profile.user_id));
-                }
-            } catch (error) {
-                if (isMountedRef.current) console.error("Error fetching profile", error);
-            } finally {
-                if (isMountedRef.current) setLoading(false);
-            }
-        };
-        init();
-        return () => { isMountedRef.current = false; };
-    }, [fetchData]);
+    const dueWords = dueData?.data || [];
+    const dueTotal = dueData?.total || 0;
 
-    useEffect(() => {
-        if (!userId) return;
-        const load = async () => {
-            setLearnedLoading(true);
-            try {
-                const res = await getUserVocabularyByUser(userId, { page: learnedPage, limit: 50 });
-                if (!isMountedRef.current) return;
-                setLearnedWords(Array.isArray(res.data) ? res.data : []);
-                setLearnedTotal(res.total ?? 0);
-            } catch {
-                if (isMountedRef.current) message.error("Không thể tải danh sách từ vựng đã học");
-            } finally {
-                if (isMountedRef.current) setLearnedLoading(false);
-            }
-        };
-        load();
-    }, [userId, learnedPage, message]);
+    const learnedWords = learnedData?.data || [];
+    const learnedTotal = learnedData?.total || 0;
+
+    const loading = statsLoading || dueLoading;
 
     const handleRefresh = async () => {
         if (!userId) return;
-        setLoading(true);
-        setLearnedLoading(true);
         try {
-            await fetchData(userId);
-            const res = await getUserVocabularyByUser(userId, { page: learnedPage, limit: 50 });
-            setLearnedWords(Array.isArray(res.data) ? res.data : []);
-            setLearnedTotal(res.total ?? 0);
+            await Promise.all([
+                refetchStats(),
+                refetchActivity(),
+                refetchDue(),
+                refetchLearned()
+            ]);
             message.success("Dữ liệu đã được cập nhật");
         } catch (e) {
             message.error("Lỗi khi cập nhật dữ liệu");
-        } finally {
-            setLoading(false);
-            setLearnedLoading(false);
         }
     };
 

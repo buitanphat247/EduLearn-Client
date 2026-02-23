@@ -33,20 +33,6 @@ export default function WritingPracticePage() {
   const { theme: currentTheme } = useTheme();
   const id = params?.id as string;
 
-  // Validate ID before using
-  if (!id || id === "undefined" || id === "null") {
-    return (
-      <main className="min-h-screen bg-slate-50 dark:bg-[#0f172a] flex items-center justify-center transition-colors duration-500">
-        <div className="text-center text-slate-800 dark:text-white">
-          <p className="text-lg mb-4">ID bài luyện tập không hợp lệ</p>
-          <Button type="primary" onClick={() => router.push("/writing")}>
-            Quay lại
-          </Button>
-        </div>
-      </main>
-    );
-  }
-
   // Custom hooks
   const { data, loading, currentIndex, setCurrentIndex } = useWritingData(id);
   const { formattedTime, start: startTimer } = useTimer(false);
@@ -148,10 +134,11 @@ export default function WritingPracticePage() {
         },
       });
       // Cập nhật lượt còn lại sau khi dùng gợi ý
-      getUsageStatusForFeature("ai_writing_hint").then(setHintUsage).catch(() => {});
-    } catch (error: any) {
+      getUsageStatusForFeature("ai_writing_hint").then(setHintUsage).catch(() => { });
+    } catch (error: unknown) {
       console.error("Hint API error:", error);
-      message.error(error?.message || "Không thể tạo gợi ý. Vui lòng thử lại.");
+      const errMsg = error instanceof Error ? error.message : "Không thể tạo gợi ý. Vui lòng thử lại.";
+      message.error(errMsg);
       dispatch({ type: "SET_HINT_LOADING", payload: false });
     } finally {
       hintRequestInFlightRef.current = false;
@@ -211,6 +198,20 @@ export default function WritingPracticePage() {
     updateProgress,
     setCurrentIndex,
   ]);
+
+  // Validate ID before using
+  if (!id || id === "undefined" || id === "null") {
+    return (
+      <main className="min-h-screen bg-slate-50 dark:bg-[#0f172a] flex items-center justify-center transition-colors duration-500">
+        <div className="text-center text-slate-800 dark:text-white">
+          <p className="text-lg mb-4">ID bài luyện tập không hợp lệ</p>
+          <Button type="primary" onClick={() => router.push("/writing")}>
+            Quay lại
+          </Button>
+        </div>
+      </main>
+    );
+  }
 
   // Loading state
   if (loading) {

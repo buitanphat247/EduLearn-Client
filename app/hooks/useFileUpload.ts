@@ -100,7 +100,7 @@ export function useFileUpload({ assignmentId, userId, existingAttachment, onProg
 
         // ✅ Fix: Race condition - Add isMounted check và proper cleanup
         let timeoutId: NodeJS.Timeout | null = null;
-        let isMounted = true;
+        const isMounted = true;
         
         const controller = new AbortController();
         timeoutId = setTimeout(() => {

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback } from "react";
 import { message } from "antd";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
 import { useUserId } from "@/app/hooks/useUserId";
 
@@ -9,87 +10,78 @@ interface UseUserProfileOptions {
 
 /**
  * Custom hook to fetch user profile and handle common auth errors.
- * Used in LayoutClients to reduce code duplication.
+ * Re-written to use TanStack Query for optimal caching and state management.
  */
 export function useUserProfile(options: UseUserProfileOptions = { showError: false }) {
   const { userId, loading: userIdLoading } = useUserId();
-  const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
 
-  // Ref to track if component is mounted to prevent state updates on unmounted component
-  const isMountedRef = useRef(true);
+  const {
+    data: userInfo,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery<UserInfoResponse, Error>({
+    queryKey: ["userProfile", userId],
+    // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+    queryFn: () => getUserInfo(userId!),
+    enabled: !!userId && !userIdLoading,
+    staleTime: 5 * 60 * 1000,
+  });
 
+  // Handle error showing logic
   useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+    if (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const err = error as any;
+      const authCodes = ["TOKEN_REVOKED", "REFRESH_TOKEN_EXPIRED", "INVALID_REFRESH_TOKEN", "USER_BANNED"];
+      const isAuthRedirect = authCodes.includes(err?.code ?? "") || err?.message === "Phiên đăng nhập đã bị đăng xuất khỏi hệ thống";
 
-  const fetchUserInfo = useCallback(
-    async (showLoading = false) => {
-      if (!userId) {
-        if (options.showError && !userIdLoading) {
-          message.error("Không tìm thấy thông tin người dùng");
-        }
-        return;
+      const errorMessage = err?.message || "Không thể tải thông tin người dùng";
+
+      if (options.showError && !isAuthRedirect) {
+        message.error(errorMessage);
       }
 
-      if (showLoading && isMountedRef.current) setLoading(true);
-
-      try {
-        const user = await getUserInfo(userId);
-        if (isMountedRef.current) {
-          setUserInfo(user);
-          setError(null);
-        }
-      } catch (err: any) {
-        if (!isMountedRef.current) return;
-
-        const authCodes = ["TOKEN_REVOKED", "REFRESH_TOKEN_EXPIRED", "INVALID_REFRESH_TOKEN", "USER_BANNED"];
-        const isAuthRedirect = authCodes.includes(err?.code ?? "") || err?.message === "Phiên đăng nhập đã bị đăng xuất khỏi hệ thống";
-
-        const errorMessage = err?.message || "Không thể tải thông tin người dùng";
-
-        setError(err);
-
-        if (options.showError && !isAuthRedirect) {
-          message.error(errorMessage);
-        }
-
-        if (!isAuthRedirect) {
-          console.error("Error fetching user info:", err);
-        }
-      } finally {
-        if (isMountedRef.current && showLoading) {
-          setLoading(false);
-        }
+      if (!isAuthRedirect) {
+        console.error("Error fetching user info:", err);
       }
-    },
-    [userId, userIdLoading, options.showError],
-  );
+    }
+  }, [error, options.showError]);
 
-  // Initial fetch when userId changes
-  useEffect(() => {
-    if (!userId || userIdLoading) return;
-    fetchUserInfo(false);
-  }, [userId, userIdLoading, fetchUserInfo]);
+  const fetchUserInfo = useCallback(async () => {
+    if (!userId) {
+      if (options.showError && !userIdLoading) {
+        message.error("Không tìm thấy thông tin người dùng");
+      }
+      return;
+    }
 
-  // Listen for user updates
+    // We can force refetch if needed
+    await refetch();
+  }, [userId, userIdLoading, options.showError, refetch]);
+
+  // Listen for user updates to invalidate query
   useEffect(() => {
     const handleUpdate = () => {
-      fetchUserInfo(false);
+      queryClient.invalidateQueries({ queryKey: ["userProfile", userId] });
     };
     window.addEventListener("user-updated", handleUpdate);
     return () => window.removeEventListener("user-updated", handleUpdate);
-  }, [fetchUserInfo]);
+  }, [queryClient, userId]);
+
+  const setUserInfo = useCallback(
+    (newInfo: UserInfoResponse | null) => {
+      queryClient.setQueryData(["userProfile", userId], newInfo);
+    },
+    [queryClient, userId],
+  );
 
   return {
-    userInfo,
-    loading,
+    userInfo: userInfo || null,
+    loading: loading || userIdLoading,
     error,
     fetchUserInfo,
-    setUserInfo, // Expose setter just in case manual optimistic updates are needed
+    setUserInfo,
   };
 }

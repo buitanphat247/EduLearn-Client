@@ -1,6 +1,6 @@
 "use client";
 
-import { Table, Button, App, Input, Spin } from "antd";
+import { Table, Button, App, Input } from "antd";
 import { SearchOutlined, EyeOutlined, LoadingOutlined } from "@ant-design/icons";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { ColumnsType } from "antd/es/table";
@@ -23,7 +23,6 @@ export default function AdminStudents() {
     total: 0,
   });
   const [loading, setLoading] = useState(true);
-  const initialFetchDone = useRef(false);
   const pageSizeRef = useRef(pagination.pageSize);
 
   // Map API status to display status
@@ -108,12 +107,7 @@ export default function AdminStudents() {
 
   // Initial fetch and refetch on dependencies change
   useEffect(() => {
-    if (!initialFetchDone.current) {
-      initialFetchDone.current = true;
-      fetchStudents(pagination.current, pagination.pageSize, debouncedSearchQuery);
-    } else {
-      fetchStudents(pagination.current, pagination.pageSize, debouncedSearchQuery);
-    }
+    fetchStudents(pagination.current, pagination.pageSize, debouncedSearchQuery);
   }, [fetchStudents, pagination.current, pagination.pageSize, debouncedSearchQuery]);
 
   const handleTableChange = useCallback((page: number, pageSize: number) => {
@@ -217,30 +211,29 @@ export default function AdminStudents() {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-none dark:shadow-sm">
-        <Spin spinning={loading}>
-          <Table
-            columns={columns}
-            dataSource={students}
-            pagination={{
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              total: pagination.total,
-              showSizeChanger: false,
-              showTotal: (total) => <span className="text-gray-500 dark:text-gray-400">Tổng {total} học sinh</span>,
-              // pageSizeOptions: ["10", "20", "50"],
-              size: "small",
-              onChange: handleTableChange,
-            }}
-            className="[&_.ant-pagination]:px-6 [&_.ant-pagination]:pb-4"
-            rowClassName="group hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-200 cursor-pointer border-b border-gray-100 dark:border-gray-800"
-            size="small"
-            onRow={(record) => ({
-              onClick: () => {
-                handleViewStudent(record);
-              },
-            })}
-          />
-        </Spin>
+        <Table
+          columns={columns}
+          dataSource={students}
+          loading={loading}
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            showSizeChanger: false,
+            showTotal: (total) => <span className="text-gray-500 dark:text-gray-400">Tổng {total} học sinh</span>,
+            // pageSizeOptions: ["10", "20", "50"],
+            size: "small",
+            onChange: handleTableChange,
+          }}
+          className="[&_.ant-pagination]:px-6 [&_.ant-pagination]:pb-4"
+          rowClassName="group hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-200 cursor-pointer border-b border-gray-100 dark:border-gray-800"
+          size="small"
+          onRow={(record) => ({
+            onClick: () => {
+              handleViewStudent(record);
+            },
+          })}
+        />
       </div>
 
       <StudentDetailModal

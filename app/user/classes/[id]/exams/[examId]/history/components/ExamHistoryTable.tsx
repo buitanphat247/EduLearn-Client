@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Table, Tag, Typography } from "antd";
 import { ClockCircleOutlined, CheckCircleOutlined, LineChartOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
 import type { StudentAttempt } from "@/lib/api/exam-attempts";
@@ -14,7 +15,8 @@ interface ExamHistoryTableProps {
 }
 
 export default function ExamHistoryTable({ attempts, totalScore, loading = false }: ExamHistoryTableProps) {
-  const columns = [
+  // ✅ Memoize columns to prevent Ant Table full re-render on every parent state change
+  const columns = useMemo(() => [
     {
       title: "Lượt làm",
       key: "attempt",
@@ -106,7 +108,7 @@ export default function ExamHistoryTable({ attempts, totalScore, loading = false
         );
       },
     },
-  ];
+  ], [totalScore]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden mt-6">

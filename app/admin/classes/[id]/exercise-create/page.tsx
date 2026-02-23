@@ -40,7 +40,6 @@ export default function ExerciseCreatePage() {
 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<string>("");
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [editorLoading, setEditorLoading] = useState(true);
@@ -86,7 +85,6 @@ export default function ExerciseCreatePage() {
 
       setSubmitting(true);
       setShowProgressModal(true);
-      setUploadProgress(0);
       setUploadStatus("Đang tạo bài tập...");
 
       // Format dueDate
@@ -113,7 +111,6 @@ export default function ExerciseCreatePage() {
 
       // Use apiClient instead of fetch
       const createResponse = await apiClient.post(`/assignments?userId=${numericUserId}`, assignmentData);
-      setUploadProgress(30);
       setUploadStatus("Đã tạo bài tập. Đang upload file đính kèm...");
 
       const assignmentResult = createResponse.data;
@@ -199,8 +196,6 @@ export default function ExerciseCreatePage() {
             }
 
             uploadedCount++;
-            const progress = 30 + Math.floor((uploadedCount / totalFiles) * 70);
-            setUploadProgress(progress);
           } catch (error: any) {
             // Handle network errors
             let errorMessage = error?.message || "Lỗi không xác định";
@@ -220,7 +215,7 @@ export default function ExerciseCreatePage() {
           setUploadStatus(`Đã upload thành công ${uploadedCount}/${totalFiles} file`);
         }
       } else {
-        setUploadProgress(100);
+        // No files to upload
       }
 
       setUploadStatus("Hoàn tất!");

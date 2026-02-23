@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { App } from "antd";
-import { getWritingHistoryById, type WritingGenerateResponse } from "@/lib/api/writing";
+import { useWritingHistoryByIdQuery } from "@/app/hooks/queries/useWritingQuery";
+import type { WritingGenerateResponse } from "@/lib/api/writing";
 
 interface UseWritingDataReturn {
   data: WritingGenerateResponse | null;
@@ -11,64 +12,44 @@ interface UseWritingDataReturn {
 }
 
 /**
- * Custom hook for loading writing practice data
- * Handles both history ID and session storage
- * @param id - Writing practice ID (history ID or session ID)
- * @returns Writing data and loading state
+ * Custom hook for loading writing practice data.
+ * - If `id` is numeric → uses React Query to fetch from API (cached & deduplicated)
+ * - If `id` is non-numeric → loads from sessionStorage (client-only, no query)
  */
 export function useWritingData(id: string): UseWritingDataReturn {
   const router = useRouter();
   const { message } = App.useApp();
 
-  const [data, setData] = useState<WritingGenerateResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const isHistoryId = /^\d+$/.test(id);
+  const historyIdNum = isHistoryId ? parseInt(id, 10) : null;
+
+  // ── React Query path (numeric history ID) ──
+  const { data: queryResult, isLoading: queryLoading, isError: queryError, error: queryErrorObj } = useWritingHistoryByIdQuery(historyIdNum);
+
+  // ── Session storage path (non-numeric ID) ──
+  const [sessionData, setSessionData] = useState<WritingGenerateResponse | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(!isHistoryId);
+
+  // ── Shared state for currentIndex ──
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const loadFromHistory = useCallback(
-    async (historyId: number) => {
-      try {
-        const response = await getWritingHistoryById(historyId);
+  // Sync currentIndex from React Query result
+  useEffect(() => {
+    if (isHistoryId && queryResult) {
+      setCurrentIndex(queryResult.currentIndex);
+    }
+  }, [isHistoryId, queryResult]);
 
-        if (response.status === 200 && response.data) {
-          const historyData = response.data;
-          const contentData = historyData.data;
+  // Load from session storage for non-history IDs
+  useEffect(() => {
+    if (isHistoryId || !id || id === "undefined" || id === "null") {
+      setSessionLoading(false);
+      return;
+    }
 
-          const mappedData: WritingGenerateResponse = {
-            id: contentData.id || id.toString(),
-            language: contentData.language || "English",
-            contentType: contentData.contentType || "DIALOGUE",
-            difficulty: contentData.difficulty || 2,
-            englishSentences: contentData.englishSentences || [],
-            vietnameseSentences: contentData.vietnameseSentences || [],
-            totalSentences: contentData.totalSentences || 0,
-            userPoints: contentData.userPoints || 0,
-            practiceType: contentData.practiceType || null,
-            topic: contentData.topic || "",
-            createdAt: historyData.created_at || contentData.createdAt,
-          };
-
-          setData(mappedData);
-
-          if (historyData.current_index !== undefined && typeof historyData.current_index === "number") {
-            setCurrentIndex(historyData.current_index);
-          }
-        } else {
-          message.error(response.message || "Không tìm thấy dữ liệu bài luyện");
-          router.push("/writing");
-        }
-      } catch (error: any) {
-        console.error("Error fetching history:", error);
-        message.error(error?.message || "Không thể tải dữ liệu bài luyện");
-        router.push("/writing");
-      }
-    },
-    [id, message, router],
-  );
-
-  const loadFromSession = useCallback(() => {
-    const storedData = sessionStorage.getItem(`writing_${id}`);
-    if (storedData) {
-      try {
+    try {
+      const storedData = sessionStorage.getItem(`writing_${id}`);
+      if (storedData) {
         const parsed = JSON.parse(storedData);
         const mappedData: WritingGenerateResponse = {
           id: parsed.id || id,
@@ -82,97 +63,43 @@ export function useWritingData(id: string): UseWritingDataReturn {
           practiceType: parsed.practiceType || null,
           topic: parsed.topic || "",
         };
-
-        setData(mappedData);
-
-        if (parsed.current_index !== undefined && typeof parsed.current_index === "number") {
+        setSessionData(mappedData);
+        if (typeof parsed.current_index === "number") {
           setCurrentIndex(parsed.current_index);
         }
-      } catch (e) {
-        console.error("Error parsing stored data:", e);
-        message.error("Không thể tải dữ liệu bài luyện");
+      } else {
+        message.error("Không tìm thấy dữ liệu bài luyện. Vui lòng chọn lại từ danh sách.");
         router.push("/writing");
       }
-    } else {
-      message.error("Không tìm thấy dữ liệu bài luyện. Vui lòng chọn lại từ danh sách.");
+    } catch {
+      message.error("Không thể tải dữ liệu bài luyện");
       router.push("/writing");
+    } finally {
+      setSessionLoading(false);
     }
-  }, [id, message, router]);
+  }, [id, isHistoryId, message, router]);
 
+  // Handle query error — redirect on failure
   useEffect(() => {
-    // Validate ID
-    if (!id || id === "undefined" || id === "null") {
-      message.error("Không tìm thấy ID bài luyện tập");
+    if (queryError && isHistoryId) {
+      const errMsg = queryErrorObj instanceof Error ? queryErrorObj.message : "Không thể tải dữ liệu bài luyện";
+      message.error(errMsg);
       router.push("/writing");
-      setLoading(false);
-      return;
     }
+  }, [queryError, queryErrorObj, isHistoryId, message, router]);
 
-    let isIgnore = false;
+  // ── Return unified interface ──
+  const data = isHistoryId ? (queryResult?.data ?? null) : sessionData;
+  const loading = isHistoryId ? queryLoading : sessionLoading;
 
-    const loadData = async () => {
-      const isHistoryId = /^\d+$/.test(id);
-
-      try {
-        if (isHistoryId) {
-          const historyId = parseInt(id, 10);
-          const response = await getWritingHistoryById(historyId);
-
-          if (!isIgnore && response.status === 200 && response.data) {
-            const historyData = response.data;
-            const contentData = historyData.data;
-
-            const mappedData: WritingGenerateResponse = {
-              id: contentData.id || id.toString(),
-              language: contentData.language || "English",
-              contentType: contentData.contentType || "DIALOGUE",
-              difficulty: contentData.difficulty || 2,
-              englishSentences: contentData.englishSentences || [],
-              vietnameseSentences: contentData.vietnameseSentences || [],
-              totalSentences: contentData.totalSentences || 0,
-              userPoints: contentData.userPoints || 0,
-              practiceType: contentData.practiceType || null,
-              topic: contentData.topic || "",
-              createdAt: historyData.created_at || contentData.createdAt,
-            };
-
-            setData(mappedData);
-
-            if (historyData.current_index !== undefined && typeof historyData.current_index === "number") {
-              setCurrentIndex(historyData.current_index);
-            }
-          } else if (!isIgnore) {
-            message.error(response.message || "Không tìm thấy dữ liệu bài luyện");
-            router.push("/writing");
-          }
-        } else {
-          // loadFromSession handles redirection internally if needed
-          if (!isIgnore) loadFromSession();
-        }
-      } catch (error: any) {
-        if (!isIgnore) {
-          console.error("Error fetching data:", error);
-          message.error(error?.message || "Không thể tải dữ liệu bài luyện");
-          router.push("/writing");
-        }
-      } finally {
-        if (!isIgnore) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadData();
-
-    return () => {
-      isIgnore = true;
-    };
-  }, [id, loadFromSession, message, router]);
+  const handleSetCurrentIndex = useCallback((index: number) => {
+    setCurrentIndex(index);
+  }, []);
 
   return {
     data,
     loading,
     currentIndex,
-    setCurrentIndex,
+    setCurrentIndex: handleSetCurrentIndex,
   };
 }

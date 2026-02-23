@@ -517,11 +517,6 @@ export const useAntiCheat = ({ onViolation, enable = true, initialViolationsCoun
       document.removeEventListener("mouseout", handleMouseOut);
       document.removeEventListener("mouseover", handleMouseEnter);
     };
-    return () => {
-      if (mouseOutTimeout) clearTimeout(mouseOutTimeout);
-      document.removeEventListener("mouseout", handleMouseOut);
-      document.removeEventListener("mouseover", handleMouseEnter);
-    };
   }, [enable, paused]);
 
   // 6. Active Polling Check (Hardening for missed events)

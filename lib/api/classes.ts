@@ -1,5 +1,13 @@
 import apiClient from "@/app/config/api";
 
+// Helper to extract error message from API errors
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) return error.message;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const axiosErr = error as any;
+  return axiosErr?.response?.data?.message || axiosErr?.message || fallback;
+}
+
 export interface ClassResponse {
   class_id: number | string;
   name: string;
@@ -75,7 +83,7 @@ export interface GetClassesByUserApiResponse {
 export const getClassesByUser = async (params: GetClassesByUserParams): Promise<GetClassesResult> => {
   try {
     const userId = typeof params.userId === "string" ? Number(params.userId) : params.userId;
-    const requestParams: Record<string, any> = {
+    const requestParams: Record<string, string | number> = {
       page: params?.page || 1,
       limit: params?.limit || 10,
     };
@@ -117,15 +125,14 @@ export const getClassesByUser = async (params: GetClassesByUserParams): Promise<
     }
 
     throw new Error(apiResponse.message || "Không thể lấy danh sách lớp học");
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách lớp học";
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Không thể lấy danh sách lớp học"));
   }
 };
 
 export const getClasses = async (params?: GetClassesParams): Promise<GetClassesResult> => {
   try {
-    const requestParams: Record<string, any> = {
+    const requestParams: Record<string, string | number> = {
       page: params?.page || 1,
       limit: params?.limit || 10,
     };
@@ -166,6 +173,7 @@ export const getClasses = async (params?: GetClassesParams): Promise<GetClassesR
       }
 
       // If data is paginated result
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const paginatedData = responseData as any;
       return {
         classes: paginatedData.data || paginatedData.classes || [],
@@ -176,9 +184,8 @@ export const getClasses = async (params?: GetClassesParams): Promise<GetClassesR
     }
 
     throw new Error(apiResponse.message || "Không thể lấy danh sách lớp học");
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách lớp học";
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Không thể lấy danh sách lớp học"));
   }
 };
 
@@ -220,9 +227,8 @@ export const createClass = async (params: CreateClassParams): Promise<ClassRespo
     }
 
     throw new Error(response.data.message || "Không thể tạo lớp học");
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Không thể tạo lớp học";
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Không thể tạo lớp học"));
   }
 };
 
@@ -238,7 +244,7 @@ export const getClassById = async (classId: number | string, userId?: number | s
   try {
     const id = typeof classId === "string" ? classId : String(classId);
 
-    const params: Record<string, any> = {};
+    const params: Record<string, string | number> = {};
     if (userId !== undefined) {
       const numericUserId = typeof userId === "string" ? Number(userId) : userId;
       if (!isNaN(numericUserId)) {
@@ -255,9 +261,8 @@ export const getClassById = async (classId: number | string, userId?: number | s
     }
 
     throw new Error(response.data.message || "Không thể lấy thông tin lớp học");
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy thông tin lớp học";
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Không thể lấy thông tin lớp học"));
   }
 };
 
@@ -292,9 +297,8 @@ export const updateClass = async (classId: number | string, params: UpdateClassP
     }
 
     throw new Error(response.data.message || "Không thể cập nhật lớp học");
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Không thể cập nhật lớp học";
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Không thể cập nhật lớp học"));
   }
 };
 
@@ -350,9 +354,8 @@ export const addStudentToClass = async (params: AddStudentToClassParams): Promis
     }
 
     throw new Error(response.data.message || "Không thể thêm học sinh vào lớp học");
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Không thể thêm học sinh vào lớp học";
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Không thể thêm học sinh vào lớp học"));
   }
 };
 
@@ -371,9 +374,8 @@ export const removeStudentFromClass = async (params: RemoveStudentFromClassParam
         "Content-Type": "application/json",
       },
     });
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Không thể xóa học sinh khỏi lớp học";
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Không thể xóa học sinh khỏi lớp học"));
   }
 };
 
@@ -386,9 +388,8 @@ export const deleteClass = async (classId: number | string): Promise<void> => {
         "Content-Type": "application/json",
       },
     });
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Không thể xóa lớp học";
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Không thể xóa lớp học"));
   }
 };
 
@@ -484,7 +485,7 @@ export const getClassStudentId = async (classId: number | string, userId: number
     }
 
     return null;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching class-student id:", error);
     return null;
   }
@@ -509,9 +510,8 @@ export const updateClassStudentStatus = async (params: UpdateClassStudentStatusP
     }
 
     throw new Error(response.data.message || "Không thể cập nhật trạng thái học sinh");
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Không thể cập nhật trạng thái học sinh";
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Không thể cập nhật trạng thái học sinh"));
   }
 };
 
@@ -570,9 +570,8 @@ export const getClassStudentsByClass = async (params: GetClassStudentsByClassPar
     }
 
     return [];
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách học sinh trong lớp";
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Không thể lấy danh sách học sinh trong lớp"));
   }
 };
 
@@ -592,9 +591,8 @@ export const getBannedStudents = async (params: GetBannedStudentsParams): Promis
     }
 
     return [];
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách học sinh bị cấm";
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Không thể lấy danh sách học sinh bị cấm"));
   }
 };
 
@@ -630,7 +628,7 @@ export const getClassStudentsByUser = async (params: GetClassStudentsByUserParam
   try {
     const userId = typeof params.userId === "string" ? Number(params.userId) : params.userId;
 
-    const requestParams: Record<string, any> = {
+    const requestParams: Record<string, string | number> = {
       page: params.page || 1,
       limit: params.limit || 10,
     };
@@ -659,9 +657,8 @@ export const getClassStudentsByUser = async (params: GetClassStudentsByUserParam
     }
 
     throw new Error(apiResponse.message || "Không thể lấy danh sách lớp học");
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Không thể lấy danh sách lớp học";
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Không thể lấy danh sách lớp học"));
   }
 };
 
@@ -679,8 +676,7 @@ export const joinClassByCode = async (params: JoinClassByCodeParams): Promise<Cl
     }
 
     throw new Error(response.data.message || "Không thể tham gia lớp học");
-  } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || "Không thể tham gia lớp học";
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Không thể tham gia lớp học"));
   }
 };

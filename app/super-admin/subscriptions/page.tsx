@@ -3,7 +3,8 @@
 import { Table, Tag, Button, Space, Input, App, Modal, Form, Select, Card, Typography, Divider, InputNumber, Popconfirm } from "antd";
 import { SearchOutlined, UserAddOutlined, CrownOutlined, SafetyCertificateOutlined, PlusOutlined, EditOutlined, DeleteOutlined, StopOutlined, ArrowUpOutlined, SettingOutlined } from "@ant-design/icons";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
     getSubscriptionPlans,
     adminSubscribeByEmail,
@@ -14,112 +15,121 @@ import {
     getAllUserSubscriptions,
     cancelUserSubscription
 } from "@/lib/api/subscription";
+import { useDebounce } from "@/app/hooks/useDebounce";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 export default function SubscriptionAdminPage() {
     const { message } = App.useApp();
-    const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-    const [users, setUsers] = useState<any[]>([]);
-    const [userTotal, setUserTotal] = useState<number>(0);
-    const [userPage, setUserPage] = useState<number>(1);
-    const [searchText, setSearchText] = useState<string>("");
-    const [loading, setLoading] = useState(false);
-    const [loadingUsers, setLoadingUsers] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
+    const queryClient = useQueryClient();
+
     const [form] = Form.useForm();
     const [planForm] = Form.useForm();
 
-    // Plan Modal state
+    const [userPage, setUserPage] = useState<number>(1);
+    const [searchText, setSearchText] = useState<string>("");
+    const debouncedSearchText = useDebounce(searchText, 500);
+
     const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
     const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
 
-    useEffect(() => {
-        fetchPlans();
-        fetchUsers(1);
-    }, []);
+    // Fetch subscription plans
+    const { data: plansData = [], isLoading: isLoadingPlans, isFetching: isFetchingPlans } = useQuery({
+        queryKey: ['admin_subscription_plans'],
+        queryFn: getSubscriptionPlans,
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const fetchPlans = async () => {
-        setLoading(true);
-        try {
-            const data = await getSubscriptionPlans();
-            setPlans(data);
-        } catch (error) {
-            console.error("Failed to fetch plans", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Fetch user subscriptions
+    const { data: usersData, isLoading: isLoadingUsers, isFetching: isFetchingUsers } = useQuery({
+        queryKey: ['admin_subscription_users', userPage, debouncedSearchText],
+        queryFn: async () => {
+            const result = await getAllUserSubscriptions(userPage, 10, debouncedSearchText);
+            return result;
+        },
+        placeholderData: keepPreviousData,
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const fetchUsers = async (page: number, search: string = searchText) => {
-        setLoadingUsers(true);
-        try {
-            const result = await getAllUserSubscriptions(page, 10, search);
-            setUsers(result.data);
-            setUserTotal(result.total);
-            setUserPage(page);
-        } catch (error) {
-            console.error("Failed to fetch user subscriptions", error);
-        } finally {
-            setLoadingUsers(false);
-        }
-    };
+    const safeUsers = usersData?.data || [];
+    const userTotal = usersData?.total || 0;
 
-    const handleSubscribe = async (values: { email: string; planId: number }) => {
-        setSubmitting(true);
-        try {
-            await adminSubscribeByEmail(values.email, values.planId);
+    // Mutations
+    const subscribeMutation = useMutation({
+        mutationFn: async (values: { email: string; planId: number }) => {
+            return adminSubscribeByEmail(values.email, values.planId);
+        },
+        onSuccess: () => {
             message.success("Đã nâng cấp tài khoản thành công!");
             form.resetFields();
-            fetchUsers(1); // Refresh table
-        } catch (error: any) {
+            queryClient.invalidateQueries({ queryKey: ['admin_subscription_users'] });
+        },
+        onError: (error: any) => {
             message.error(error?.response?.data?.message || "Không tìm thấy user hoặc có lỗi xảy ra");
-        } finally {
-            setSubmitting(false);
         }
-    };
+    });
 
-    const handlePlanSubmit = async (values: any) => {
-        setSubmitting(true);
-        try {
+    const planMutation = useMutation({
+        mutationFn: async (values: any) => {
             if (editingPlan) {
-                await updateSubscriptionPlan(editingPlan.id, values);
-                message.success("Cập nhật gói thành công");
+                return updateSubscriptionPlan(editingPlan.id, values);
             } else {
-                await createSubscriptionPlan(values);
-                message.success("Tạo gói mới thành công");
+                return createSubscriptionPlan(values);
             }
+        },
+        onSuccess: () => {
+            message.success(editingPlan ? "Cập nhật gói thành công" : "Tạo gói mới thành công");
             setIsPlanModalOpen(false);
             planForm.resetFields();
             setEditingPlan(null);
-            fetchPlans();
-        } catch (error: any) {
+            queryClient.invalidateQueries({ queryKey: ['admin_subscription_plans'] });
+        },
+        onError: (error: any) => {
             message.error(error?.message || "Lỗi khi lưu gói");
-        } finally {
-            setSubmitting(false);
         }
-    };
+    });
 
-    const handleCancelSubscription = async (id: number) => {
-        try {
-            await cancelUserSubscription(id);
+    const cancelMutation = useMutation({
+        mutationFn: async (id: number) => {
+            return cancelUserSubscription(id);
+        },
+        onSuccess: () => {
             message.success("Đã hủy/thu hồi gói cước của người dùng!");
-            await fetchUsers(userPage);
-        } catch (error: any) {
+            queryClient.invalidateQueries({ queryKey: ['admin_subscription_users'] });
+        },
+        onError: (error: any) => {
             message.error(error?.response?.data?.message || "Hủy gói cước thất bại");
         }
+    });
+
+    const deletePlanMutation = useMutation({
+        mutationFn: async (id: number) => {
+            return deleteSubscriptionPlan(id);
+        },
+        onSuccess: () => {
+            message.success("Đã xóa gói");
+            queryClient.invalidateQueries({ queryKey: ['admin_subscription_plans'] });
+        },
+        onError: (error: any) => {
+            message.error(error?.response?.data?.message ?? error?.message ?? "Lỗi khi xóa gói");
+        }
+    });
+
+    const handleSubscribe = (values: { email: string; planId: number }) => {
+        subscribeMutation.mutate(values);
     };
 
-    const handleDeletePlan = async (id: number) => {
-        try {
-            await deleteSubscriptionPlan(id);
-            message.success("Đã xóa gói");
-            fetchPlans();
-        } catch (error: any) {
-            const msg = error?.response?.data?.message ?? error?.message ?? "Lỗi khi xóa gói";
-            message.error(msg);
-        }
+    const handlePlanSubmit = (values: any) => {
+        planMutation.mutate(values);
+    };
+
+    const handleCancelSubscription = (id: number) => {
+        cancelMutation.mutate(id);
+    };
+
+    const handleDeletePlan = (id: number) => {
+        deletePlanMutation.mutate(id);
     };
 
     const openEditModal = (plan: SubscriptionPlan) => {
@@ -132,18 +142,9 @@ export default function SubscriptionAdminPage() {
         setIsPlanModalOpen(true);
     };
 
-    const quickSubscribe = (email: string, planId: number) => {
-        if (!email) {
-            message.warning("Vui lòng nhập email trước");
-            return;
-        }
-        handleSubscribe({ email, planId });
-    };
-
     return (
         <div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-                {/* Cấu hình nâng cấp nhanh */}
                 <Card
                     title={<Space><UserAddOutlined /> Nâng cấp tài khoản</Space>}
                     style={{ gridColumn: 'span 2', borderRadius: '8px' }}
@@ -163,8 +164,8 @@ export default function SubscriptionAdminPage() {
                             label={<Text strong>Chọn gói cước</Text>}
                             rules={[{ required: true, message: 'Vui lòng chọn gói' }]}
                         >
-                            <Select size="large" placeholder="Chọn gói để nâng cấp">
-                                {plans.map(plan => (
+                            <Select size="large" placeholder="Chọn gói để nâng cấp" loading={isLoadingPlans || isFetchingPlans}>
+                                {plansData.map(plan => (
                                     <Option key={plan.id} value={plan.id}>
                                         <Space>
                                             <Tag color={plan.name.includes('free') ? 'default' : 'gold'}>{plan.name.toUpperCase()}</Tag>
@@ -182,7 +183,7 @@ export default function SubscriptionAdminPage() {
                                 icon={<CrownOutlined />}
                                 block
                                 htmlType="submit"
-                                loading={submitting}
+                                loading={subscribeMutation.isPending}
                                 style={{ height: '48px', fontWeight: 'bold', fontSize: '16px' }}
                             >
                                 KÍCH HOẠT NGAY
@@ -191,7 +192,6 @@ export default function SubscriptionAdminPage() {
                     </Form>
                 </Card>
 
-                {/* Thông tin các gói hiện có */}
                 <Card
                     title={
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -223,7 +223,7 @@ export default function SubscriptionAdminPage() {
                     bodyStyle={{ padding: 0 }}
                 >
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        {Array.isArray(plans) && plans.map((plan, index) => (
+                        {Array.isArray(plansData) && plansData.map((plan, index) => (
                             <div
                                 key={plan.id}
                                 style={{
@@ -231,7 +231,7 @@ export default function SubscriptionAdminPage() {
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
-                                    borderBottom: index < (plans?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
+                                    borderBottom: index < (plansData?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
                                 }}
                             >
                                 <div>
@@ -249,7 +249,7 @@ export default function SubscriptionAdminPage() {
                                         <Space size="small">
                                             <Button size="small" type="text" icon={<EditOutlined />} onClick={() => openEditModal(plan)} />
                                             <Popconfirm title="Xóa gói này?" description="Thao tác này không thể hoàn tác." onConfirm={() => handleDeletePlan(plan.id)}>
-                                                <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+                                                <Button size="small" type="text" danger icon={<DeleteOutlined />} loading={deletePlanMutation.isPending && deletePlanMutation.variables === plan.id} />
                                             </Popconfirm>
                                         </Space>
                                     </div>
@@ -309,7 +309,7 @@ export default function SubscriptionAdminPage() {
                     <Form.Item style={{ marginBottom: 0, textAlign: 'right', marginTop: '24px' }}>
                         <Space>
                             <Button onClick={() => setIsPlanModalOpen(false)}>Hủy</Button>
-                            <Button type="primary" htmlType="submit" loading={submitting}>
+                            <Button type="primary" htmlType="submit" loading={planMutation.isPending}>
                                 {editingPlan ? "Lưu thay đổi" : "Tạo gói"}
                             </Button>
                         </Space>
@@ -339,24 +339,24 @@ export default function SubscriptionAdminPage() {
                         allowClear
                         enterButton={<SearchOutlined />}
                         size="large"
-                        onSearch={(value) => {
-                            setSearchText(value);
-                            fetchUsers(1, value);
+                        onChange={(e) => {
+                            setSearchText(e.target.value);
+                            setUserPage(1);
                         }}
                         style={{ maxWidth: '400px' }}
                     />
                 </div>
 
                 <Table
-                    dataSource={users}
+                    dataSource={safeUsers}
                     rowKey="id"
-                    loading={loadingUsers}
+                    loading={isLoadingUsers || isFetchingUsers}
                     scroll={{ x: 800 }}
                     pagination={{
                         current: userPage,
                         pageSize: 10,
                         total: userTotal,
-                        onChange: (page) => fetchUsers(page),
+                        onChange: (page) => setUserPage(page),
                         showSizeChanger: false
                     }}
                     columns={[
@@ -432,6 +432,7 @@ export default function SubscriptionAdminPage() {
                                             danger
                                             icon={<StopOutlined />}
                                             disabled={record.status === 'cancelled' || record.status === 'expired'}
+                                            loading={cancelMutation.isPending && cancelMutation.variables === record.id}
                                         >
                                             Hủy
                                         </Button>

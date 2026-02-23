@@ -123,7 +123,7 @@ const ClassExamsTab = memo(function ClassExamsTab({
         exam.subject.toLowerCase().includes(query)
       );
     });
-  }, [allExams, ragExams, searchQuery, readOnly]);
+  }, [allExams, ragExams, searchQuery]);
 
   const totalExams = filteredExams.length;
   const startIndex = (currentPage - 1) * pageSize;
@@ -176,9 +176,10 @@ const ClassExamsTab = memo(function ClassExamsTab({
                   } else {
                     throw new Error("Lỗi khi xóa bộ đề AI");
                   }
-                } catch (error: any) {
+                } catch (error: unknown) {
                   // Rollback on error: refresh to get correct state
-                  message.error(error?.message || "Lỗi khi xóa bộ đề AI");
+                  const errorMessage = error instanceof Error ? error.message : "Lỗi khi xóa bộ đề AI";
+                  message.error(errorMessage);
                   await fetchRagTests();
                 }
               },

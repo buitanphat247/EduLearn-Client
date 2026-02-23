@@ -2,11 +2,13 @@
 
 import { Table, Tag, Button, App, Space, Input, Popconfirm, Modal, Form, Select, Typography, Card } from "antd";
 import { SearchOutlined, EyeOutlined, DeleteOutlined, PlusOutlined, QuestionCircleOutlined, FolderOutlined, EditOutlined, CrownOutlined } from "@ant-design/icons";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnsType } from "antd/es/table";
 import Papa from "papaparse";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { getFolders, createFolder, updateFolder, deleteFolder, bulkCreateVocabulary, getVocabularyGroups, type FolderResponse, type VocabularyGroupItem } from "@/lib/api/vocabulary";
+import { useDebounce } from "@/app/hooks/useDebounce";
 
 const { Option } = Select;
 const { Title, Text } = Typography;
@@ -31,41 +33,42 @@ interface ImportVocabularyType {
 export default function VocabularyManagementPage() {
     const router = useRouter();
     const { message } = App.useApp();
+    const queryClient = useQueryClient();
     const [form] = Form.useForm();
+
     const [searchQuery, setSearchQuery] = useState("");
+    const debouncedSearchQuery = useDebounce(searchQuery, 400);
+
     const [scopeFilter, setScopeFilter] = useState("all");
-    const [folders, setFolders] = useState<FolderTableType[]>([]);
-    const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingFolder, setEditingFolder] = useState<FolderTableType | null>(null);
-    const [submitting, setSubmitting] = useState(false);
+
     const [pagination, setPagination] = useState({
         current: 1,
         pageSize: 20,
-        total: 0,
     });
 
     // Quick create state
     const [isQuickCreateModalOpen, setIsQuickCreateModalOpen] = useState(false);
     const [importData, setImportData] = useState<ImportVocabularyType[]>([]);
     const [fileInfo, setFileInfo] = useState<File | null>(null);
-    const [importing, setImporting] = useState(false);
-    const [groups, setGroups] = useState<VocabularyGroupItem[]>([]);
     const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
     const [quickCreateFolderName, setQuickCreateFolderName] = useState("");
 
+    const { data: vocabGroups = [] } = useQuery({
+        queryKey: ['admin_vocabulary_groups'],
+        queryFn: getVocabularyGroups,
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const isFetching = useRef(false);
-    const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
-
-    const fetchFolders = useCallback(async (page: number = 1, limit: number = 20, search?: string) => {
-        if (isFetching.current) return;
-
-        isFetching.current = true;
-        setLoading(true);
-
-        try {
-            const result = await getFolders({ page, limit, search });
+    const { data: folderData, isLoading, isFetching } = useQuery({
+        queryKey: ['admin_vocabulary_folders', pagination.current, pagination.pageSize, debouncedSearchQuery],
+        queryFn: async () => {
+            const result = await getFolders({
+                page: pagination.current,
+                limit: pagination.pageSize,
+                search: debouncedSearchQuery.trim() || undefined
+            });
 
             const formattedData: FolderTableType[] = result.data.map((folder: FolderResponse) => ({
                 key: folder.folderId,
@@ -76,56 +79,74 @@ export default function VocabularyManagementPage() {
                 access_level: (folder as any).access_level || "free",
             }));
 
-            setFolders(formattedData);
-            setPagination((prev) => ({
-                ...prev,
-                current: page,
-                pageSize: limit,
+            return {
+                folders: formattedData,
                 total: result.total,
-            }));
-        } catch (error: any) {
-            message.error(error?.message || "Không thể tải danh sách thư mục từ vựng");
-            setFolders([]);
-        } finally {
-            setLoading(false);
-            isFetching.current = false;
-        }
-    }, [message]);
+            };
+        },
+        placeholderData: keepPreviousData,
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const isMountedRef = useRef(true);
-    useEffect(() => {
-        isMountedRef.current = true;
-        fetchFolders(1, pagination.pageSize);
-        getVocabularyGroups().then((data) => {
-            if (isMountedRef.current) setGroups(data);
-        });
-        return () => { isMountedRef.current = false; };
-    }, []);
+    const safeFolders = folderData?.folders || [];
+    const filteredFolders = useMemo(() => {
+        return scopeFilter === "all" ? safeFolders : safeFolders.filter(f => f.scope === scopeFilter);
+    }, [safeFolders, scopeFilter]);
 
-    useEffect(() => {
-        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-
-        searchDebounceRef.current = setTimeout(() => {
-            fetchFolders(1, pagination.pageSize, searchQuery.trim() || undefined);
-        }, 500);
-
-        return () => {
-            if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-        };
-    }, [searchQuery, pagination.pageSize, fetchFolders]);
-
-    const handleTableChange = (page: number, pageSize: number) => {
-        fetchFolders(page, pageSize, searchQuery.trim() || undefined);
-    };
-
-    const handleDelete = async (id: number) => {
-        try {
-            await deleteFolder(id);
+    // Mutations
+    const deleteMutation = useMutation({
+        mutationFn: async (id: number) => {
+            return deleteFolder(id);
+        },
+        onSuccess: () => {
             message.success("Xóa thư mục thành công");
-            fetchFolders(pagination.current, pagination.pageSize, searchQuery.trim() || undefined);
-        } catch (error: any) {
+            queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_folders'] });
+        },
+        onError: (error: any) => {
             message.error(error?.message || "Không thể xóa thư mục");
         }
+    });
+
+    const saveMutation = useMutation({
+        mutationFn: async (values: { folderName: string; access_level: string }) => {
+            if (editingFolder) {
+                return updateFolder(editingFolder.folderId, values.folderName, values.access_level);
+            } else {
+                return createFolder(values.folderName, values.access_level);
+            }
+        },
+        onSuccess: () => {
+            message.success(editingFolder ? "Cập nhật thư mục thành công" : "Tạo thư mục mới thành công");
+            setIsModalOpen(false);
+            queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_folders'] });
+        },
+        onError: (error: any) => {
+            message.error(error?.message || "Đã có lỗi xảy ra");
+        }
+    });
+
+    const quickCreateMutation = useMutation({
+        mutationFn: async () => {
+            const folder = await createFolder(quickCreateFolderName, 'free');
+            await bulkCreateVocabulary(folder.folderId, selectedGroupId, importData);
+            return importData.length;
+        },
+        onSuccess: (count) => {
+            message.success(`Tạo thư mục và import thành công ${count} từ vựng`);
+            setIsQuickCreateModalOpen(false);
+            setQuickCreateFolderName("");
+            setImportData([]);
+            setFileInfo(null);
+            setSelectedGroupId(null);
+            queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_folders'] });
+        },
+        onError: (error: any) => {
+            message.error(error?.message || "Đã có lỗi xảy ra trong quá trình tạo nhanh");
+        }
+    });
+
+    const handleDelete = (id: number) => {
+        deleteMutation.mutate(id);
     };
 
     const handleOpenModal = (folder?: FolderTableType) => {
@@ -142,23 +163,8 @@ export default function VocabularyManagementPage() {
         setIsModalOpen(true);
     };
 
-    const handleSubmit = async (values: { folderName: string; access_level: string }) => {
-        setSubmitting(true);
-        try {
-            if (editingFolder) {
-                await updateFolder(editingFolder.folderId, values.folderName, values.access_level);
-                message.success("Cập nhật thư mục thành công");
-            } else {
-                await createFolder(values.folderName, values.access_level);
-                message.success("Tạo thư mục mới thành công");
-            }
-            setIsModalOpen(false);
-            fetchFolders(pagination.current, pagination.pageSize, searchQuery.trim() || undefined);
-        } catch (error: any) {
-            message.error(error?.message || "Đã có lỗi xảy ra");
-        } finally {
-            setSubmitting(false);
-        }
+    const handleSubmit = (values: { folderName: string; access_level: string }) => {
+        saveMutation.mutate(values);
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,7 +195,7 @@ export default function VocabularyManagementPage() {
         });
     };
 
-    const handleQuickCreate = async () => {
+    const handleQuickCreate = () => {
         if (!quickCreateFolderName.trim()) {
             message.warning("Vui lòng nhập tên thư mục");
             return;
@@ -198,30 +204,7 @@ export default function VocabularyManagementPage() {
             message.warning("Vui lòng tải lên file CSV chứa từ vựng");
             return;
         }
-
-        setImporting(true);
-        try {
-            // Bước 1: Tạo thư mục
-            const folder = await createFolder(quickCreateFolderName);
-
-            // Bước 2: Gọi bulkCreate
-            await bulkCreateVocabulary(folder.folderId, selectedGroupId, importData);
-
-            message.success(`Tạo thư mục và import thành công ${importData.length} từ vựng`);
-
-            // Đóng Modal và Reset state
-            setIsQuickCreateModalOpen(false);
-            setQuickCreateFolderName("");
-            setImportData([]);
-            setFileInfo(null);
-            setSelectedGroupId(null);
-
-            fetchFolders(pagination.current, pagination.pageSize, searchQuery.trim() || undefined);
-        } catch (error: any) {
-            message.error(error?.message || "Đã có lỗi xảy ra trong quá trình tạo nhanh");
-        } finally {
-            setImporting(false);
-        }
+        quickCreateMutation.mutate();
     };
 
 
@@ -316,6 +299,7 @@ export default function VocabularyManagementPage() {
                             size="small"
                             danger
                             onClick={(e) => e.stopPropagation()}
+                            loading={deleteMutation.isPending && deleteMutation.variables === record.folderId}
                         >
                             Xóa
                         </Button>
@@ -332,13 +316,16 @@ export default function VocabularyManagementPage() {
                     placeholder="Tìm kiếm thư mục..."
                     prefix={<SearchOutlined />}
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setPagination(prev => ({ ...prev, current: 1 }));
+                    }}
                     allowClear
                     style={{ flex: 1 }}
                 />
                 <Select
                     value={scopeFilter}
-                    onChange={setScopeFilter}
+                    onChange={(v) => { setScopeFilter(v); setPagination(prev => ({ ...prev, current: 1 })); }}
                     style={{ width: 160 }}
                 >
                     <Option value="all">Tất cả phạm vi</Option>
@@ -364,15 +351,15 @@ export default function VocabularyManagementPage() {
                 rowKey="folderId"
                 size="middle"
                 columns={columns}
-                dataSource={scopeFilter === "all" ? folders : folders.filter(f => f.scope === scopeFilter)}
-                loading={loading}
+                dataSource={filteredFolders}
+                loading={isLoading || isFetching}
                 pagination={{
                     current: pagination.current,
                     pageSize: pagination.pageSize,
-                    total: scopeFilter === "all" ? pagination.total : folders.filter(f => f.scope === scopeFilter).length,
+                    total: scopeFilter === "all" ? (folderData?.total || 0) : filteredFolders.length,
                     showSizeChanger: true,
                     showTotal: (total) => `Tổng cộng ${total} thư mục`,
-                    onChange: handleTableChange,
+                    onChange: (page, pageSize) => setPagination({ current: page, pageSize }),
                 }}
                 onRow={(record) => ({
                     onClick: () => router.push(`/super-admin/vocabulary/${record.folderId}`),
@@ -413,7 +400,7 @@ export default function VocabularyManagementPage() {
                     <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
                         <Space>
                             <Button onClick={() => setIsModalOpen(false)}>Hủy</Button>
-                            <Button type="primary" htmlType="submit" loading={submitting}>
+                            <Button type="primary" htmlType="submit" loading={saveMutation.isPending}>
                                 {editingFolder ? "Cập nhật" : "Tạo mới"}
                             </Button>
                         </Space>
@@ -425,7 +412,7 @@ export default function VocabularyManagementPage() {
                 title="Tạo nhanh thư mục & Import CSV"
                 open={isQuickCreateModalOpen}
                 onCancel={() => {
-                    if (importing) return;
+                    if (quickCreateMutation.isPending) return;
                     setIsQuickCreateModalOpen(false);
                 }}
                 footer={null}
@@ -438,16 +425,16 @@ export default function VocabularyManagementPage() {
                                 <Input
                                     value={quickCreateFolderName}
                                     onChange={(e) => setQuickCreateFolderName(e.target.value)}
-                                    disabled={importing}
+                                    disabled={quickCreateMutation.isPending}
                                 />
                             </Form.Item>
                             <Form.Item label="Chọn nhóm từ vựng" required>
                                 <Select
                                     placeholder="Chọn Vocabulary Group..."
-                                    options={groups.map(g => ({ label: g.groupName, value: g.vocabularyGroupId }))}
+                                    options={vocabGroups.map(g => ({ label: g.groupName, value: g.vocabularyGroupId }))}
                                     value={selectedGroupId}
                                     onChange={setSelectedGroupId}
-                                    disabled={importing}
+                                    disabled={quickCreateMutation.isPending}
                                 />
                             </Form.Item>
                         </div>
@@ -493,11 +480,11 @@ export default function VocabularyManagementPage() {
 
                     <div style={{ textAlign: 'right' }}>
                         <Space>
-                            <Button onClick={() => setIsQuickCreateModalOpen(false)} disabled={importing}>Hủy</Button>
+                            <Button onClick={() => setIsQuickCreateModalOpen(false)} disabled={quickCreateMutation.isPending}>Hủy</Button>
                             <Button
                                 type="primary"
                                 disabled={importData.length === 0 || !quickCreateFolderName.trim() || !selectedGroupId}
-                                loading={importing}
+                                loading={quickCreateMutation.isPending}
                                 onClick={handleQuickCreate}
                             >
                                 Bắt đầu Import

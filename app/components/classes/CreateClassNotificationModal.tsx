@@ -17,7 +17,7 @@ export default function CreateClassNotificationModal({ open, classId, onCancel, 
     }
   }, [open, form]);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: { title: string; message: string }) => {
     setSubmitting(true);
     try {
       const userId = getUserIdFromCookie();
@@ -48,8 +48,8 @@ export default function CreateClassNotificationModal({ open, classId, onCancel, 
       message.success("Tạo thông báo thành công!");
       form.resetFields();
       onSuccess();
-    } catch (error: any) {
-      message.error(error?.message || "Không thể tạo thông báo");
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : "Không thể tạo thông báo");
     } finally {
       setSubmitting(false);
     }

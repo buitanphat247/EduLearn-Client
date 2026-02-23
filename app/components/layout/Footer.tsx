@@ -17,7 +17,7 @@ export default function Footer() {
               onMouseEnter={() => router.prefetch("/")}
               className="flex items-center space-x-3 mb-4"
             >
-              <Image src="/images/logo/1.png" alt="" width={48} height={48} className="object-contain" aria-hidden="true" />
+              <Image src="/images/logo/main.png" alt="" width={48} height={48} className="object-contain" aria-hidden="true" />
               <span className="text-2xl font-bold text-slate-800 dark:text-white">Thư viện số</span>
             </Link>
             <p className="text-slate-600 dark:text-slate-400 mb-4 max-w-md">

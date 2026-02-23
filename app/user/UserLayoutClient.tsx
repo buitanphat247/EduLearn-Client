@@ -3,10 +3,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import UserSidebar from "../components/layout/UserSidebar";
 import { usePathname } from "next/navigation";
-import { Modal, Spin, message, Avatar } from "antd";
+import { Modal, Spin, Avatar } from "antd";
 import { UserOutlined } from "@ant-design/icons";
-import { getUserInfo, type UserInfoResponse } from "@/lib/api/users";
-import { useUserId } from "@/app/hooks/useUserId";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
 import { ServerAuthedUserProvider } from "../context/ServerAuthedUserProvider";
@@ -29,7 +27,8 @@ interface InitialUserData {
 function UserHeader({ initialUserData }: { initialUserData: InitialUserData | null }) {
   const pathname = usePathname();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [imgError, setImgError] = useState(false);
+  const [headerImgError, setHeaderImgError] = useState(false);
+  const [modalImgError, setModalImgError] = useState(false);
 
   // Memoize page title calculation
   const currentPageTitle = useMemo(() => {
@@ -48,7 +47,7 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
   // We just need to trigger a manual fetch when modal opens if we want fresh data.
   useEffect(() => {
     if (isProfileModalOpen && !userInfo) {
-      fetchUserInfo(true);
+      fetchUserInfo();
     }
   }, [isProfileModalOpen, userInfo, fetchUserInfo]);
 
@@ -92,14 +91,14 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
               <Avatar
                 size={40}
                 src={
-                  userInfo?.avatar && !imgError
+                  userInfo?.avatar && !headerImgError
                     ? getMediaUrl(userInfo.avatar)
-                    : initialUserData?.avatar && !imgError
+                    : initialUserData?.avatar && !headerImgError
                       ? getMediaUrl(initialUserData.avatar)
                       : undefined
                 }
                 onError={() => {
-                  setImgError(true);
+                  setHeaderImgError(true);
                   return true;
                 }}
                 className="flex items-center justify-center bg-blue-600"
@@ -122,9 +121,9 @@ function UserHeader({ initialUserData }: { initialUserData: InitialUserData | nu
                 <div className="relative p-1 rounded-full bg-blue-500 dark:bg-blue-600">
                   <Avatar
                     size={80}
-                    src={userInfo.avatar && !imgError ? getCachedImageUrl(getMediaUrl(userInfo.avatar)) : undefined}
+                    src={userInfo.avatar && !modalImgError ? getCachedImageUrl(getMediaUrl(userInfo.avatar)) : undefined}
                     onError={() => {
-                      setImgError(true);
+                      setModalImgError(true);
                       return true;
                     }}
                     className="flex items-center justify-center bg-blue-600"

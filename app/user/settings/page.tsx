@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Form, Input, Button, Divider, Avatar, App } from "antd";
 import Swal from "sweetalert2";
 import {
@@ -13,7 +13,8 @@ import {
   LoadingOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
-import { getUserInfo, changePassword, updateUser, type UserInfoResponse } from "@/lib/api/users";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getUserInfo, changePassword, updateUser } from "@/lib/api/users";
 import { signOutAllDevices } from "@/lib/api/auth";
 import { uploadFile } from "@/lib/api/file-upload";
 import { getMediaUrl } from "@/lib/utils/media";
@@ -33,56 +34,135 @@ interface SettingsFormData {
 
 export default function UserSettings() {
   const { message: messageApi } = App.useApp();
-  const { userId, loading: userIdLoading } = useUserId(); // Use hook
+  const { userId, loading: userIdLoading } = useUserId();
   const [profileForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [logoutAllLoading, setLogoutAllLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [imgError, setImgError] = useState(false);
-  const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
   const { theme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+  const [imgError, setImgError] = useState(false);
 
-  const isMountedRef = useRef(true);
+  // 1. Query for User Info
+  const { data: userInfo, isLoading: isUserInfoLoading, isError: isUserError } = useQuery({
+    queryKey: ["userProfile", userId],
+    // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+    queryFn: () => getUserInfo(userId!),
+    enabled: !!userId && !userIdLoading,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+  });
+
+  // Handle setting initial form values when data loads
   useEffect(() => {
-    isMountedRef.current = true;
-    if (userIdLoading || !userId) {
-      if (!userIdLoading && !userId) {
-        messageApi.error("Không tìm thấy thông tin người dùng");
-        if (isMountedRef.current) setLoading(false);
-      }
-      return () => { isMountedRef.current = false; };
+    if (userInfo) {
+      profileForm.setFieldsValue({
+        fullname: userInfo.fullname,
+        email: userInfo.email,
+        phone: userInfo.phone,
+        username: userInfo.username,
+      });
     }
+  }, [userInfo, profileForm]);
 
-    const fetchUserInfo = async () => {
-      try {
-        if (isMountedRef.current) setLoading(true);
-        const user = await getUserInfo(userId);
-        if (!isMountedRef.current) return;
-        setUserInfo(user);
-        profileForm.setFieldsValue({
-          fullname: user.fullname,
-          email: user.email,
-          phone: user.phone,
-          username: user.username,
-        });
-      } catch (error: any) {
-        if (isMountedRef.current) {
-          messageApi.error(error?.message || "Không thể tải thông tin người dùng");
-        }
-      } finally {
-        if (isMountedRef.current) setLoading(false);
+  if (isUserError) {
+    messageApi.error("Không thể tải thông tin người dùng");
+  }
+
+  // 2. Mutation for Update Profile
+  const updateProfileMutation = useMutation({
+    mutationFn: async (values: SettingsFormData) => {
+      if (!userId) throw new Error("Chưa có ID người dùng");
+      return updateUser(userId, values);
+    },
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(["userProfile", userId], updatedUser);
+      saveUserDataToSession(updatedUser);
+      window.dispatchEvent(new Event("user-updated"));
+      messageApi.success("Đã cập nhật thông tin thành công");
+    },
+    onError: (error: unknown) => {
+      const err = error as Error;
+      messageApi.error(err.message || "Không thể cập nhật thông tin");
+    },
+  });
+
+  // 3. Mutation for Change Password
+  const changePasswordMutation = useMutation({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mutationFn: async (values: any) => {
+      return changePassword({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      });
+    },
+    onSuccess: () => {
+      messageApi.success("Đã đổi mật khẩu thành công");
+      passwordForm.resetFields();
+    },
+    onError: (error: unknown) => {
+      const err = error as Error;
+      messageApi.error(err.message || "Không thể đổi mật khẩu");
+    },
+  });
+
+  // 4. Mutation for Avatar Upload
+  const uploadAvatarMutation = useMutation({
+    mutationFn: async (file: File) => {
+      if (!userId) throw new Error("Chưa có ID người dùng");
+      const imageUrl = await uploadFile(file, "avatars");
+      return updateUser(userId, { avatar: imageUrl });
+    },
+    onMutate: () => {
+      const hideProgress = messageApi.loading("Đang tải ảnh lên...", 0);
+      return { hideProgress };
+    },
+    onSuccess: (updatedUser, _, context) => {
+      queryClient.setQueryData(["userProfile", userId], updatedUser);
+      setImgError(false);
+      saveUserDataToSession(updatedUser);
+      window.dispatchEvent(new Event("user-updated"));
+      context?.hideProgress();
+      Swal.fire({
+        title: "Thành công!",
+        text: "Ảnh đại diện đã được cập nhật.",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+        background: theme === 'dark' ? '#1e293b' : '#fff',
+        color: theme === 'dark' ? '#fff' : '#000',
+      });
+    },
+    onError: (error: unknown, _, context) => {
+      context?.hideProgress();
+      const err = error as Error;
+      messageApi.error(err.message || "Lỗi khi cập nhật ảnh đại diện");
+    },
+    onSettled: () => {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
-    };
+    }
+  });
 
-    fetchUserInfo();
-    return () => { isMountedRef.current = false; };
-  }, [userId, userIdLoading, profileForm, messageApi]);
+  // 5. Mutation for Logout All Devices
+  const logoutAllMutation = useMutation({
+    mutationFn: async () => {
+      queryClient.clear();
+      const savedTheme = localStorage.getItem("theme");
+      await signOutAllDevices();
+      // Clear all client caches
+      const { clearUserCache } = await import("@/lib/utils/cookies");
+      clearUserCache();
+      localStorage.clear();
+      if (savedTheme) localStorage.setItem("theme", savedTheme);
+    },
+    onSuccess: () => {
+      // Hard navigate to force server-side re-render (fresh initialAuth)
+      window.location.href = "/auth";
+    },
+  });
 
   const handleAvatarClick = () => {
-    if (uploading) return;
+    if (uploadAvatarMutation.isPending) return;
 
     Swal.fire({
       title: "Đổi ảnh đại diện?",
@@ -102,7 +182,7 @@ export default function UserSettings() {
     });
   };
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !userId) return;
 
@@ -116,56 +196,7 @@ export default function UserSettings() {
       return;
     }
 
-    try {
-      setUploading(true);
-      const hideProgress = messageApi.loading("Đang tải ảnh lên...", 0);
-
-      const imageUrl = await uploadFile(file, "avatars");
-      const updatedUser = await updateUser(userId, { avatar: imageUrl });
-
-      setUserInfo(updatedUser);
-      setImgError(false);
-      saveUserDataToSession(updatedUser);
-      window.dispatchEvent(new Event("user-updated"));
-
-      hideProgress();
-
-      Swal.fire({
-        title: "Thành công!",
-        text: "Ảnh đại diện đã được cập nhật.",
-        icon: "success",
-        timer: 1500,
-        showConfirmButton: false,
-        background: theme === 'dark' ? '#1e293b' : '#fff',
-        color: theme === 'dark' ? '#fff' : '#000',
-      });
-    } catch (error: any) {
-      console.error("Avatar upload error:", error);
-      messageApi.error(error.message || "Lỗi khi cập nhật ảnh đại diện");
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
-
-  const handleSaveProfile = async (values: SettingsFormData) => {
-    try {
-      setSaving(true);
-      // Use the values to update the user profile
-      const userId = userInfo?.user_id;
-      if (userId) {
-        const updated = await updateUser(userId, values);
-        setUserInfo(updated);
-        saveUserDataToSession(updated);
-        window.dispatchEvent(new Event("user-updated"));
-      }
-      messageApi.success("Đã cập nhật thông tin thành công");
-    } catch (error: any) {
-      messageApi.error(error?.message || "Không thể cập nhật thông tin");
-      setSaving(false);
-    }
+    uploadAvatarMutation.mutate(file);
   };
 
   // Custom Card Component
@@ -176,10 +207,11 @@ export default function UserSettings() {
     </div>
   );
 
+  const loading = userIdLoading || isUserInfoLoading;
+
   return (
     <div className="space-y-6">
       {loading && <SettingsSkeleton />}
-      {/* Always render Form elements to prevent useForm warning, but hide when loading */}
       <div style={{ display: loading ? 'none' : 'block' }}>
         {/* Profile Information */}
         <CustomCard
@@ -205,7 +237,7 @@ export default function UserSettings() {
                 />
               </div>
 
-              {uploading && (
+              {uploadAvatarMutation.isPending && (
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-10 rounded-full">
                   <LoadingOutlined className="text-white text-3xl" />
                 </div>
@@ -214,7 +246,7 @@ export default function UserSettings() {
               <button
                 onClick={handleAvatarClick}
                 className="absolute bottom-1 right-1 w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg transition-all duration-300 transform group-hover/avatar:scale-110 border-2 border-white dark:border-slate-800 z-20"
-                disabled={uploading}
+                disabled={uploadAvatarMutation.isPending}
               >
                 <CameraOutlined className="text-lg" />
                 <input
@@ -223,7 +255,7 @@ export default function UserSettings() {
                   className="hidden"
                   accept="image/*"
                   onChange={handleAvatarChange}
-                  disabled={uploading}
+                  disabled={uploadAvatarMutation.isPending}
                 />
               </button>
             </div>
@@ -242,7 +274,8 @@ export default function UserSettings() {
 
           <Divider className="dark:border-slate-600!" />
 
-          <Form form={profileForm} layout="vertical" onFinish={handleSaveProfile}>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <Form form={profileForm} layout="vertical" onFinish={(values: any) => updateProfileMutation.mutate(values)}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Form.Item
                 label={<span className="text-gray-700 dark:text-gray-300">Họ và tên</span>}
@@ -303,7 +336,7 @@ export default function UserSettings() {
                 htmlType="submit"
                 icon={<SaveOutlined />}
                 size="large"
-                loading={saving}
+                loading={updateProfileMutation.isPending}
                 className="bg-blue-600 hover:bg-blue-700 border-none"
               >
                 Lưu thay đổi
@@ -321,27 +354,8 @@ export default function UserSettings() {
             </div>
           }
         >
-          <Form
-            form={passwordForm}
-            layout="vertical"
-            onFinish={async (values) => {
-              try {
-                setSaving(true);
-
-                await changePassword({
-                  currentPassword: values.currentPassword,
-                  newPassword: values.newPassword,
-                });
-
-                messageApi.success("Đã đổi mật khẩu thành công");
-                passwordForm.resetFields();
-              } catch (error: any) {
-                messageApi.error(error?.message || "Không thể đổi mật khẩu");
-              } finally {
-                setSaving(false);
-              }
-            }}
-          >
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <Form form={passwordForm} layout="vertical" onFinish={(values: any) => changePasswordMutation.mutate(values)}>
             <Form.Item
               label={<span className="text-gray-700 dark:text-gray-300">Mật khẩu hiện tại</span>}
               name="currentPassword"
@@ -398,7 +412,7 @@ export default function UserSettings() {
                 htmlType="submit"
                 icon={<SaveOutlined />}
                 size="large"
-                loading={saving}
+                loading={changePasswordMutation.isPending}
                 className="bg-blue-600 hover:bg-blue-700 border-none"
               >
                 Đổi mật khẩu
@@ -423,7 +437,7 @@ export default function UserSettings() {
             type="primary"
             danger
             icon={<LogoutOutlined />}
-            loading={logoutAllLoading}
+            loading={logoutAllMutation.isPending}
             size="large"
             onClick={() => {
               Swal.fire({
@@ -439,8 +453,7 @@ export default function UserSettings() {
                 color: theme === "dark" ? "#fff" : "#000",
               }).then((result) => {
                 if (result.isConfirmed) {
-                  setLogoutAllLoading(true);
-                  signOutAllDevices();
+                  logoutAllMutation.mutate();
                 }
               });
             }}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Typography, Button, Space, Breadcrumb, Modal, Form, Input, Switch, Divider, App, Spin } from "antd";
 import { PlusOutlined, KeyOutlined, RobotOutlined, UserOutlined, TeamOutlined, SafetyOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
@@ -43,12 +43,19 @@ export default function PermissionPage() {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
+  const messageRef = useRef(message);
+  messageRef.current = message;
+  const hasFetchedRef = useRef(false);
+
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     const fetchRoles = async () => {
       try {
         setLoading(true);
         const response = await getRoles();
-        const data = response.data || response; // Handle different response formats
+        const data = response.data || response;
 
         const mappedRoles: Role[] = data.map((r: any) => ({
           id: r.role_id.toString(),
@@ -56,7 +63,7 @@ export default function PermissionPage() {
           color: ROLE_COLORS[r.role_name.toLowerCase()] || "#64748b",
           icon: ROLE_ICONS[r.role_name.toLowerCase()] || <UserOutlined />,
           status: "active",
-          permissions: [], // For legacy UI if needed
+          permissions: [],
           apiPermissionIds: r.rolePermissions?.map((rp: any) => rp.permission_id) || [],
         }));
 
@@ -64,14 +71,14 @@ export default function PermissionPage() {
         if (mappedRoles.length > 0) setSelectedRole(mappedRoles[0]);
       } catch (error) {
         console.error("Error fetching roles:", error);
-        message.error("Không thể tải danh sách vai trò");
+        messageRef.current.error("Không thể tải danh sách vai trò");
       } finally {
         setLoading(false);
       }
     };
 
     fetchRoles();
-  }, [message]);
+  }, []);
 
   const handleSaveMatrix = useCallback(() => {
     message.success("Đã cập nhật bảng phân quyền thành công!");
@@ -126,9 +133,8 @@ export default function PermissionPage() {
               {["blue", "red", "green", "gold", "purple", "magenta"].map((c) => (
                 <div
                   key={c}
-                  className={`w-8 h-8 rounded-full cursor-pointer border-2 transition-all ${
-                    c === "blue" ? "border-gray-800 scale-110" : "border-transparent"
-                  }`}
+                  className={`w-8 h-8 rounded-full cursor-pointer border-2 transition-all ${c === "blue" ? "border-gray-800 scale-110" : "border-transparent"
+                    }`}
                   style={{ backgroundColor: c === "gold" ? "#faad14" : c === "magenta" ? "#eb2f96" : c }}
                 />
               ))}

@@ -102,9 +102,9 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
         setTotal(result.total);
         setLoading(false);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (latestRequestRef.current === timestamp) {
-        messageRef.current.error(error?.message || "Không thể tải danh sách thông báo");
+        messageRef.current.error(error instanceof Error ? error.message : "Không thể tải danh sách thông báo");
         setNotifications([]);
         setTotal(0);
         setLoading(false);
@@ -173,8 +173,8 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
       if (isNaN(id)) return;
       const detail = await getNotificationById(id);
       setEditNotification(detail);
-    } catch (error: any) {
-      messageRef.current.error(error?.message || "Lỗi tải thông báo");
+    } catch (error: unknown) {
+      messageRef.current.error(error instanceof Error ? error.message : "Lỗi tải thông báo");
       setIsEditModalOpen(false);
     } finally {
       setLoadingEdit(false);
@@ -191,8 +191,8 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
         const detail = await getNotificationById(id);
         setSelectedNotification(detail);
         setIsDetailModalOpen(true);
-      } catch (error: any) {
-        messageRef.current.error(error?.message || "Không thể xem thông báo này. Bạn có thể không còn là thành viên của lớp học này.");
+      } catch (error: unknown) {
+        messageRef.current.error(error instanceof Error ? error.message : "Không thể xem thông báo này. Bạn có thể không còn là thành viên của lớp học này.");
       } finally {
         setLoadingDetail(false);
       }
@@ -227,9 +227,9 @@ const ClassNotificationsTab = memo(function ClassNotificationsTab({
 
               // Refresh list to ensure consistency
               await fetchNotificationsRef.current(true);
-            } catch (error: any) {
+            } catch (error: unknown) {
               // Rollback on error: refresh to get correct state
-              messageRef.current.error(error?.message || "Lỗi xóa");
+              messageRef.current.error(error instanceof Error ? error.message : "Lỗi xóa");
               await fetchNotificationsRef.current(false);
             }
           },

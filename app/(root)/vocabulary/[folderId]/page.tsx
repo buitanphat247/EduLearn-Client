@@ -11,6 +11,8 @@ import { IoArrowBackOutline } from "react-icons/io5";
 import { GoBook } from "react-icons/go";
 import VocabularyDetailSkeleton from "@/app/components/features/vocabulary/VocabularyDetailSkeleton";
 
+import { useVocabulariesByFolderQuery } from "@/app/hooks/queries/useVocabularyQuery";
+
 type Tier = "free" | "pro";
 
 export default function VocabularyDetail() {
@@ -18,54 +20,35 @@ export default function VocabularyDetail() {
   const router = useRouter();
   const params = useParams();
   const folderId = params?.folderId ? parseInt(params.folderId as string, 10) : null;
-  const [vocabularies, setVocabularies] = useState<VocabularyResponse[]>([]);
-  const [loading, setLoading] = useState(true);
   const [playingId, setPlayingId] = useState<number | null>(null);
-  const [folderName, setFolderName] = useState("");
   const [isPro, setIsPro] = useState(false);
 
-  const isMountedRef = useRef(true);
-  const fetchVocabularies = useCallback(async () => {
-    if (!folderId) return;
-    if (isMountedRef.current) {
-      setLoading(true);
-      setVocabularies([]);
-      setFolderName("");
-    }
-    try {
-      const data = await getVocabulariesByFolder(folderId);
-      if (!isMountedRef.current) return;
-      setVocabularies(data);
-      if (data.length > 0) setFolderName(data[0].folder.folderName);
-    } catch (error: unknown) {
+  // Fetch vocabulary data via React Query
+  const { data, isLoading: loading, error } = useVocabulariesByFolderQuery(folderId || 0);
+  const vocabularies = data || [];
+  const folderName = vocabularies.length > 0 ? vocabularies[0].folder.folderName : "";
+
+  // Handle Query Errors
+  useEffect(() => {
+    if (error) {
       const err = error as { response?: { status?: number; data?: { message?: string } } };
       const status = err?.response?.status;
-      if (isMountedRef.current && (status === 403 || status === 404)) {
+      if (status === 403 || status === 404) {
         if (status === 404) {
           message.warning("Không tìm thấy thư mục từ vựng.");
         } else {
           message.warning(err?.response?.data?.message || "Bạn cần gói Pro để truy cập từ vựng.");
         }
         router.replace("/vocabulary");
-        return;
-      }
-      const errorMessage = error instanceof Error ? error.message : "Không thể tải danh sách từ vựng";
-      console.error("Error fetching vocabularies:", error);
-      if (isMountedRef.current) {
+      } else {
+        const errorMessage = error instanceof Error ? error.message : "Không thể tải danh sách từ vựng";
+        console.error("Error fetching vocabularies:", error);
         message.error(errorMessage);
-        setVocabularies([]);
       }
-    } finally {
-      if (isMountedRef.current) setLoading(false);
     }
-  }, [folderId, message, router]);
+  }, [error, message, router]);
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    if (folderId) fetchVocabularies();
-    return () => { isMountedRef.current = false; };
-  }, [folderId, fetchVocabularies]);
-
+  const isMountedRef = useRef(true);
   useEffect(() => {
     getSubscriptionStatus()
       .then((res) => {
@@ -104,39 +87,39 @@ export default function VocabularyDetail() {
     tier: Tier;
     path: string;
   }> = [
-    {
-      title: "Flashcard",
-      description: "Học với thẻ ghi nhớ thông minh",
-      icon: FileTextOutlined,
-      color: "green",
-      tier: "free",
-      path: `/vocabulary/flashcard/${folderId}`,
-    },
-    {
-      title: "Kiểm tra",
-      description: "Trắc nghiệm & điền từ",
-      icon: CheckCircleOutlined,
-      color: "blue",
-      tier: "free",
-      path: `/vocabulary/quiz/${folderId}`,
-    },
-    {
-      title: "Gõ từ",
-      description: "Nghe và viết lại từ vựng",
-      icon: EditOutlined,
-      color: "purple",
-      tier: "free",
-      path: `/vocabulary/typing/${folderId}`,
-    },
-    {
-      title: "Thống kê",
-      description: "Xem tiến độ học tập",
-      icon: BarChartOutlined,
-      color: "orange",
-      tier: "free",
-      path: "/vocabulary/review",
-    },
-  ];
+      {
+        title: "Flashcard",
+        description: "Học với thẻ ghi nhớ thông minh",
+        icon: FileTextOutlined,
+        color: "green",
+        tier: "free",
+        path: `/vocabulary/flashcard/${folderId}`,
+      },
+      {
+        title: "Kiểm tra",
+        description: "Trắc nghiệm & điền từ",
+        icon: CheckCircleOutlined,
+        color: "blue",
+        tier: "free",
+        path: `/vocabulary/quiz/${folderId}`,
+      },
+      {
+        title: "Gõ từ",
+        description: "Nghe và viết lại từ vựng",
+        icon: EditOutlined,
+        color: "purple",
+        tier: "free",
+        path: `/vocabulary/typing/${folderId}`,
+      },
+      {
+        title: "Thống kê",
+        description: "Xem tiến độ học tập",
+        icon: BarChartOutlined,
+        color: "orange",
+        tier: "free",
+        path: "/vocabulary/review",
+      },
+    ];
 
   if (!folderId) {
     return (
@@ -308,8 +291,8 @@ export default function VocabularyDetail() {
                                   playAudio(primaryAudio, vocab.sourceWordId);
                                 }}
                                 className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 active:scale-90 shadow-sm hover:shadow-md ${playingId === vocab.sourceWordId
-                                    ? "bg-blue-600 text-white animate-pulse scale-110"
-                                    : "bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500"
+                                  ? "bg-blue-600 text-white animate-pulse scale-110"
+                                  : "bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500"
                                   }`}
                                 title="Phát âm"
                               >

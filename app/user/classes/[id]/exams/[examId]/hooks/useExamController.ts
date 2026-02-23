@@ -89,10 +89,7 @@ export function useExamController(examId: string, classId: string, studentId: nu
   }, [hasStarted]);
 
   // Chuẩn hóa answers đã lưu (full text) sang A/B/C/D khi resume
-  const normalizeResumedAnswers = (
-    answers: Record<string, string>,
-    questions: RagQuestion[]
-  ): Record<string, string> => {
+  const normalizeResumedAnswers = (answers: Record<string, string>, questions: RagQuestion[]): Record<string, string> => {
     const qMap = new Map(questions.map((q) => [q.id, q]));
     const result: Record<string, string> = {};
     for (const [qId, val] of Object.entries(answers)) {
@@ -107,9 +104,7 @@ export function useExamController(examId: string, classId: string, studentId: nu
         result[qId] = val;
         continue;
       }
-      const idx = q.options.findIndex(
-        (opt) => opt === val || opt.replace(/^[A-Z][\.\)]\s*/, "").trim() === trimmed
-      );
+      const idx = q.options.findIndex((opt) => opt === val || opt.replace(/^[A-Z][\.\)]\s*/, "").trim() === trimmed);
       result[qId] = idx >= 0 ? String.fromCharCode(65 + idx) : val;
     }
     return result;
@@ -161,15 +156,12 @@ export function useExamController(examId: string, classId: string, studentId: nu
   // Luôn bật khi đã bắt đầu làm bài và chưa nộp
   const antiCheatEnabled = !isSubmitted && hasStarted;
 
-  // Log debug để verify
+  // Log debug để verify (chỉ khi dev mode)
   useEffect(() => {
-    if (hasStarted) {
-      console.log("[AntiCheat FORCED] Status:", {
-        enabled: antiCheatEnabled,
-        reason: { hasStarted, isSubmitted, override: "FORCE_ENABLED" },
-      });
+    if (hasStarted && isExamDevMode) {
+      console.log("[AntiCheat] Status:", { enabled: antiCheatEnabled });
     }
-  }, [hasStarted, antiCheatEnabled, isSubmitted]);
+  }, [hasStarted, antiCheatEnabled]);
 
   const { isFullScreen, enterFullScreen, exitFullScreen, violations, toggleBlockingOverlaySecure, setPaused } = useAntiCheat({
     enable: antiCheatEnabled,
@@ -452,7 +444,7 @@ export function useExamController(examId: string, classId: string, studentId: nu
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [hasStarted, isSubmitted, remainingSeconds === null]);
+  }, [hasStarted, isSubmitted]);
 
   // Khi đồng hồ về 0 → tự động nộp bài
   useEffect(() => {
@@ -505,11 +497,14 @@ export function useExamController(examId: string, classId: string, studentId: nu
         else next[qId] = opt;
         return next;
       });
+      // ✅ Use ref to always send the latest answers, not a stale closure
       if (socketRef.current?.connected && attemptId) {
-        socketRef.current.emit("save_answers", { attemptId, answers: { ...userAnswers, [qId]: opt } });
+        const latestWithUpdate = { ...latestAnswersRef.current, [qId]: opt };
+        if (!opt) delete latestWithUpdate[qId];
+        socketRef.current.emit("save_answers", { attemptId, answers: latestWithUpdate });
       }
     },
-    [attemptId, userAnswers],
+    [attemptId],
   );
 
   const toggleFlag = useCallback((qId: string) => {
@@ -546,8 +541,10 @@ export function useExamController(examId: string, classId: string, studentId: nu
     handleSubmit,
     enterFullScreen,
     exitFullScreen,
-    handleReconnect: () => connectSocket(attemptId!),
-    startExam: startExamProcess, // Replaced
+    handleReconnect: () => {
+      if (attemptId) connectSocket(attemptId);
+    },
+    startExam: startExamProcess,
     // Helpers
     formatTime: (s: number) => {
       const m = Math.floor(s / 60);

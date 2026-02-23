@@ -1,14 +1,16 @@
 "use client";
 
-import { Table, Tag, Button, Space, Select, App, Spin, Input, Modal, Form } from "antd";
+import { Table, Tag, Button, Space, Select, App, Input, Modal, Form } from "antd";
 import { SearchOutlined, EditOutlined, EyeOutlined, PlusOutlined, LoadingOutlined, UploadOutlined } from "@ant-design/icons";
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnsType } from "antd/es/table";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { getUsers, createUser, getUserInfo, type GetUsersResponse, type UserInfoResponse } from "@/lib/api/users";
 import UserDetailModal from "@/app/components/super-admin/UserDetailModal";
 import UpdateUserStatusModal from "@/app/components/super-admin/UpdateUserStatusModal";
 import { getPasswordValidationRules } from "@/lib/utils/validation";
+import { useDebounce } from "@/app/hooks/useDebounce";
 
 const { Option } = Select;
 
@@ -27,20 +29,17 @@ interface AccountType {
 
 export default function SuperAdminAccounts() {
   const router = useRouter();
-  const { modal, message } = App.useApp();
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
 
-  // Gộp modal states thành một object
   const [modalState, setModalState] = useState({
-    search: false,
     addSingle: false,
     viewDetail: false,
     updateStatus: false,
   });
 
-  // State cho update status modal
   const [selectedUser, setSelectedUser] = useState<{ id: number; username: string; status?: string } | null>(null);
 
-  // Gộp user detail states thành một object
   const [userDetailState, setUserDetailState] = useState<{
     userId: number | null;
     data: UserInfoResponse | null;
@@ -51,70 +50,27 @@ export default function SuperAdminAccounts() {
     loading: false,
   });
 
-  const [selectedRole, setSelectedRole] = useState<number | undefined>();
+  const [selectedRole] = useState<number | undefined>();
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");
-  const [accounts, setAccounts] = useState<AccountType[]>([]);
-  const [loading, setLoading] = useState(true);
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
   const [form] = Form.useForm();
+
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
-    total: 0,
   });
-  const hasFetched = useRef(false);
-  const isFetching = useRef(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setModalState((prev) => ({ ...prev, search: true }));
-      }
-      if (e.key === "Escape" && modalState.search) {
-        setModalState((prev) => ({ ...prev, search: false }));
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [modalState.search]);
-
-  const fetchUsers = async (page: number = 1, limit: number = 10, search?: string) => {
-    // Prevent multiple simultaneous calls
-    if (isFetching.current) {
-      return;
-    }
-
-    isFetching.current = true;
-    setLoading(true);
-    const startTime = Date.now();
-
-    try {
-      const result = await getUsers({ page, limit, search });
+  const { data, isLoading, isFetching, isError, error } = useQuery({
+    queryKey: ['admin_users', pagination.current, pagination.pageSize, debouncedSearchQuery],
+    queryFn: async () => {
+      const result = await getUsers({
+        page: pagination.current,
+        limit: pagination.pageSize,
+        search: debouncedSearchQuery.trim() || undefined
+      });
 
       const users = result.users || [];
-      const total = result.total || 0;
-
-      // Ensure minimum loading time of 1.5 seconds
-      const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 250;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
-
-      if (!users || users.length === 0) {
-        setAccounts([]);
-        setPagination((prev) => ({
-          ...prev,
-          current: page,
-          pageSize: limit,
-          total: 0,
-        }));
-        return;
-      }
-
       const formattedData: AccountType[] = users.map((user: GetUsersResponse) => ({
         key: user.user_id.toString(),
         user_id: user.user_id,
@@ -128,78 +84,34 @@ export default function SuperAdminAccounts() {
         created_at: user.created_at,
       }));
 
-      setAccounts(formattedData);
-      setPagination((prev) => ({
-        ...prev,
-        current: page,
-        pageSize: limit,
-        total: total,
-      }));
-    } catch (error: unknown) {
-      // Ensure minimum loading time even on error
-      const elapsedTime = Date.now() - startTime;
-      const minLoadingTime = 250;
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-      await new Promise((resolve) => setTimeout(resolve, remainingTime));
+      return {
+        data: formattedData,
+        total: result.total || 0,
+      };
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
+  });
 
-      message.error((error as any)?.message || "Không thể tải danh sách tài khoản");
-      setAccounts([]);
-    } finally {
-      setLoading(false);
-      isFetching.current = false;
-    }
-  };
-
-  // Debounce search query
-  useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 500);
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, [searchQuery]);
-
-  useEffect(() => {
-    if (!hasFetched.current) {
-      hasFetched.current = true;
-      fetchUsers(pagination.current, pagination.pageSize, debouncedSearchQuery);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Reset to page 1 when debounced search changes
-    if (hasFetched.current) {
-      setPagination((prev) => ({ ...prev, current: 1 }));
-      fetchUsers(1, pagination.pageSize, debouncedSearchQuery);
-    }
-  }, [debouncedSearchQuery]);
+  if (isError) {
+    message.error((error as Error)?.message || "Không thể tải danh sách tài khoản");
+  }
 
   const handleTableChange = (page: number, pageSize: number) => {
-    if (!isFetching.current) {
-      fetchUsers(page, pageSize, debouncedSearchQuery);
-    }
+    setPagination({ current: page, pageSize });
   };
 
   const handleSearch = useCallback((value: string) => {
     setSearchQuery(value);
-    setPagination((prev) => ({ ...prev, current: 1 }));
+    setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
-  // Sử dụng useMemo để tránh tính toán lại filteredData không cần thiết
   const filteredData = useMemo(() => {
-    return accounts.filter((item) => {
+    return (data?.data || []).filter((item) => {
       const matchesRole = !selectedRole || item.role_id === selectedRole;
       return matchesRole;
     });
-  }, [accounts, selectedRole]);
+  }, [data?.data, selectedRole]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
@@ -208,7 +120,6 @@ export default function SuperAdminAccounts() {
   };
 
   const handleViewUser = useCallback(async (userId: number) => {
-    // Set all states in one batch to reduce rerenders
     setModalState((prev) => ({ ...prev, viewDetail: true }));
     setUserDetailState({
       userId,
@@ -218,15 +129,13 @@ export default function SuperAdminAccounts() {
 
     try {
       const userData = await getUserInfo(userId);
-      // Only update userDetail and loading state on success
       setUserDetailState({
         userId,
         data: userData,
         loading: false,
       });
-    } catch (error: unknown) {
-      message.error((error as any)?.message || "Không thể tải thông tin người dùng");
-      // Close modal and reset on error
+    } catch (error: any) {
+      message.error(error?.message || "Không thể tải thông tin người dùng");
       setModalState((prev) => ({ ...prev, viewDetail: false }));
       setUserDetailState({
         userId: null,
@@ -236,7 +145,7 @@ export default function SuperAdminAccounts() {
     }
   }, [message]);
 
-  const columns: ColumnsType<AccountType> = [
+  const columns: ColumnsType<AccountType> = useMemo(() => [
     {
       title: "STT",
       dataIndex: "user_id",
@@ -363,13 +272,13 @@ export default function SuperAdminAccounts() {
         );
       },
     },
-  ];
+  ], [pagination.current, pagination.pageSize, handleViewUser]);
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <Input
-          prefix={loading ? <LoadingOutlined spin /> : <SearchOutlined />}
+          prefix={isFetching ? <LoadingOutlined spin /> : <SearchOutlined />}
           placeholder="Tìm kiếm theo email, số điện thoại, hoặc username..."
           value={searchQuery}
           onChange={(e) => handleSearch(e.target.value)}
@@ -403,11 +312,11 @@ export default function SuperAdminAccounts() {
         <Table
           columns={columns}
           dataSource={filteredData}
-          loading={loading}
+          loading={isLoading || isFetching}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
-            total: pagination.total,
+            total: data?.total || 0,
             showSizeChanger: false,
             showTotal: (total) => `Tổng ${total} tài khoản`,
             size: "small",
@@ -419,7 +328,6 @@ export default function SuperAdminAccounts() {
         />
       </div>
 
-      {/* Add Single Account Modal */}
       <Modal
         title="Thêm tài khoản"
         open={modalState.addSingle}
@@ -435,12 +343,11 @@ export default function SuperAdminAccounts() {
           onSuccess={() => {
             setModalState((prev) => ({ ...prev, addSingle: false }));
             form.resetFields();
-            fetchUsers(pagination.current, pagination.pageSize, debouncedSearchQuery);
+            queryClient.invalidateQueries({ queryKey: ['admin_users'] });
           }}
         />
       </Modal>
 
-      {/* User Detail Modal */}
       <UserDetailModal
         open={modalState.viewDetail}
         onCancel={() => {
@@ -455,7 +362,6 @@ export default function SuperAdminAccounts() {
         loading={userDetailState.loading}
       />
 
-      {/* Update User Status Modal */}
       <UpdateUserStatusModal
         open={modalState.updateStatus}
         onCancel={() => {
@@ -465,8 +371,7 @@ export default function SuperAdminAccounts() {
         onSuccess={() => {
           setModalState((prev) => ({ ...prev, updateStatus: false }));
           setSelectedUser(null);
-          // Refresh danh sách users
-          fetchUsers(pagination.current, pagination.pageSize, debouncedSearchQuery);
+          queryClient.invalidateQueries({ queryKey: ['admin_users'] });
         }}
         userId={selectedUser?.id || 0}
         currentStatus={selectedUser?.status}
@@ -478,12 +383,10 @@ export default function SuperAdminAccounts() {
 
 function SingleAccountForm({ form, onSuccess }: { form: ReturnType<typeof Form.useForm>[0]; onSuccess: () => void }) {
   const { message } = App.useApp();
-  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (values: any) => {
-    setSubmitting(true);
-    try {
-      await createUser({
+  const mutation = useMutation({
+    mutationFn: async (values: any) => {
+      return createUser({
         username: values.username,
         fullname: values.fullname,
         email: values.email,
@@ -491,13 +394,18 @@ function SingleAccountForm({ form, onSuccess }: { form: ReturnType<typeof Form.u
         password: values.password,
         role_id: values.role_id,
       });
+    },
+    onSuccess: () => {
       message.success("Tạo tài khoản thành công!");
       onSuccess();
-    } catch (error: unknown) {
-      message.error((error as any)?.message || "Không thể tạo tài khoản");
-    } finally {
-      setSubmitting(false);
+    },
+    onError: (error: Error) => {
+      message.error(error?.message || "Không thể tạo tài khoản");
     }
+  });
+
+  const handleSubmit = (values: any) => {
+    mutation.mutate(values);
   };
 
   return (
@@ -539,7 +447,7 @@ function SingleAccountForm({ form, onSuccess }: { form: ReturnType<typeof Form.u
 
       <Form.Item>
         <Space>
-          <Button type="primary" htmlType="submit" loading={submitting}>
+          <Button type="primary" htmlType="submit" loading={mutation.isPending}>
             Tạo tài khoản
           </Button>
           <Button onClick={() => form.resetFields()}>Làm mới</Button>

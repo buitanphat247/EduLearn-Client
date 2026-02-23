@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { App, Button, ConfigProvider, theme, Empty, Pagination } from "antd";
+import { App, ConfigProvider, theme, Pagination } from "antd";
 import {
     SoundOutlined,
     CheckCircleOutlined,
@@ -17,63 +17,51 @@ import {
     CrownOutlined
 } from "@ant-design/icons";
 import { getDueWords, type UserVocabularyResponse } from "@/lib/api/vocabulary";
-import { getSubscriptionStatus } from "@/lib/api/subscription";
-import { getProfile } from "@/lib/api/auth";
-import Image from "next/image";
 import { IoArrowBackOutline } from "react-icons/io5";
-import { GoBook } from "react-icons/go";
 import VocabularyDetailSkeleton from "@/app/components/features/vocabulary/VocabularyDetailSkeleton";
 import { useTheme } from "@/app/context/ThemeContext";
+import { useUserId } from "@/app/hooks/useUserId";
+import { useSubscriptionQuery } from "@/app/hooks/queries";
 
 export default function ReviewDetailPage() {
     const { message } = App.useApp();
     const router = useRouter();
     const { theme: themeName } = useTheme();
+    const { userId: rawUserId, loading: userIdLoading } = useUserId();
+    const userId = rawUserId ? Number(rawUserId) : null;
+    const { data: subData } = useSubscriptionQuery();
+    const isPro = subData?.isPro ?? false;
+
     const [vocabularies, setVocabularies] = useState<UserVocabularyResponse[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
-    const [userId, setUserId] = useState<number | null>(null);
-    const [isPro, setIsPro] = useState(false);
 
     const isMountedRef = useRef(true);
-    useEffect(() => {
-        isMountedRef.current = true;
-        const init = async () => {
-            try {
-                const [profile, sub] = await Promise.all([
-                    getProfile(),
-                    getSubscriptionStatus().catch(() => ({ isPro: false })),
-                ]);
-                if (!isMountedRef.current) return;
-                if (profile && profile.user_id) {
-                    setUserId(Number(profile.user_id));
-                    await fetchDueWords(Number(profile.user_id), 1);
-                }
-                if (isMountedRef.current) setIsPro(sub?.isPro ?? false);
-            } catch (error) {
-                console.error("Error fetching profile", error);
-            } finally {
-                if (isMountedRef.current) setLoading(false);
-            }
-        };
-        init();
-        return () => { isMountedRef.current = false; };
-    }, []);
 
-    const fetchDueWords = async (id: number, p: number) => {
+    const fetchDueWords = useCallback(async (id: number, p: number) => {
         if (isMountedRef.current) setLoading(true);
         try {
             const res = await getDueWords(id, { page: p, limit: 50 });
             if (!isMountedRef.current) return;
             setVocabularies(res.data);
             setTotal(res.total);
-        } catch (error: any) {
+        } catch (error: unknown) {
             if (isMountedRef.current) message.error("Không thể tải danh sách tài liệu cần ôn tập");
         } finally {
             if (isMountedRef.current) setLoading(false);
         }
-    };
+    }, [message]);
+
+    useEffect(() => {
+        isMountedRef.current = true;
+        if (!userId || userIdLoading) {
+            if (!userIdLoading) setLoading(false);
+            return;
+        }
+        fetchDueWords(userId, 1);
+        return () => { isMountedRef.current = false; };
+    }, [userId, userIdLoading, fetchDueWords]);
 
     const handlePageChange = (p: number) => {
         setPage(p);

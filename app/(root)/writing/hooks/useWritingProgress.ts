@@ -1,26 +1,21 @@
 import { useCallback } from "react";
-import { updateWritingHistoryIndex } from "@/lib/api/writing";
+import { useUpdateWritingProgressMutation } from "@/app/hooks/queries/useWritingQuery";
 
 /**
- * Custom hook for managing writing practice progress
- * Handles both history ID and session storage updates
- * @param id - Writing practice ID
- * @returns Progress update function
+ * Custom hook for managing writing practice progress.
+ * - If `id` is a numeric history ID → uses React Query mutation (with cache update)
+ * - If `id` is non-numeric → updates sessionStorage directly
  */
 export function useWritingProgress(id: string) {
   const isHistoryId = /^\d+$/.test(id);
+  const historyIdNum = isHistoryId ? parseInt(id, 10) : 0;
+  const mutation = useUpdateWritingProgressMutation();
 
   const updateProgress = useCallback(
     async (newIndex: number): Promise<void> => {
-      if (isHistoryId) {
-        // Update via API for history records
-        try {
-          const historyId = parseInt(id, 10);
-          await updateWritingHistoryIndex(historyId, newIndex);
-        } catch (error: any) {
-          console.error("Error updating current_index:", error);
-          throw error;
-        }
+      if (isHistoryId && historyIdNum > 0) {
+        // Use React Query mutation for API updates
+        await mutation.mutateAsync({ historyId: historyIdNum, currentIndex: newIndex });
       } else {
         // Update session storage for temporary sessions
         const storedData = sessionStorage.getItem(`writing_${id}`);
@@ -36,7 +31,7 @@ export function useWritingProgress(id: string) {
         }
       }
     },
-    [id, isHistoryId],
+    [id, isHistoryId, historyIdNum, mutation],
   );
 
   return { updateProgress };
