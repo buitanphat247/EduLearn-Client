@@ -93,18 +93,42 @@ export default function VocabularyManagementPage() {
         return scopeFilter === "all" ? safeFolders : safeFolders.filter(f => f.scope === scopeFilter);
     }, [safeFolders, scopeFilter]);
 
-    // Mutations
+    // Mutations — Optimistic Delete
     const deleteMutation = useMutation({
         mutationFn: async (id: number) => {
             return deleteFolder(id);
         },
+        onMutate: async (deletedId) => {
+            // Cancel outgoing refetches
+            await queryClient.cancelQueries({ queryKey: ['admin_vocabulary_folders'] });
+            // Snapshot previous value
+            const previousData = queryClient.getQueriesData({ queryKey: ['admin_vocabulary_folders'] });
+            // Optimistic remove from cache
+            queryClient.setQueriesData({ queryKey: ['admin_vocabulary_folders'] }, (old: any) => {
+                if (!old) return old;
+                return {
+                    ...old,
+                    folders: old.folders?.filter((f: FolderTableType) => f.folderId !== deletedId),
+                    total: (old.total || 1) - 1,
+                };
+            });
+            return { previousData };
+        },
         onSuccess: () => {
             message.success("Xóa thư mục thành công");
+        },
+        onError: (error: any, _id, context) => {
+            // Rollback on error
+            if (context?.previousData) {
+                context.previousData.forEach(([queryKey, data]: [any, any]) => {
+                    queryClient.setQueryData(queryKey, data);
+                });
+            }
+            message.error(error?.message || "Không thể xóa thư mục");
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['admin_vocabulary_folders'] });
         },
-        onError: (error: any) => {
-            message.error(error?.message || "Không thể xóa thư mục");
-        }
     });
 
     const saveMutation = useMutation({

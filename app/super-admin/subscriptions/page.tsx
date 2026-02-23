@@ -94,26 +94,59 @@ export default function SubscriptionAdminPage() {
         mutationFn: async (id: number) => {
             return cancelUserSubscription(id);
         },
+        onMutate: async (cancelledId) => {
+            await queryClient.cancelQueries({ queryKey: ['admin_subscription_users'] });
+            const previousData = queryClient.getQueriesData({ queryKey: ['admin_subscription_users'] });
+            queryClient.setQueriesData({ queryKey: ['admin_subscription_users'] }, (old: any) => {
+                if (!old) return old;
+                return {
+                    ...old,
+                    data: old.data?.map((u: any) => u.id === cancelledId ? { ...u, status: 'cancelled' } : u),
+                };
+            });
+            return { previousData };
+        },
         onSuccess: () => {
             message.success("Đã hủy/thu hồi gói cước của người dùng!");
+        },
+        onError: (error: any, _id, context) => {
+            if (context?.previousData) {
+                context.previousData.forEach(([queryKey, data]: [any, any]) => {
+                    queryClient.setQueryData(queryKey, data);
+                });
+            }
+            message.error(error?.response?.data?.message || "Hủy gói cước thất bại");
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['admin_subscription_users'] });
         },
-        onError: (error: any) => {
-            message.error(error?.response?.data?.message || "Hủy gói cước thất bại");
-        }
     });
 
     const deletePlanMutation = useMutation({
         mutationFn: async (id: number) => {
             return deleteSubscriptionPlan(id);
         },
+        onMutate: async (deletedId) => {
+            await queryClient.cancelQueries({ queryKey: ['admin_subscription_plans'] });
+            const previousPlans = queryClient.getQueryData(['admin_subscription_plans']);
+            queryClient.setQueryData(['admin_subscription_plans'], (old: any) => {
+                if (!Array.isArray(old)) return old;
+                return old.filter((p: any) => p.id !== deletedId);
+            });
+            return { previousPlans };
+        },
         onSuccess: () => {
             message.success("Đã xóa gói");
+        },
+        onError: (error: any, _id, context) => {
+            if (context?.previousPlans) {
+                queryClient.setQueryData(['admin_subscription_plans'], context.previousPlans);
+            }
+            message.error(error?.response?.data?.message ?? error?.message ?? "Lỗi khi xóa gói");
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['admin_subscription_plans'] });
         },
-        onError: (error: any) => {
-            message.error(error?.response?.data?.message ?? error?.message ?? "Lỗi khi xóa gói");
-        }
     });
 
     const handleSubscribe = (values: { email: string; planId: number }) => {

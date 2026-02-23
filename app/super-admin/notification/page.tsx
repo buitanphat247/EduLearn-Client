@@ -127,13 +127,34 @@ export default function SuperAdminNotifications() {
       if (!userId) throw new Error("Không tìm thấy thông tin người dùng");
       return deleteNotification(id, userId);
     },
+    onMutate: async (deletedId) => {
+      const qk = ['admin_notifications', userId];
+      await queryClient.cancelQueries({ queryKey: qk });
+      const previousData = queryClient.getQueriesData({ queryKey: qk });
+      queryClient.setQueriesData({ queryKey: qk }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          notifications: old.notifications?.filter((n: any) => n.id !== deletedId),
+          total: (old.total || 1) - 1,
+        };
+      });
+      return { previousData };
+    },
     onSuccess: () => {
       message.success("Đã xóa thông báo thành công");
+    },
+    onError: (error: Error, _id, context) => {
+      if (context?.previousData) {
+        context.previousData.forEach(([queryKey, data]: [any, any]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      message.error(error.message || "Không thể xóa thông báo");
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin_notifications', userId] });
     },
-    onError: (error: Error) => {
-      message.error(error.message || "Không thể xóa thông báo");
-    }
   });
 
   const columns: ColumnsType<NotificationType> = useMemo(() => [

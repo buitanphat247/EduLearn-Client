@@ -105,7 +105,37 @@ export function useDeleteClassMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number | string) => deleteClass(id),
-    onSuccess: () => {
+    onMutate: async (deletedId) => {
+      await queryClient.cancelQueries({ queryKey: classKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: classKeys.byUserLists() });
+      const previousLists = queryClient.getQueriesData({ queryKey: classKeys.lists() });
+      const previousByUser = queryClient.getQueriesData({ queryKey: classKeys.byUserLists() });
+      // Optimistic remove from all cached class lists
+      queryClient.setQueriesData({ queryKey: classKeys.lists() }, (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return old.filter((c: any) => c.class_id !== deletedId && c.id !== deletedId);
+        if (old.data && Array.isArray(old.data))
+          return { ...old, data: old.data.filter((c: any) => c.class_id !== deletedId && c.id !== deletedId), total: (old.total || 1) - 1 };
+        return old;
+      });
+      queryClient.setQueriesData({ queryKey: classKeys.byUserLists() }, (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return old.filter((c: any) => c.class_id !== deletedId && c.id !== deletedId);
+        if (old.data && Array.isArray(old.data))
+          return { ...old, data: old.data.filter((c: any) => c.class_id !== deletedId && c.id !== deletedId), total: (old.total || 1) - 1 };
+        return old;
+      });
+      return { previousLists, previousByUser };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previousLists) {
+        context.previousLists.forEach(([qk, data]: [any, any]) => queryClient.setQueryData(qk, data));
+      }
+      if (context?.previousByUser) {
+        context.previousByUser.forEach(([qk, data]: [any, any]) => queryClient.setQueryData(qk, data));
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: classKeys.lists() });
       queryClient.invalidateQueries({ queryKey: classKeys.byUserLists() });
     },
@@ -140,7 +170,7 @@ export function useRemoveStudentMutation() {
 export function useUpdateStudentStatusMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (params: UpdateClassStudentStatusParams & { classId: number | string }) => 
+    mutationFn: (params: UpdateClassStudentStatusParams & { classId: number | string }) =>
       updateClassStudentStatus({ id: params.id, status: params.status }),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: classKeys.students(variables.classId) });

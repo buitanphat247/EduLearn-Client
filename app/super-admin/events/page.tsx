@@ -162,13 +162,33 @@ export default function SuperAdminEvents() {
     mutationFn: async (id: number) => {
       return deleteEvent(id);
     },
+    onMutate: async (deletedId) => {
+      await queryClient.cancelQueries({ queryKey: ['admin_events'] });
+      const previousData = queryClient.getQueriesData({ queryKey: ['admin_events'] });
+      queryClient.setQueriesData({ queryKey: ['admin_events'] }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          events: old.events?.filter((e: any) => e.event_id !== deletedId),
+          total: (old.total || 1) - 1,
+        };
+      });
+      return { previousData };
+    },
     onSuccess: () => {
       message.success("Xóa sự kiện thành công!");
+    },
+    onError: (error: Error, _id, context) => {
+      if (context?.previousData) {
+        context.previousData.forEach(([queryKey, data]: [any, any]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      message.error(error?.message || "Không thể xóa sự kiện");
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin_events'] });
     },
-    onError: (error: Error) => {
-      message.error(error?.message || "Không thể xóa sự kiện");
-    }
   });
 
   const columns: ColumnsType<EventType> = useMemo(() => [

@@ -83,13 +83,33 @@ export default function WebsiteDocumentationPage() {
         mutationFn: async (id: string) => {
             return deleteDocument(id);
         },
+        onMutate: async (deletedId) => {
+            await queryClient.cancelQueries({ queryKey: ['admin_website_docs_list'] });
+            const previousData = queryClient.getQueriesData({ queryKey: ['admin_website_docs_list'] });
+            queryClient.setQueriesData({ queryKey: ['admin_website_docs_list'] }, (old: any) => {
+                if (!old) return old;
+                return {
+                    ...old,
+                    documents: old.documents?.filter((d: DocumentTableType) => d.id !== deletedId),
+                    total: (old.total || 1) - 1,
+                };
+            });
+            return { previousData };
+        },
         onSuccess: () => {
             message.success("Xóa tài liệu thành công");
+        },
+        onError: (error: any, _id, context) => {
+            if (context?.previousData) {
+                context.previousData.forEach(([queryKey, data]: [any, any]) => {
+                    queryClient.setQueryData(queryKey, data);
+                });
+            }
+            message.error(error?.message || "Không thể xóa tài liệu");
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['admin_website_docs_list'] });
         },
-        onError: (error: any) => {
-            message.error(error?.message || "Không thể xóa tài liệu");
-        }
     });
 
     const createMutation = useMutation({
