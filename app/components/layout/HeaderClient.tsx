@@ -655,7 +655,7 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
 
         {/* Navigation Links */}
         <div className="p-3 space-y-1">
-          <div className="px-4 py-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Điều hướng</div>
+          <div className="px-4 py-2 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Điều hướng</div>
           <MobileNavLink to="/" label="Trang chủ" />
 
           {user && (
@@ -667,7 +667,7 @@ export default function HeaderClient({ initialAuth }: HeaderClientProps) {
             </>
           )}
 
-          <div className="px-4 pt-4 pb-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Thông tin</div>
+          <div className="px-4 pt-4 pb-2 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Thông tin</div>
           <MobileNavLink to="/about" label="Giới thiệu" />
           <MobileNavLink to="/system" label="Hệ thống" />
           <MobileNavLink to="/guide" label="Hướng dẫn" />
