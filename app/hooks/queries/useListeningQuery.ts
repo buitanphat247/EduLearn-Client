@@ -28,11 +28,12 @@ export function useListeningLessonDetailQuery(lessonId: number | string | null) 
     queryFn: async () => {
       const response = await apiClient.get(`/challenges/by-lesson/${lessonId}`);
       if (response.data?.status && response.data?.data) {
-        return response.data.data.sort((a: any, b: any) => a.position_challenges - b.position_challenges);
+        // Backend already sorts by position_challenges ASC
+        return response.data.data;
       }
       throw new Error("Không thể tải bài học hoặc bài học chưa có nội dung");
     },
     enabled: !!lessonId,
-    staleTime: 30 * 1000, // 30s
+    staleTime: 5 * 60 * 1000, // 5 min — challenge data rarely changes
   });
 }
