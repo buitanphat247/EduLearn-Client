@@ -1,43 +1,68 @@
+/**
+ * Skeleton loading cho trang /listening/[id]
+ * Layout khớp 1:1 với ListeningPage thật:
+ * - Breadcrumb → Title + subtitle → Back button
+ * - Shortcuts bar
+ * - Progress badge
+ * - Audio player card
+ * - Input area (textarea + buttons)
+ */
 export default function ListeningDetailSkeleton() {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] p-4 md:p-8 font-sans transition-colors duration-500">
             <div className="container mx-auto">
-                {/* Header Skeleton */}
+                {/* Header */}
                 <div className="mb-8">
-                    {/* Breadcrumbs */}
-                    <div className="mb-6 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded-xl px-6 py-4 h-14 animate-pulse shadow-sm" />
+                    {/* Breadcrumb: Trang chủ / Học nghe / [lesson name] */}
+                    <div className="mb-6 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded-xl px-6 py-4 shadow-sm flex items-center gap-2 animate-pulse">
+                        <div className="h-4 w-16 bg-slate-200 dark:bg-slate-700 rounded" />
+                        <div className="h-4 w-2 bg-slate-200 dark:bg-slate-700 rounded" />
+                        <div className="h-4 w-16 bg-slate-200 dark:bg-slate-700 rounded" />
+                        <div className="h-4 w-2 bg-slate-200 dark:bg-slate-700 rounded" />
+                        <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded" />
+                    </div>
 
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    {/* Title row: Title + subtitle left, Back button right */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-pulse">
                         <div className="space-y-3">
-                            <div className="h-10 w-64 md:w-96 bg-slate-200 dark:bg-slate-700/50 rounded-lg animate-pulse" />
-                            <div className="h-5 w-40 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                            <div className="h-9 w-64 md:w-80 bg-slate-200 dark:bg-slate-700/50 rounded-lg" />
+                            <div className="h-5 w-48 bg-slate-100 dark:bg-slate-800 rounded" />
                         </div>
                         {/* Back Button */}
-                        <div className="w-40 h-9 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse border border-slate-200 dark:border-slate-700/50" />
+                        <div className="w-44 h-10 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700" />
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    {/* LEFT COLUMN SKELETON */}
-                    <div className="lg:col-span-7 space-y-6">
-                        {/* Shortcuts Bar Skeleton */}
-                        <div className="h-12 bg-white dark:bg-slate-800/50 rounded-lg w-full border border-slate-200 dark:border-slate-700/50 animate-pulse flex items-center px-4 gap-4">
-                            <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700 rounded" />
-                            <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+                {/* Content — single column stack (matches real page space-y-6) */}
+                <div className="space-y-6">
+                    {/* Shortcuts Bar */}
+                    <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-3 flex items-center gap-4 animate-pulse">
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-blue-200 dark:bg-blue-600/30 rounded" />
+                            <div className="h-4 w-14 bg-slate-200 dark:bg-slate-700 rounded" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="h-5 w-12 bg-slate-100 dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600" />
                             <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
                         </div>
+                        <div className="flex items-center gap-2">
+                            <div className="h-5 w-8 bg-slate-100 dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600" />
+                            <div className="h-4 w-28 bg-slate-200 dark:bg-slate-700 rounded" />
+                        </div>
+                    </div>
 
-                        {/* Progress Badge */}
-                        <div className="h-6 w-24 bg-blue-100 dark:bg-blue-600/50 rounded-full animate-pulse" />
+                    {/* Progress Badge */}
+                    <div className="flex items-center gap-3 animate-pulse">
+                        <div className="h-6 w-24 bg-blue-500/20 dark:bg-blue-600/30 rounded-full" />
+                    </div>
 
-                        {/* Audio Player Skeleton */}
-                        <div className="bg-white dark:bg-[#1e293b] rounded-2xl h-32 w-full border border-slate-200 dark:border-slate-700/50 p-6 flex items-center gap-5 animate-pulse relative overflow-hidden shadow-sm">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-slate-100 dark:bg-slate-700/30" />
+                    {/* Audio Player Card */}
+                    <div className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700/50 p-6 shadow-sm animate-pulse">
+                        <div className="flex items-center gap-5">
+                            {/* Play button */}
+                            <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-full shrink-0" />
 
-                            {/* Play Button Circle */}
-                            <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-full shrink-0 border border-slate-100 dark:border-slate-600" />
-
-                            {/* Progress Bar & Time */}
+                            {/* Progress bar + time */}
                             <div className="flex-1 space-y-3">
                                 <div className="flex justify-between">
                                     <div className="h-3 w-10 bg-slate-200 dark:bg-slate-800 rounded" />
@@ -46,64 +71,33 @@ export default function ListeningDetailSkeleton() {
                                 <div className="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full" />
                             </div>
 
-                            {/* Controls */}
-                            <div className="flex gap-3">
-                                <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded shrink-0" />
-                                <div className="w-12 h-8 bg-slate-200 dark:bg-slate-700 rounded shrink-0" />
+                            {/* Speed + controls */}
+                            <div className="flex gap-3 shrink-0">
+                                <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded" />
+                                <div className="w-12 h-8 bg-slate-200 dark:bg-slate-700 rounded" />
                             </div>
-                        </div>
-
-                        {/* Input Area Skeleton */}
-                        <div className="space-y-4 animate-pulse">
-                            <div className="flex items-center gap-2">
-                                <div className="w-1 h-6 bg-blue-500 rounded-full" />
-                                <div className="h-6 w-40 bg-slate-200 dark:bg-slate-700 rounded" />
-                            </div>
-
-                            {/* Textarea */}
-                            <div className="h-32 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700/50 w-full p-5 shadow-inner">
-                                <div className="h-4 w-3/4 bg-slate-100 dark:bg-slate-800 rounded mb-3" />
-                                <div className="h-4 w-1/2 bg-slate-100 dark:bg-slate-800 rounded" />
-                            </div>
-
-                            {/* Buttons */}
-                            <div className="flex gap-3">
-                                <div className="h-11 w-32 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-500/20 rounded-lg" />
-                                <div className="h-11 w-32 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg" />
-                            </div>
-                        </div>
-
-                        {/* Result Box Skeleton */}
-                        <div className="h-28 bg-white dark:bg-[#1e293b] rounded-2xl border-2 border-slate-200 dark:border-slate-700/50 border-dashed w-full animate-pulse flex items-center justify-center">
-                            <div className="h-5 w-1/2 bg-slate-100 dark:bg-slate-800/50 rounded" />
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN SKELETON - TRANSCRIPT */}
-                    <div className="lg:col-span-5 hidden lg:block h-[calc(100vh-8rem)] sticky top-4">
-                        <div className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700/50 h-full flex flex-col overflow-hidden animate-pulse shadow-xl">
-                            {/* Panel Header */}
-                            <div className="p-4 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center bg-slate-50 dark:bg-[#1e293b]">
-                                <div className="h-6 w-28 bg-slate-200 dark:bg-slate-700 rounded" />
-                                <div className="flex gap-2">
-                                    <div className="h-8 w-24 bg-slate-200 dark:bg-slate-800 rounded-full" />
-                                    <div className="h-8 w-20 bg-slate-200 dark:bg-slate-800 rounded-full" />
-                                </div>
-                            </div>
-                            {/* List Items */}
-                            <div className="p-4 space-y-4 flex-1 overflow-hidden">
-                                {[1, 2, 3, 4, 5].map((i) => (
-                                    <div
-                                        key={i}
-                                        className="h-32 bg-slate-50 dark:bg-slate-800/20 rounded-xl w-full border border-slate-100 dark:border-slate-700/30 flex flex-col justify-center p-5 space-y-3"
-                                    >
-                                        <div className="h-4 w-full bg-slate-200 dark:bg-slate-700/30 rounded" />
-                                        <div className="h-4 w-5/6 bg-slate-200 dark:bg-slate-700/30 rounded" />
-                                        <div className="w-full border-t border-slate-200 dark:border-slate-700/30 my-2" />
-                                        <div className="h-3 w-3/4 bg-slate-100 dark:bg-slate-700/20 rounded" />
-                                    </div>
-                                ))}
-                            </div>
+                    {/* Input Area */}
+                    <div className="space-y-4 animate-pulse">
+                        {/* Section label */}
+                        <div className="flex items-center gap-2">
+                            <div className="w-1 h-6 bg-blue-500 rounded-full" />
+                            <div className="h-6 w-40 bg-slate-200 dark:bg-slate-700 rounded" />
+                        </div>
+
+                        {/* Textarea */}
+                        <div className="bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700/50 w-full p-5 shadow-inner">
+                            <div className="h-4 w-3/4 bg-slate-100 dark:bg-slate-800 rounded mb-3" />
+                            <div className="h-4 w-1/2 bg-slate-100 dark:bg-slate-800 rounded mb-3" />
+                            <div className="h-4 w-2/3 bg-slate-100 dark:bg-slate-800 rounded" />
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-3">
+                            <div className="h-11 w-32 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-500/20 rounded-xl" />
+                            <div className="h-11 w-32 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl" />
                         </div>
                     </div>
                 </div>

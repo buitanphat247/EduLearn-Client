@@ -217,6 +217,34 @@ export async function getVocabulariesByFolder(folderId: number): Promise<Vocabul
 }
 
 /**
+ * Lấy danh sách từ vựng theo folderId (có phân trang cho infinite scroll)
+ */
+export async function getVocabulariesByFolderPaginated(
+  folderId: number,
+  page: number = 1,
+  limit: number = 30,
+): Promise<{ data: VocabularyResponse[]; total: number; page: number; limit: number }> {
+  try {
+    const response = await apiClient.get<{
+      status: boolean;
+      data: { data: VocabularyResponse[]; total: number; page: number; limit: number };
+      message: string;
+    }>(`/vocabularies/by-folder/${folderId}`, {
+      params: { page, limit },
+    });
+
+    if (response.data.status && response.data.data) {
+      return response.data.data;
+    }
+
+    throw new Error(response.data.message || "Không thể lấy danh sách từ vựng");
+  } catch (error: any) {
+    if (error?.response) throw error;
+    throw new Error(error?.message || "Không thể lấy danh sách từ vựng");
+  }
+}
+
+/**
  * Lấy thông tin chi tiết của một từ vựng theo sourceWordId
  */
 export async function getVocabularyDetail(id: number): Promise<VocabularyResponse> {

@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { App, ConfigProvider, theme } from "antd";
 import { LeftOutlined, RightOutlined, SoundOutlined, SwapOutlined } from "@ant-design/icons";
-import { getVocabulariesByFolder, getDueWords, getVocabularyDetail, getVocabularyBatch, type VocabularyResponse } from "@/lib/api/vocabulary";
+import { getVocabulariesByFolder, getDueWords, getVocabularyDetail, getVocabularyBatch, reviewWord, createUserVocabulary, type VocabularyResponse } from "@/lib/api/vocabulary";
 import { getSubscriptionStatus } from "@/lib/api/subscription";
 import { IoArrowBackOutline } from "react-icons/io5";
 import VocabularyFlashcardSkeleton from "@/app/components/features/vocabulary/VocabularyFlashcardSkeleton";
@@ -142,52 +142,62 @@ export default function VocabularyFlashcard() {
     easy: "Dễ",
   };
 
+  // Pre-load ping audio once (avoid loading per click)
+  const pingAudioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    pingAudioRef.current = new Audio("/audio/ping.mp3");
+    pingAudioRef.current.volume = 0.2;
+  }, []);
+
   const handleSetReviewLevel = useCallback(
     async (level: ReviewLevel) => {
       if (!currentVocab || !userId || isProcessing) return;
 
       setIsProcessing(true);
 
-      // Play ping sound
-      try {
-        const pingAudio = new Audio("/audio/ping.mp3");
-        pingAudio.volume = 0.2;
-        pingAudio.currentTime = 0;
-        await pingAudio.play();
-      } catch (err) {
-        console.error("Error playing ping sound:", err);
+      // Optimistic UI update — show selection immediately
+      setReviewLevels((prev) => ({ ...prev, [currentVocab.sourceWordId]: level }));
+
+      // Play ping (fire-and-forget, no await)
+      if (pingAudioRef.current) {
+        pingAudioRef.current.currentTime = 0;
+        pingAudioRef.current.play().catch(() => { });
       }
 
       try {
-        const { reviewWord, createUserVocabulary } = await import("@/lib/api/vocabulary");
-        setReviewLevels((prev) => ({ ...prev, [currentVocab.sourceWordId]: level }));
+        // Parallel: create + review at the same time
+        await Promise.all([
+          createUserVocabulary({
+            user_id: userId,
+            sourceWordId: currentVocab.sourceWordId,
+          }),
+          reviewWord({
+            user_id: userId,
+            sourceWordId: currentVocab.sourceWordId,
+            grade: levelToGrade[level],
+          }),
+        ]);
 
-        await createUserVocabulary({
-          user_id: userId,
-          sourceWordId: currentVocab.sourceWordId,
-        });
-
-        await reviewWord({
-          user_id: userId,
-          sourceWordId: currentVocab.sourceWordId,
-          grade: levelToGrade[level],
-        });
-
-        // ✅ Invalidate related caches so other pages show fresh data
-        queryClient.invalidateQueries({ queryKey: vocabularyKeys.all });
+        // Invalidate only specific caches (not all)
         queryClient.invalidateQueries({ queryKey: reviewStatsKeys.all });
 
         if (currentIndex < vocabularies.length - 1) {
-          setTimeout(() => handleNext(), 500);
+          setTimeout(() => handleNext(), 300);
         }
       } catch (error) {
         console.error("Error reviewing word:", error);
+        // Rollback optimistic update
+        setReviewLevels((prev) => {
+          const copy = { ...prev };
+          delete copy[currentVocab.sourceWordId];
+          return copy;
+        });
         message.error("Không thể lưu kết quả ôn tập");
       } finally {
-        setTimeout(() => setIsProcessing(false), 500); // Debounce duration
+        setTimeout(() => setIsProcessing(false), 300);
       }
     },
-    [currentVocab, userId, currentIndex, vocabularies.length, handleNext, message, isProcessing, levelLabels, levelToGrade, queryClient]
+    [currentVocab, userId, currentIndex, vocabularies.length, handleNext, message, isProcessing, levelToGrade, queryClient]
   );
 
 
