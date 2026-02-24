@@ -27,7 +27,7 @@ export default function SignInForm({
             onFinish={onFinish}
             layout="vertical"
             autoComplete="off"
-            className="flex flex-col gap-5"
+            className="flex flex-col gap-3"
         >
             <Form.Item
                 name="email"
@@ -35,7 +35,7 @@ export default function SignInForm({
                     { required: true, message: "Vui lòng nhập email!" },
                     { type: "email", message: "Email không hợp lệ!" },
                 ]}
-                className="mb-2"
+                className="!mb-0"
             >
                 <Input
                     size="large"
@@ -49,7 +49,7 @@ export default function SignInForm({
             <Form.Item
                 name="password"
                 rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
-                className="mb-0"
+                className="!mb-0"
             >
                 <Input.Password
                     size="large"

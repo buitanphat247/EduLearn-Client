@@ -66,6 +66,26 @@ export const signUp = async (data: SignUpRequest): Promise<SignUpResponse> => {
   }
 };
 
+export const sendVerificationCode = async (email: string): Promise<{ message: string }> => {
+  try {
+    const response = await apiClient.post("/auth/send-verification", { email });
+    return response.data?.data || response.data;
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || "Gửi mã xác thực thất bại";
+    throw new Error(errorMessage);
+  }
+};
+
+export const verifyEmailCode = async (email: string, code: string): Promise<{ verified: boolean; message: string }> => {
+  try {
+    const response = await apiClient.post("/auth/verify-email", { email, code });
+    return response.data?.data || response.data;
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || "Xác thực thất bại";
+    throw new Error(errorMessage);
+  }
+};
+
 export const googleLogin = async (data: { token?: string; code?: string; redirect_uri?: string; device_name?: string }): Promise<SignInResponse> => {
   const isDev = process.env.NODE_ENV === "development";
   try {
