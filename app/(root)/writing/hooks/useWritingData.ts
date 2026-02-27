@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { App } from "antd";
-import { useWritingHistoryByIdQuery } from "@/app/hooks/queries/useWritingQuery";
-import type { WritingGenerateResponse } from "@/lib/api/writing";
+import { useWritingHistoryByIdQuery } from "@/hooks/queries/useWritingQuery";
+import type { WritingGenerateResponse } from "@/lib/services/writing";
 
 interface UseWritingDataReturn {
   data: WritingGenerateResponse | null;

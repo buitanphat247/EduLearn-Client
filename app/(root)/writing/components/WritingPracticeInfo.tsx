@@ -2,7 +2,7 @@
 
 import { Descriptions, Tag } from "antd";
 import { InfoCircleOutlined, BookOutlined, OrderedListOutlined, BarChartOutlined, FieldTimeOutlined, AlignLeftOutlined } from "@ant-design/icons";
-import { WritingGenerateResponse } from "@/lib/api/writing";
+import { WritingGenerateResponse } from "@/lib/services/writing";
 import dayjs from "dayjs";
 
 interface WritingPracticeInfoProps {

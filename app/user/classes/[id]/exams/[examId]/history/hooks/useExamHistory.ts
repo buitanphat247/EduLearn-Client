@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getRagTestDetail, type RagTestDetail } from "@/lib/api/rag-exams";
-import { getTestAttempts, type StudentAttempt } from "@/lib/api/exam-attempts";
-import { useUserId } from "@/app/hooks/useUserId";
+import { getRagTestDetail, type RagTestDetail } from "@/lib/services/rag-exams";
+import { getTestAttempts, type StudentAttempt } from "@/lib/services/exam-attempts";
+import { useUserId } from "@/hooks/useUserId";
 
 export function useExamHistory(examId: string) {
   const { userId, loading: userLoading } = useUserId();

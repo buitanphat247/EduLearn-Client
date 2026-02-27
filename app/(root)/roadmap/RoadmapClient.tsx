@@ -1,6 +1,6 @@
 "use client";
 
-import ScrollAnimation from "@/app/components/common/ScrollAnimation";
+import ScrollAnimation from "@/components/common/ScrollAnimation";
 import {
     FlagOutlined,
     CheckCircleOutlined,

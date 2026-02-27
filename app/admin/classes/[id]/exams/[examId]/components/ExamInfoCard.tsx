@@ -3,7 +3,7 @@
 import { memo } from "react";
 import { Card, Descriptions, Row, Col, Statistic, Typography, Space, Tag } from "antd";
 import { InfoCircleOutlined, ClockCircleOutlined, UserOutlined, LineChartOutlined } from "@ant-design/icons";
-import type { RagTestDetail } from "@/lib/api/rag-exams";
+import type { RagTestDetail } from "@/lib/services/rag-exams";
 import dayjs from "dayjs";
 
 const { Text, Paragraph } = Typography;

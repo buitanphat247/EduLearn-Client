@@ -1,11 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import FeaturesHeader from "@/app/components/features/FeaturesHeader";
-import WritingFeatureSkeleton from "@/app/components/features/writing/WritingFeatureSkeleton";
+import FeaturesHeader from "@/components/features/FeaturesHeader";
+import WritingFeatureSkeleton from "@/components/features/writing/WritingFeatureSkeleton";
 
 const WritingFeature = dynamic(
-    () => import("@/app/components/features/writing/WritingFeature"),
+    () => import("@/components/features/writing/WritingFeature"),
     {
         ssr: true,
         loading: () => <WritingFeatureSkeleton />

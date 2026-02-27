@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { App } from "antd";
-import { getRagTestDetail, type RagTestDetail } from "@/lib/api/rag-exams";
-import { getTestAttempts, recalculateTestScores, type StudentAttempt } from "@/lib/api/exam-attempts";
+import { getRagTestDetail, type RagTestDetail } from "@/lib/services/rag-exams";
+import { getTestAttempts, recalculateTestScores, type StudentAttempt } from "@/lib/services/exam-attempts";
 
 export function useExamDetail(examId: string) {
   const { message } = App.useApp();

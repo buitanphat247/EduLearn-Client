@@ -1,7 +1,7 @@
 "use client";
 
 import { FlagFilled, FlagOutlined, CheckCircleFilled } from "@ant-design/icons";
-import { type RagQuestion } from "@/lib/api/rag-exams";
+import { type RagQuestion } from "@/lib/services/rag-exams";
 
 interface QuestionCardProps {
   question: RagQuestion;

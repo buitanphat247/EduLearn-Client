@@ -5,8 +5,8 @@ export const dynamic = "force-dynamic";
 
 import AdminLayoutClient from "./AdminLayoutClient";
 import { decryptCookie } from "@/lib/utils/server-cookie-decrypt";
-import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
-import { FEATURES } from "@/app/config/features";
+import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
+import { FEATURES } from "@/config/features";
 
 async function getInitialUserData() {
   try {

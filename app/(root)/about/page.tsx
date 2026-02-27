@@ -7,7 +7,7 @@ import {
   DashboardOutlined,
   ApiOutlined,
 } from "@ant-design/icons";
-import ScrollAnimation from "@/app/components/common/ScrollAnimation";
+import ScrollAnimation from "@/components/common/ScrollAnimation";
 import Image from "next/image";
 // ✅ Extracted hardcoded arrays to constants file
 import { ABOUT_STATS, ABOUT_VALUES, TARGET_AUDIENCES } from "./constants";

@@ -10,19 +10,19 @@ import {
     DailyGoalCard,
     QuickActionsGrid,
     type StatCardItem,
-} from "@/app/components/features/vocabulary/review";
-import { useTheme } from "@/app/context/ThemeContext";
+} from "@/components/features/vocabulary/review";
+import { useTheme } from "@/context/ThemeContext";
 import { App } from "antd";
 
 const ForgettingCurveChart = dynamic(
-    () => import("@/app/components/profile/ForgettingCurveChart"),
+    () => import("@/components/profile/ForgettingCurveChart"),
     { ssr: false, loading: () => <div className="h-80 rounded-2xl bg-slate-100 dark:bg-slate-800/50 animate-pulse" /> }
 );
 
-import ReviewPageSkeleton from "@/app/components/features/vocabulary/review/ReviewPageSkeleton";
-import { useUserId } from "@/app/hooks/useUserId";
+import ReviewPageSkeleton from "@/components/features/vocabulary/review/ReviewPageSkeleton";
+import { useUserId } from "@/hooks/useUserId";
 
-import { useUserVocabularyStatsQuery, useUserActivityStatsQuery, useDueWordsQuery, useLearnedVocabularyQuery } from "@/app/hooks/queries/useVocabularyQuery";
+import { useUserVocabularyStatsQuery, useUserActivityStatsQuery, useDueWordsQuery, useLearnedVocabularyQuery } from "@/hooks/queries/useVocabularyQuery";
 
 const safeNum = (v: unknown): number => (typeof v === "number" && !Number.isNaN(v) ? v : 0);
 

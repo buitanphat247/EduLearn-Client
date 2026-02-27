@@ -3,9 +3,9 @@ import { useRouter } from "next/navigation";
 import { App } from "antd";
 import Swal from "sweetalert2";
 import io, { type Socket } from "socket.io-client";
-import { RagTestDetail, RagQuestion, getRagTestDetail } from "@/lib/api/rag-exams";
-import { startExamAttempt, submitExamAttempt, logSecurityEvent } from "@/lib/api/exam-attempts";
-import { useAntiCheat } from "@/app/hooks/useAntiCheat";
+import { RagTestDetail, RagQuestion, getRagTestDetail } from "@/lib/services/rag-exams";
+import { startExamAttempt, submitExamAttempt, logSecurityEvent } from "@/lib/services/exam-attempts";
+import { useAntiCheat } from "@/hooks/useAntiCheat";
 
 // --- Constants & Config (đọc từ .env, anti-cheat tắt khi bất kỳ điều kiện nào = true) ---
 const QUESTIONS_PER_PAGE = 1;

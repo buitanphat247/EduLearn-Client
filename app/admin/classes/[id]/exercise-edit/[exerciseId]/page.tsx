@@ -3,21 +3,21 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { App, Button, Input, Form, DatePicker, Skeleton } from "antd";
-import CustomCard from "@/app/components/common/CustomCard";
+import CustomCard from "@/components/common/CustomCard";
 import dynamic from "next/dynamic";
-import type { Editor } from "@/app/components/common/RichTextEditor";
+import type { Editor } from "@/components/common/RichTextEditor";
 
-const RichTextEditor = dynamic(() => import("@/app/components/common/RichTextEditor"), {
+const RichTextEditor = dynamic(() => import("@/components/common/RichTextEditor"), {
   ssr: false,
   loading: () => <div className="h-[300px] bg-gray-50 animate-pulse rounded-lg border border-gray-200" />
 });
-import FileUploadSection from "@/app/components/exercises/FileUploadSection";
-import ProgressModal from "@/app/components/exercises/ProgressModal";
-import { useUserId } from "@/app/hooks/useUserId";
-import { getApiBaseUrl } from "@/app/config/api-base-url";
-import { getAssignmentById, updateAssignment } from "@/lib/api/assignments";
+import FileUploadSection from "@/components/exercises/FileUploadSection";
+import ProgressModal from "@/components/exercises/ProgressModal";
+import { useUserId } from "@/hooks/useUserId";
+import { getApiBaseUrl } from "@/config/api-base-url";
+import { getAssignmentById, updateAssignment } from "@/lib/services/assignments";
 import { formatFileName } from "@/lib/utils/fileName";
-import { useFileHandlers } from "@/app/hooks/useFileUpload";
+import { useFileHandlers } from "@/hooks/useFileUpload";
 import {
   ArrowLeftOutlined,
   SaveOutlined,

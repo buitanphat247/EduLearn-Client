@@ -7,7 +7,7 @@ import { useRouter, useParams } from "next/navigation";
 import type { ColumnsType } from "antd/es/table";
 import Papa from "papaparse";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getVocabulariesByFolder, getFolderDetail, bulkCreateVocabulary, getVocabularyGroups, regenerateAudio, type VocabularyResponse, type FolderResponse } from "@/lib/api/vocabulary";
+import { getVocabulariesByFolder, getFolderDetail, bulkCreateVocabulary, getVocabularyGroups, regenerateAudio, type VocabularyResponse, type FolderResponse } from "@/lib/services/vocabulary";
 
 interface VocabularyTableType extends VocabularyResponse {
     key: number;

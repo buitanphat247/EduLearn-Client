@@ -5,10 +5,10 @@ import { SearchOutlined, EyeOutlined, DownloadOutlined, LoadingOutlined } from "
 import { useState, useEffect, useMemo, useCallback } from "react";
 import type { ColumnsType } from "antd/es/table";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { getDocumentAttachmentsCrawl, type DocumentAttachmentCrawl } from "@/lib/api/documents";
-import DocumentPreviewModal from "@/app/components/documents/DocumentPreviewModal";
-import { useDocumentPreview } from "@/app/components/documents/useDocumentPreview";
-import { useDebounce } from "@/app/hooks/useDebounce";
+import { getDocumentAttachmentsCrawl, type DocumentAttachmentCrawl } from "@/lib/services/documents";
+import DocumentPreviewModal from "@/components/documents/DocumentPreviewModal";
+import { useDocumentPreview } from "@/components/documents/useDocumentPreview";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const { Option } = Select;
 

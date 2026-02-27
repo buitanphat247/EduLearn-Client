@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Table, Tag, Button, App, Modal, Form, Input, Tooltip, Select } from "antd";
 import { EyeOutlined, UserOutlined, KeyOutlined, StopOutlined, SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
-import { getClassStudentsByUser, joinClassByCode, type ClassStudentRecord } from "@/lib/api/classes";
+import { getClassStudentsByUser, joinClassByCode, type ClassStudentRecord } from "@/lib/services/classes";
 import type { ColumnsType } from "antd/es/table";
-import { useUserId } from "@/app/hooks/useUserId";
+import { useUserId } from "@/hooks/useUserId";
 
 type ClassStatusFilter = "all" | "online" | "banned";
 

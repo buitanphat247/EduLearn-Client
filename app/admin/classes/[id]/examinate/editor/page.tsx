@@ -4,10 +4,10 @@ import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { App, Button, Input, Modal } from "antd";
 import { ArrowLeftOutlined, SaveOutlined, FileTextOutlined, InfoCircleOutlined, StarOutlined, PlusOutlined } from "@ant-design/icons";
-import { PartData, QuestionItem, QuestionType, GeneralConfig, QuestionCard, getQuestionType } from "@/app/components/exams/editor";
-import { MathFieldInput } from "@/app/components/exams/editor/MathFieldInput";
-import { MATH_DATA } from "@/app/components/exams/editor/constants";
-import { stripBoldTags } from "@/app/components/exams/editor/utils";
+import { PartData, QuestionItem, QuestionType, GeneralConfig, QuestionCard, getQuestionType } from "@/components/exams/editor";
+import { MathFieldInput } from "@/components/exams/editor/MathFieldInput";
+import { MATH_DATA } from "@/components/exams/editor/constants";
+import { stripBoldTags } from "@/components/exams/editor/utils";
 import { getMediaUrl } from "@/lib/utils/media";
 
 // Initial data - lazy load để tối ưu initial render

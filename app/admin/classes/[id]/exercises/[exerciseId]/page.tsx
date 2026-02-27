@@ -17,8 +17,8 @@ import {
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import CustomCard from "@/app/components/common/CustomCard";
-import DataLoadingSplash from "@/app/components/common/DataLoadingSplash";
+import CustomCard from "@/components/common/CustomCard";
+import DataLoadingSplash from "@/components/common/DataLoadingSplash";
 import {
   getAssignmentById,
   getAssignmentStudents,
@@ -26,9 +26,9 @@ import {
   ungradeAssignmentStudent,
   type AssignmentDetailResponse,
   type AssignmentStudentResponse
-} from "@/lib/api/assignments";
-import { getClassById } from "@/lib/api/classes";
-import { useUserId } from "@/app/hooks/useUserId";
+} from "@/lib/services/assignments";
+import { getClassById } from "@/lib/services/classes";
+import { useUserId } from "@/hooks/useUserId";
 import dayjs from "dayjs";
 import "dayjs/locale/vi";
 

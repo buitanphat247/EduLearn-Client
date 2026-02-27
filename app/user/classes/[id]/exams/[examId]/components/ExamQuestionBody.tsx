@@ -1,6 +1,6 @@
 "use client";
 
-import { RagQuestion } from "@/lib/api/rag-exams";
+import { RagQuestion } from "@/lib/services/rag-exams";
 import Image from "next/image";
 import { QuestionOptionItem } from "./QuestionOptionItem";
 import { Fancybox } from "@fancyapps/ui/dist/fancybox/";

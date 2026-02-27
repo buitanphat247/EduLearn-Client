@@ -1,7 +1,7 @@
 import { Button, Form, Input, InputNumber, Switch, DatePicker } from "antd";
 import { SettingOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
-import CustomCard from "@/app/components/common/CustomCard";
+import CustomCard from "@/components/common/CustomCard";
 import dayjs from "dayjs";
 
 const { TextArea } = Input;

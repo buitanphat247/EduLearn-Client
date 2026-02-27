@@ -3,17 +3,17 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { App, Tabs, Skeleton } from "antd";
-import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
+import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
 import { FileTextOutlined, BellOutlined, UserOutlined, ExperimentOutlined } from "@ant-design/icons";
-import StudentDetailModal from "@/app/components/students/StudentDetailModal";
-import ClassHeader from "@/app/components/classes/ClassHeader";
-import ClassInfoCard from "@/app/components/classes/ClassInfoCard";
-import ClassStudentsTable from "@/app/components/classes/ClassStudentsTable";
-import UpdateClassModal from "@/app/components/classes/UpdateClassModal";
-import ClassExercisesTab from "@/app/components/classes/ClassExercisesTab";
-import ClassNotificationsTab from "@/app/components/classes/ClassNotificationsTab";
-import ClassExamsTab from "@/app/components/classes/ClassExamsTab";
-import { useUserId } from "@/app/hooks/useUserId";
+import StudentDetailModal from "@/components/students/StudentDetailModal";
+import ClassHeader from "@/components/classes/ClassHeader";
+import ClassInfoCard from "@/components/classes/ClassInfoCard";
+import ClassStudentsTable from "@/components/classes/ClassStudentsTable";
+import UpdateClassModal from "@/components/classes/UpdateClassModal";
+import ClassExercisesTab from "@/components/classes/ClassExercisesTab";
+import ClassNotificationsTab from "@/components/classes/ClassNotificationsTab";
+import ClassExamsTab from "@/components/classes/ClassExamsTab";
+import { useUserId } from "@/hooks/useUserId";
 import {
   getClassById,
   removeStudentFromClass,
@@ -22,8 +22,8 @@ import {
   getClassStudentsByClass,
   type ClassDetailResponse,
   type ClassStudentRecord,
-} from "@/lib/api/classes";
-import { deleteRagTestsByClass } from "@/lib/api/rag-exams";
+} from "@/lib/services/classes";
+import { deleteRagTestsByClass } from "@/lib/services/rag-exams";
 import type { StudentItem } from "@/interface/students";
 import { CLASS_STATUS_MAP, formatStudentId } from "@/lib/utils/classUtils";
 

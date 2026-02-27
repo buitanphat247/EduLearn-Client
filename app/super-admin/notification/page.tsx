@@ -5,12 +5,12 @@ import { SearchOutlined, EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined
 import { useState, useEffect, useMemo } from "react";
 import type { ColumnsType } from "antd/es/table";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import CreateNotificationModal from "@/app/components/super-admin/CreateNotificationModal";
-import EditNotificationModal from "@/app/components/super-admin/EditNotificationModal";
-import NotificationDetailModal from "@/app/components/super-admin/NotificationDetailModal";
-import { getNotificationsByCreatedBy, deleteNotification } from "@/lib/api/notifications";
-import { useUserId } from "@/app/hooks/useUserId";
-import { useDebounce } from "@/app/hooks/useDebounce";
+import CreateNotificationModal from "@/components/super-admin/CreateNotificationModal";
+import EditNotificationModal from "@/components/super-admin/EditNotificationModal";
+import NotificationDetailModal from "@/components/super-admin/NotificationDetailModal";
+import { getNotificationsByCreatedBy, deleteNotification } from "@/lib/services/notifications";
+import { useUserId } from "@/hooks/useUserId";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface NotificationType {
   key: string;

@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { decryptCookie } from "@/lib/utils/server-cookie-decrypt";
-import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
+import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
 
 export const dynamic = "force-dynamic";
 

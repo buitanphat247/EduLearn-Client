@@ -1,4 +1,4 @@
-import { RagQuestion, RagTestDetail } from "@/lib/api/rag-exams";
+import { RagQuestion, RagTestDetail } from "@/lib/services/rag-exams";
 import { ExamNavFooter } from "./ExamNavFooter";
 import { ExamQuestionBody } from "./ExamQuestionBody";
 import { ExamMainHeader } from "./ExamMainHeader";

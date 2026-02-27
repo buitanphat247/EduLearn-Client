@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 import SuperAdminLayoutClient from "./SuperAdminLayoutClient";
 import { decryptCookie } from "@/lib/utils/server-cookie-decrypt";
-import { FEATURES } from "@/app/config/features";
+import { FEATURES } from "@/config/features";
 
 async function getInitialUserData() {
   try {

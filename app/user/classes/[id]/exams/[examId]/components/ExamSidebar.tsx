@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Button } from "antd";
-import { RagTestDetail } from "@/lib/api/rag-exams";
+import { RagTestDetail } from "@/lib/services/rag-exams";
 import { SidebarStatCard } from "./SidebarStatCard";
 
 type UserAnswers = Record<string, string>;

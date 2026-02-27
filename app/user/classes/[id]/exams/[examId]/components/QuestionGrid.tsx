@@ -2,8 +2,8 @@
 
 import { LeftOutlined, RightOutlined, CheckCircleFilled } from "@ant-design/icons";
 import { Tooltip, Button } from "antd";
-import { type RagQuestion } from "@/lib/api/rag-exams";
-import { type Violation } from "@/app/hooks/useAntiCheat";
+import { type RagQuestion } from "@/lib/services/rag-exams";
+import { type Violation } from "@/hooks/useAntiCheat";
 
 interface QuestionGridProps {
   questions: RagQuestion[];

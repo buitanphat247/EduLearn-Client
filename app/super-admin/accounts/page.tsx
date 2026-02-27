@@ -6,11 +6,11 @@ import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnsType } from "antd/es/table";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { getUsers, createUser, getUserInfo, type GetUsersResponse, type UserInfoResponse } from "@/lib/api/users";
-import UserDetailModal from "@/app/components/super-admin/UserDetailModal";
-import UpdateUserStatusModal from "@/app/components/super-admin/UpdateUserStatusModal";
+import { getUsers, createUser, getUserInfo, type GetUsersResponse, type UserInfoResponse } from "@/lib/services/users";
+import UserDetailModal from "@/components/super-admin/UserDetailModal";
+import UpdateUserStatusModal from "@/components/super-admin/UpdateUserStatusModal";
 import { getPasswordValidationRules } from "@/lib/utils/validation";
-import { useDebounce } from "@/app/hooks/useDebounce";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const { Option } = Select;
 

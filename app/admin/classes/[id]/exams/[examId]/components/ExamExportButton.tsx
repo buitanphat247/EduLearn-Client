@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { Button, Dropdown, App, type MenuProps } from "antd";
 import { DownloadOutlined, TrophyOutlined, BarChartOutlined } from "@ant-design/icons";
-import { exportScoresExcel, type ExportMode } from "@/lib/api/exam-export";
+import { exportScoresExcel, type ExportMode } from "@/lib/services/exam-export";
 
 interface ExamExportButtonProps {
   classId: string;

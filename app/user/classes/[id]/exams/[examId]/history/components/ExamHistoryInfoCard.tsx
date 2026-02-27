@@ -11,8 +11,8 @@ import {
   LineChartOutlined,
   CheckCircleOutlined,
 } from "@ant-design/icons";
-import type { RagTestDetail } from "@/lib/api/rag-exams";
-import type { StudentAttempt } from "@/lib/api/exam-attempts";
+import type { RagTestDetail } from "@/lib/services/rag-exams";
+import type { StudentAttempt } from "@/lib/services/exam-attempts";
 import dayjs from "dayjs";
 
 const { Text } = Typography;

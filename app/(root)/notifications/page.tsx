@@ -11,19 +11,19 @@ import {
     getNotificationRecipientsByUserId,
     type NotificationResponse,
     type NotificationRecipientResponse
-} from "@/lib/api/notifications";
-import { useUserId } from "@/app/hooks/useUserId";
+} from "@/lib/services/notifications";
+import { useUserId } from "@/hooks/useUserId";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useDebounce } from "@/app/hooks/useDebounce";
-import { useNotificationsQuery } from "@/app/hooks/queries/useNotificationQuery";
-import { getClassesByUser, getClassById } from "@/lib/api/classes";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useNotificationsQuery } from "@/hooks/queries/useNotificationQuery";
+import { getClassesByUser, getClassById } from "@/lib/services/classes";
 import { useQueryClient } from "@tanstack/react-query";
-import DarkPagination from "@/app/components/common/DarkPagination";
-import CustomInput from "@/app/components/common/CustomInput";
-import CustomSelect from "@/app/components/common/CustomSelect";
-import NotificationsSkeleton from "@/app/components/notifications/NotificationsSkeleton";
-import NotificationCard, { NotificationItem } from "@/app/components/notifications/NotificationCard";
-import NotificationDetailModal from "@/app/components/notifications/NotificationDetailModal";
+import DarkPagination from "@/components/common/DarkPagination";
+import CustomInput from "@/components/common/CustomInput";
+import CustomSelect from "@/components/common/CustomSelect";
+import NotificationsSkeleton from "@/components/notifications/NotificationsSkeleton";
+import NotificationCard, { NotificationItem } from "@/components/notifications/NotificationCard";
+import NotificationDetailModal from "@/components/notifications/NotificationDetailModal";
 
 
 export default function NotificationsPage() {

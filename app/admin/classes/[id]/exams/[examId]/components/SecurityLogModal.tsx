@@ -3,7 +3,7 @@
 import { memo } from "react";
 import { Modal, Button, Space, List, Empty, Typography } from "antd";
 import { WarningOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
-import type { StudentAttempt } from "@/lib/api/exam-attempts";
+import type { StudentAttempt } from "@/lib/services/exam-attempts";
 import dayjs from "dayjs";
 
 const { Text } = Typography;

@@ -4,7 +4,7 @@ import { BookOutlined, LeftOutlined, MenuOutlined, RightOutlined } from "@ant-de
 import { Button, Drawer } from "antd";
 import GuideSidebar from "@/app/(root)/guide/GuideSidebar";
 import GuideContent from "@/app/(root)/guide/GuideContent";
-import PrefetchLink from "@/app/components/common/PrefetchLink";
+import PrefetchLink from "@/components/common/PrefetchLink";
 
 // Load menu configuration
 const getMenu = () => {

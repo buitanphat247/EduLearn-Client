@@ -1,19 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import apiClient from "@/app/config/api";
-import { getApiBaseUrl } from "@/app/config/api-base-url";
+import apiClient from "@/config/api";
+import { getApiBaseUrl } from "@/config/api-base-url";
 import { useRouter, useParams } from "next/navigation";
 import { App, Button, Input, Upload, Form, DatePicker, Modal, Spin, Select } from "antd";
-import CustomCard from "@/app/components/common/CustomCard";
+import CustomCard from "@/components/common/CustomCard";
 import dynamic from "next/dynamic";
-import type { Editor } from "@/app/components/common/RichTextEditor";
+import type { Editor } from "@/components/common/RichTextEditor";
 
-const RichTextEditor = dynamic(() => import("@/app/components/common/RichTextEditor"), {
+const RichTextEditor = dynamic(() => import("@/components/common/RichTextEditor"), {
   ssr: false,
   loading: () => <div className="h-[300px] bg-gray-50 animate-pulse rounded-lg border border-gray-200" />
 });
-import { useUserId } from "@/app/hooks/useUserId";
+import { useUserId } from "@/hooks/useUserId";
 import { formatFileName } from "@/lib/utils/fileName";
 import {
   ArrowLeftOutlined,

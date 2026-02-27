@@ -1,4 +1,4 @@
-import { RagTestDetail } from "@/lib/api/rag-exams";
+import { RagTestDetail } from "@/lib/services/rag-exams";
 
 export const DEMO_TEST_DATA: RagTestDetail = {
   id: "demo",

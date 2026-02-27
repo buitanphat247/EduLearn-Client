@@ -6,7 +6,7 @@ import { LockOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-des
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import apiClient from "@/app/config/api";
+import apiClient from "@/config/api";
 
 const { Title, Text } = Typography;
 

@@ -5,11 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { App, ConfigProvider, theme } from "antd";
 import { SoundOutlined, FileTextOutlined, CheckCircleOutlined, EditOutlined, BookOutlined, BarChartOutlined, CrownOutlined, LoadingOutlined } from "@ant-design/icons";
-import { getVocabulariesByFolderPaginated, type VocabularyResponse } from "@/lib/api/vocabulary";
-import { getSubscriptionStatus } from "@/lib/api/subscription";
+import { getVocabulariesByFolderPaginated, type VocabularyResponse } from "@/lib/services/vocabulary";
+import { getSubscriptionStatus } from "@/lib/services/subscription";
 import { IoArrowBackOutline } from "react-icons/io5";
 import { GoBook } from "react-icons/go";
-import VocabularyDetailSkeleton from "@/app/components/features/vocabulary/VocabularyDetailSkeleton";
+import VocabularyDetailSkeleton from "@/components/features/vocabulary/VocabularyDetailSkeleton";
 
 type Tier = "free" | "pro";
 const PAGE_SIZE = 30;

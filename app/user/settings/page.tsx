@@ -14,16 +14,16 @@ import {
   LogoutOutlined,
 } from "@ant-design/icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUserInfo, changePassword, updateUser } from "@/lib/api/users";
-import { signOutAllDevices } from "@/lib/api/auth";
-import { uploadFile } from "@/lib/api/file-upload";
+import { getUserInfo, changePassword, updateUser } from "@/lib/services/users";
+import { signOutAllDevices } from "@/lib/services/auth";
+import { uploadFile } from "@/lib/services/file-upload";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
-import { useUserId } from "@/app/hooks/useUserId";
-import SettingsSkeleton from "@/app/components/settings/SettingsSkeleton";
+import { useUserId } from "@/hooks/useUserId";
+import SettingsSkeleton from "@/components/settings/SettingsSkeleton";
 import { getNewPasswordValidationRules } from "@/lib/utils/validation";
 import { saveUserDataToSession } from "@/lib/utils/cookies";
-import { useTheme } from "@/app/context/ThemeContext";
+import { useTheme } from "@/context/ThemeContext";
 
 interface SettingsFormData {
   fullname: string;

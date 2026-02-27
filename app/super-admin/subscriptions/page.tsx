@@ -14,8 +14,8 @@ import {
     SubscriptionPlan,
     getAllUserSubscriptions,
     cancelUserSubscription
-} from "@/lib/api/subscription";
-import { useDebounce } from "@/app/hooks/useDebounce";
+} from "@/lib/services/subscription";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const { Title, Text } = Typography;
 const { Option } = Select;

@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import AdminSidebar from "../components/layout/AdminSidebar";
+import AdminSidebar from "@/components/layout/AdminSidebar";
 import { usePathname } from "next/navigation";
 import { Spin, Modal, Avatar } from "antd";
 import { UserOutlined } from "@ant-design/icons";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
-import { ServerAuthedUserProvider } from "../context/ServerAuthedUserProvider";
-import { useUserProfile } from "@/app/hooks/useUserProfile";
+import { ServerAuthedUserProvider } from "@/context/ServerAuthedUserProvider";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 const pageTitles: Record<string, string> = {
   "/admin": "Trang chủ",

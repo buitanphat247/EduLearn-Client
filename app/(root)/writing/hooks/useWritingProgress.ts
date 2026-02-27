@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useUpdateWritingProgressMutation } from "@/app/hooks/queries/useWritingQuery";
+import { useUpdateWritingProgressMutation } from "@/hooks/queries/useWritingQuery";
 
 /**
  * Custom hook for managing writing practice progress.

@@ -6,9 +6,9 @@ import { SearchOutlined, EyeOutlined, DownloadOutlined } from "@ant-design/icons
 
 const { Option } = Select;
 import type { ColumnsType } from "antd/es/table";
-import DocumentPreviewModal from "@/app/components/documents/DocumentPreviewModal";
-import { getDocumentAttachmentsCrawl, type DocumentAttachmentCrawl } from "@/lib/api/documents";
-import { useDocumentPreview } from "@/app/components/documents/useDocumentPreview";
+import DocumentPreviewModal from "@/components/documents/DocumentPreviewModal";
+import { getDocumentAttachmentsCrawl, type DocumentAttachmentCrawl } from "@/lib/services/documents";
+import { useDocumentPreview } from "@/components/documents/useDocumentPreview";
 
 interface DocumentTableType {
   key: string;

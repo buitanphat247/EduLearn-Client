@@ -9,7 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 // Sub-components
 import PermissionMatrix from "./components/PermissionMatrix";
 import { Role } from "./types";
-import { getRoles } from "@/lib/api/permissions";
+import { getRoles } from "@/lib/services/permissions";
 
 const { Title, Text } = Typography;
 

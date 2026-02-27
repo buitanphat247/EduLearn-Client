@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import SuperAdminSidebar from "../components/layout/SuperAdminSidebar";
+import SuperAdminSidebar from "@/components/layout/SuperAdminSidebar";
 import { usePathname } from "next/navigation";
 import { Modal, Spin, Breadcrumb, Avatar } from "antd";
 import { UserOutlined } from "@ant-design/icons";
-import { type UserInfoResponse } from "@/lib/api/users";
+import { type UserInfoResponse } from "@/lib/services/users";
 import Link from "next/link";
-import { ServerAuthedUserProvider } from "../context/ServerAuthedUserProvider";
-import { useUserProfile } from "@/app/hooks/useUserProfile";
+import { ServerAuthedUserProvider } from "@/context/ServerAuthedUserProvider";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 const pageTitles: Record<string, string> = {
   "/super-admin": "Dashboard",

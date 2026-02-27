@@ -1,11 +1,11 @@
 "use client";
 
 import { ConfigProvider, App, theme as antTheme } from "antd";
-import { ThemeProvider, useTheme, type Theme } from "@/app/context/ThemeContext";
+import { ThemeProvider, useTheme, type Theme } from "@/context/ThemeContext";
 import ErrorBoundary from "@/app/error-boundary";
-import { WebVitalsTracker } from "@/app/components/common/WebVitalsTracker";
+import { WebVitalsTracker } from "@/components/common/WebVitalsTracker";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
-import AuthRedirectListener from "@/app/components/auth/AuthRedirectListener";
+import AuthRedirectListener from "@/components/auth/AuthRedirectListener";
 
 function AntdConfigProvider({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme();

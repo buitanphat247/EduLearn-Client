@@ -22,7 +22,7 @@ import {
     CloudServerOutlined
 } from '@ant-design/icons';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { getGlobalAiUsageStats, AiUsageLog } from '@/lib/api/subscription';
+import { getGlobalAiUsageStats, AiUsageLog } from '@/lib/services/subscription';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;

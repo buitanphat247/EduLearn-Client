@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { App } from "antd";
-import { updateRagQuestion, RagTestDetail } from "@/lib/api/rag-exams";
+import { updateRagQuestion, RagTestDetail } from "@/lib/services/rag-exams";
 import { transactionQueue } from "../utils/transactionQueue";
 
 interface UseQuestionActionsProps {

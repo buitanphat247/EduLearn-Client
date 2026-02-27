@@ -1,13 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Features from "@/app/components/home/Features";
-import Hero from "@/app/components/home/Hero";
-import Stats from "@/app/components/home/Stats";
-import ScrollAnimation from "@/app/components/common/ScrollAnimation";
+import Features from "@/components/home/Features";
+import Hero from "@/components/home/Hero";
+import Stats from "@/components/home/Stats";
+import ScrollAnimation from "@/components/common/ScrollAnimation";
 
 // Dynamic imports for below-the-fold components to reduce initial bundle size
-const Testimonials = dynamic(() => import("@/app/components/home/Testimonials"), {
+const Testimonials = dynamic(() => import("@/components/home/Testimonials"), {
   ssr: true, // Keep SSR for SEO
   loading: () => (
     <div className="border-b border-slate-200/60 dark:border-slate-800 transition-colors duration-500 py-16">
@@ -32,7 +32,7 @@ const Testimonials = dynamic(() => import("@/app/components/home/Testimonials"),
   ),
 });
 
-const Integrations = dynamic(() => import("@/app/components/home/Integrations"), {
+const Integrations = dynamic(() => import("@/components/home/Integrations"), {
   ssr: true,
   loading: () => (
     <div className="py-16">
@@ -51,7 +51,7 @@ const Integrations = dynamic(() => import("@/app/components/home/Integrations"),
   ),
 });
 
-const ValueProps = dynamic(() => import("@/app/components/home/ValueProps"), {
+const ValueProps = dynamic(() => import("@/components/home/ValueProps"), {
   ssr: true,
   loading: () => (
     <div className="border-b border-slate-200/60 dark:border-slate-800 transition-colors duration-500 py-16">
@@ -70,7 +70,7 @@ const ValueProps = dynamic(() => import("@/app/components/home/ValueProps"), {
   ),
 });
 
-const CallToAction = dynamic(() => import("@/app/components/home/CallToAction"), {
+const CallToAction = dynamic(() => import("@/components/home/CallToAction"), {
   ssr: true,
   loading: () => (
     <div className="py-16">

@@ -16,12 +16,12 @@ import {
     LockOutlined,
     CrownOutlined
 } from "@ant-design/icons";
-import { getDueWords, type UserVocabularyResponse } from "@/lib/api/vocabulary";
+import { getDueWords, type UserVocabularyResponse } from "@/lib/services/vocabulary";
 import { IoArrowBackOutline } from "react-icons/io5";
-import VocabularyDetailSkeleton from "@/app/components/features/vocabulary/VocabularyDetailSkeleton";
-import { useTheme } from "@/app/context/ThemeContext";
-import { useUserId } from "@/app/hooks/useUserId";
-import { useSubscriptionQuery } from "@/app/hooks/queries";
+import VocabularyDetailSkeleton from "@/components/features/vocabulary/VocabularyDetailSkeleton";
+import { useTheme } from "@/context/ThemeContext";
+import { useUserId } from "@/hooks/useUserId";
+import { useSubscriptionQuery } from "@/hooks/queries";
 
 export default function ReviewDetailPage() {
     const { message } = App.useApp();

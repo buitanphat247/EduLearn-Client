@@ -1,0 +1,175 @@
+"use client";
+
+import { Modal, Avatar, Tag, Descriptions, Spin, App } from "antd";
+import { UserOutlined, MailOutlined, PhoneOutlined, BookOutlined, IdcardOutlined } from "@ant-design/icons";
+import { useState, useEffect } from "react";
+import { getUserInfo, type UserInfoResponse } from "@/lib/services/users";
+import type { StudentItem } from "@/interface/students";
+
+interface StudentDetailModalProps {
+  open: boolean;
+  onCancel: () => void;
+  student: StudentItem | null;
+  classInfo?: {
+    name: string;
+    code: string;
+  };
+}
+
+export default function StudentDetailModal({ open, onCancel, student, classInfo }: StudentDetailModalProps) {
+  const { message } = App.useApp();
+  const [loading, setLoading] = useState(false);
+  const [studentProfile, setStudentProfile] = useState<UserInfoResponse | null>(null);
+
+
+  // Fetch student profile when modal opens
+  useEffect(() => {
+    const fetchStudentProfile = async () => {
+      if (!open || !student) {
+        setStudentProfile(null);
+        return;
+      }
+
+      // Get userId from student.key (which is user_id)
+      const userId = student.key;
+
+      if (!userId) {
+        message.error("Không tìm thấy ID học sinh");
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const profile = await getUserInfo(userId);
+        setStudentProfile(profile);
+      } catch (error: any) {
+        message.error(error?.message || "Không thể tải thông tin học sinh");
+        setStudentProfile(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudentProfile();
+  }, [open, student, message]);
+
+  // Use API data if available, otherwise fallback to student prop
+  const displayData = studentProfile
+    ? {
+      name: studentProfile.fullname,
+      studentId: studentProfile.username,
+      email: studentProfile.email,
+      phone: studentProfile.phone || "",
+      status: student?.apiStatus || student?.status || "online", // Ưu tiên apiStatus từ student prop
+      apiStatus: student?.apiStatus, // Lưu apiStatus để dùng cho getDisplayStatus
+      avatar: studentProfile.avatar,
+    }
+    : student
+      ? {
+        name: student.name,
+        studentId: student.studentId,
+        email: student.email,
+        phone: student.phone || "",
+        status: student.status,
+        apiStatus: student.apiStatus, // Lưu apiStatus để dùng cho getDisplayStatus
+        avatar: null,
+      }
+      : null;
+
+  return (
+    <Modal
+      title="Chi tiết học sinh"
+      open={open}
+      onCancel={onCancel}
+      footer={null}
+      width={700}
+      destroyOnHidden={true}
+      maskClosable={true}
+    >
+      <Spin spinning={loading}>
+        {displayData && (
+          <div className="space-y-6">
+            {/* Avatar và thông tin cơ bản */}
+            <div className="text-center">
+              <Avatar
+                size={120}
+                src={displayData.avatar}
+                icon={<UserOutlined />}
+                className="mb-3"
+              />
+              <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">{displayData.name}</h3>
+              <Tag color="blue" className="mb-4">
+                {displayData.studentId}
+              </Tag>
+            </div>
+
+            {/* Thông tin chi tiết */}
+            <Descriptions column={1} bordered className="[&_.ant-descriptions-item-label]:dark:bg-gray-800 [&_.ant-descriptions-item-content]:dark:bg-gray-900">
+              <Descriptions.Item
+                label={
+                  <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <IdcardOutlined />
+                    Mã học sinh
+                  </span>
+                }
+              >
+                <span className="font-mono text-sm bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-2 py-1 rounded border border-gray-200 dark:border-gray-700">
+                  {displayData.studentId}
+                </span>
+              </Descriptions.Item>
+              <Descriptions.Item
+                label={
+                  <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <UserOutlined />
+                    Họ và tên
+                  </span>
+                }
+              >
+                <span className="font-semibold text-gray-800 dark:text-gray-100">{displayData.name}</span>
+              </Descriptions.Item>
+              <Descriptions.Item
+                label={
+                  <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <MailOutlined />
+                    Email
+                  </span>
+                }
+              >
+                <span className="text-gray-800 dark:text-gray-200">{displayData.email}</span>
+              </Descriptions.Item>
+              {displayData.phone && (
+                <Descriptions.Item
+                  label={
+                    <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                      <PhoneOutlined />
+                      Số điện thoại
+                    </span>
+                  }
+                >
+                  <span className="text-gray-800 dark:text-gray-200">{displayData.phone}</span>
+                </Descriptions.Item>
+              )}
+              {classInfo && (
+                <Descriptions.Item
+                  label={
+                    <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                      <BookOutlined />
+                      Lớp học
+                    </span>
+                  }
+                >
+                  <span className="text-gray-800 dark:text-gray-200">{`${classInfo.name} (${classInfo.code})`}</span>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          </div>
+        )}
+        {!loading && !displayData && (
+          <div className="text-center py-8 text-gray-500">
+            Không tìm thấy thông tin học sinh
+          </div>
+        )}
+      </Spin>
+    </Modal>
+  );
+}

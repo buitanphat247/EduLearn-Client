@@ -5,11 +5,11 @@ import { SearchOutlined, EyeOutlined, DownloadOutlined, FileTextOutlined, Delete
 import { useState } from "react";
 import type { ColumnsType } from "antd/es/table";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { getDocuments, deleteDocument, createDocument, type DocumentResponse } from "@/lib/api/documents";
-import DocumentPreviewModal from "@/app/components/documents/DocumentPreviewModal";
-import { useDocumentPreview } from "@/app/components/documents/useDocumentPreview";
-import { useUserId } from "@/app/hooks/useUserId";
-import { useDebounce } from "@/app/hooks/useDebounce";
+import { getDocuments, deleteDocument, createDocument, type DocumentResponse } from "@/lib/services/documents";
+import DocumentPreviewModal from "@/components/documents/DocumentPreviewModal";
+import { useDocumentPreview } from "@/components/documents/useDocumentPreview";
+import { useUserId } from "@/hooks/useUserId";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const { Option } = Select;
 const { Dragger } = Upload;

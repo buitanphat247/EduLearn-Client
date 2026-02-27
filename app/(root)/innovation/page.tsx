@@ -6,7 +6,7 @@ import {
 } from '@ant-design/icons';
 import GuideSidebar from '@/app/(root)/guide/GuideSidebar';
 import GuideContent from '@/app/(root)/guide/GuideContent';
-import PrefetchLink from '@/app/components/common/PrefetchLink';
+import PrefetchLink from '@/components/common/PrefetchLink';
 
 // Load menu configuration
 const getMenu = () => {

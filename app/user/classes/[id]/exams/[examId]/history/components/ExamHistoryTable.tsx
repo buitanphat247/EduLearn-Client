@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Table, Tag, Typography } from "antd";
 import { ClockCircleOutlined, CheckCircleOutlined, LineChartOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
-import type { StudentAttempt } from "@/lib/api/exam-attempts";
+import type { StudentAttempt } from "@/lib/services/exam-attempts";
 import dayjs from "dayjs";
 
 const { Text } = Typography;

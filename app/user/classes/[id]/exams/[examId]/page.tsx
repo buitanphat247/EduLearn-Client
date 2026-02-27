@@ -2,13 +2,13 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { Empty, Button } from "antd";
-import { useUserId } from "@/app/hooks/useUserId";
+import { useUserId } from "@/hooks/useUserId";
 import { useExamController } from "./hooks/useExamController";
 import { ExamMain } from "./components/ExamMain";
 import { ExamSidebar } from "./components/ExamSidebar";
-import DataLoadingSplash from "@/app/components/common/DataLoadingSplash";
-import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
-import { type RagTestDetail } from "@/lib/api/rag-exams";
+import DataLoadingSplash from "@/components/common/DataLoadingSplash";
+import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
+import { type RagTestDetail } from "@/lib/services/rag-exams";
 
 // Component: Màn hình hướng dẫn & Bắt đầu
 const ExamStartScreen = ({ test, onStart }: { test: RagTestDetail; onStart: () => void }) => {

@@ -5,11 +5,11 @@ import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
-import PrefetchRoutes from "./components/common/PrefetchRoutes";
+import PrefetchRoutes from "@/components/common/PrefetchRoutes";
 import ErrorBoundary from "./error-boundary";
-import { noTransitionsScript } from "./scripts/no-transitions";
+import { noTransitionsScript } from "@/scripts/no-transitions";
 import { Analytics } from "@vercel/analytics/next";
-import DevToolsBlocker from "./components/security/DevToolsBlocker";
+import DevToolsBlocker from "@/components/security/DevToolsBlocker";
 
 // Only enable Vercel Analytics when deployed on Vercel platform
 const isVercel = process.env.VERCEL === "1";

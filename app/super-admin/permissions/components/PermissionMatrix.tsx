@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, Button, Typography, Table, Tag, Checkbox, Tabs, Switch, Badge, Collapse, Space, App } from "antd";
 import { SaveOutlined, ApiOutlined, LockOutlined, GlobalOutlined, RightOutlined, SafetyOutlined } from "@ant-design/icons";
 import { Role } from "@/app/super-admin/permissions/types";
-import { getPermissions, bulkSyncPermissions } from "@/lib/api/permissions";
+import { getPermissions, bulkSyncPermissions } from "@/lib/services/permissions";
 
 import { ALL_ROUTES } from "../data/all_routes";
 
@@ -150,7 +150,7 @@ export default function PermissionMatrix({ selectedRole, roles, modules, actions
 
     pendingSaves.current.add(roleId);
     try {
-      const { assignPermissions } = await import("@/lib/api/permissions");
+      const { assignPermissions } = await import("@/lib/services/permissions");
       await assignPermissions(parseInt(roleId), perms);
     } catch (error) {
       console.error("Error saving permission for role", roleId, error);

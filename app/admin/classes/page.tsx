@@ -3,15 +3,15 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { App, Button, Input } from "antd";
 import { ReloadOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import ClassesTable from "@/app/components/classes/ClassesTable";
-import CreateClassModal from "@/app/components/classes/CreateClassModal";
-import UpdateClassModal from "@/app/components/classes/UpdateClassModal";
-import { getClassesByUser, deleteClass, getClassById, type ClassResponse, type ClassDetailResponse } from "@/lib/api/classes";
-import { deleteRagTestsByClass } from "@/lib/api/rag-exams";
+import ClassesTable from "@/components/classes/ClassesTable";
+import CreateClassModal from "@/components/classes/CreateClassModal";
+import UpdateClassModal from "@/components/classes/UpdateClassModal";
+import { getClassesByUser, deleteClass, getClassById, type ClassResponse, type ClassDetailResponse } from "@/lib/services/classes";
+import { deleteRagTestsByClass } from "@/lib/services/rag-exams";
 import type { ClassItem } from "@/interface/classes";
 import { CLASS_STATUS_MAP } from "@/lib/utils/classUtils";
 
-import { useUserId } from "@/app/hooks/useUserId";
+import { useUserId } from "@/hooks/useUserId";
 
 export default function AdminClasses() {
   const { message, modal } = App.useApp();

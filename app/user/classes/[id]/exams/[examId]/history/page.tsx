@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
+import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
 import { Button, Empty, Skeleton } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useExamHistory } from "./hooks/useExamHistory";

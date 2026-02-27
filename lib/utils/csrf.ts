@@ -5,7 +5,7 @@
  */
 
 import axios from "axios";
-import { getApiBaseUrl } from "@/app/config/api-base-url";
+import { getApiBaseUrl } from "@/config/api-base-url";
 
 const isDev = process.env.NODE_ENV === "development";
 

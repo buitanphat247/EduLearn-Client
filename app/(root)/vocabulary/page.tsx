@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, Suspense } from "react";
-import FeaturesHeader from "@/app/components/features/FeaturesHeader";
-import VocabularyFeature from "@/app/components/features/vocabulary/VocabularyFeature";
-import { useSubscriptionQuery } from "@/app/hooks/queries";
+import FeaturesHeader from "@/components/features/FeaturesHeader";
+import VocabularyFeature from "@/components/features/vocabulary/VocabularyFeature";
+import { useSubscriptionQuery } from "@/hooks/queries";
 
 export default function VocabularyPage() {
     const { data: subscriptionData, isLoading: subLoading } = useSubscriptionQuery();

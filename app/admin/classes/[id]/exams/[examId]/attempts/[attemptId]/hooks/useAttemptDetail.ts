@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { App } from "antd";
-import { getAttemptDetail, type AttemptDetail } from "@/lib/api/exam-attempts";
+import { getAttemptDetail, type AttemptDetail } from "@/lib/services/exam-attempts";
 
 export function useAttemptDetail(attemptId: string | undefined) {
   const { message } = App.useApp();

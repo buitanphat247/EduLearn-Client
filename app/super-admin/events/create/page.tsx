@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { Button, App } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd";
-import { createEvent } from "@/lib/api/events";
-import { useUserId } from "@/app/hooks/useUserId";
+import { createEvent } from "@/lib/services/events";
+import { useUserId } from "@/hooks/useUserId";
 import { useQueryClient } from "@tanstack/react-query";
-import CSVUploadForm from "@/app/components/common/CSVUploadForm";
+import CSVUploadForm from "@/components/common/CSVUploadForm";
 
 export default function CreateEventPage() {
   const router = useRouter();

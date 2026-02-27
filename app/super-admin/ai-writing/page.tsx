@@ -3,7 +3,7 @@
 import { Table, Tag, Card, Typography, Row, Col, Statistic, Space, Divider, Button, App } from "antd";
 import { FireOutlined, ThunderboltOutlined, UserOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { getUsageStats, UsageStat } from "@/lib/api/subscription";
+import { getUsageStats, UsageStat } from "@/lib/services/subscription";
 import dayjs from "dayjs";
 import { useMemo } from "react";
 

@@ -2,7 +2,7 @@
 
 import { Card, Tag, Typography } from "antd";
 import { CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
-import type { AttemptDetailQuestion } from "@/lib/api/exam-attempts";
+import type { AttemptDetailQuestion } from "@/lib/services/exam-attempts";
 
 const { Text } = Typography;
 

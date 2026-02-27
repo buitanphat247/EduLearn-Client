@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
+import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
 import { useExamDetail } from "./hooks/useExamDetail";
 import ExamInfoCard from "./components/ExamInfoCard";
 import ExamDetailHeader from "./components/ExamDetailHeader";

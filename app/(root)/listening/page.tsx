@@ -1,8 +1,8 @@
 "use client";
 
 import { Suspense } from "react";
-import FeaturesHeader from "@/app/components/features/FeaturesHeader";
-import ListeningFeature from "@/app/components/features/listening/ListeningFeature";
+import FeaturesHeader from "@/components/features/FeaturesHeader";
+import ListeningFeature from "@/components/features/listening/ListeningFeature";
 
 export default function ListeningPage() {
     return (

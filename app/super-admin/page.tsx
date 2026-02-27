@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
-import { getStats } from "@/lib/api/stats";
+import { getStats } from "@/lib/services/stats";
 import { App } from "antd";
 
 // Dynamic import for CountUp - only load when needed (below the fold)

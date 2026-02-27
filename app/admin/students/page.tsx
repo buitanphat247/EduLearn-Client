@@ -4,9 +4,9 @@ import { Table, Button, App, Input } from "antd";
 import { SearchOutlined, EyeOutlined, LoadingOutlined } from "@ant-design/icons";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { ColumnsType } from "antd/es/table";
-import StudentDetailModal from "@/app/components/students/StudentDetailModal";
-import { getStudentsByUserId, type StudentResponse } from "@/lib/api/users";
-import { useUserId } from "@/app/hooks/useUserId";
+import StudentDetailModal from "@/components/students/StudentDetailModal";
+import { getStudentsByUserId, type StudentResponse } from "@/lib/services/users";
+import { useUserId } from "@/hooks/useUserId";
 import type { StudentItem } from "@/interface/students";
 
 export default function AdminStudents() {

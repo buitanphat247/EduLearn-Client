@@ -6,18 +6,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
 
-import { signIn, signUp, googleLogin as googleLoginApi } from "@/lib/api/auth";
-import { getCurrentUser } from "@/lib/api/users";
-import { useTheme } from "@/app/context/ThemeContext";
+import { signIn, signUp, googleLogin as googleLoginApi } from "@/lib/services/auth";
+import { getCurrentUser } from "@/lib/services/users";
+import { useTheme } from "@/context/ThemeContext";
 import { getCookie } from "@/lib/utils/cookies";
-import ForgotPasswordModal from "@/app/components/auth/ForgotPasswordModal";
-import GoogleCompleteProfileModal from "@/app/components/auth/GoogleCompleteProfileModal";
+import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
+import GoogleCompleteProfileModal from "@/components/auth/GoogleCompleteProfileModal";
 
 // Import UI components
-import AuthHero from "@/app/components/auth/AuthHero";
-import SignInForm from "@/app/components/auth/SignInForm";
-import SignUpForm from "@/app/components/auth/SignUpForm";
-import GoogleLoginButton from "@/app/components/auth/GoogleLoginButton";
+import AuthHero from "@/components/auth/AuthHero";
+import SignInForm from "@/components/auth/SignInForm";
+import SignUpForm from "@/components/auth/SignUpForm";
+import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 
 // Helper error handler
 function getApiErrorMessage(error: unknown, fallback: string): string {

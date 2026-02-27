@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { App } from "antd";
-import { updateRagTest, publishRagTest, RagTestDetail } from "@/lib/api/rag-exams";
+import { updateRagTest, publishRagTest, RagTestDetail } from "@/lib/services/rag-exams";
 import { transactionQueue } from "../utils/transactionQueue";
 
 interface UseTestMetadataProps {

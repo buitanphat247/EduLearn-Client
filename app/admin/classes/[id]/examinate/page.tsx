@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button, Modal, Spin } from "antd";
-import CustomCard from "@/app/components/common/CustomCard";
-import InfoBox from "@/app/components/exams/InfoBox";
-import TemplatesSection from "@/app/components/exams/TemplatesSection";
-import ExamFormatGuide from "@/app/components/exams/ExamFormatGuide";
-import AIGenerationSection from "@/app/components/exams/AIGenerationSection";
+import CustomCard from "@/components/common/CustomCard";
+import InfoBox from "@/components/exams/InfoBox";
+import TemplatesSection from "@/components/exams/TemplatesSection";
+import ExamFormatGuide from "@/components/exams/ExamFormatGuide";
+import AIGenerationSection from "@/components/exams/AIGenerationSection";
 import { ArrowLeftOutlined, LoadingOutlined } from "@ant-design/icons";
-import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
+import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
 import type { UploadFile } from "antd";
 
 export default function ExaminatePage() {

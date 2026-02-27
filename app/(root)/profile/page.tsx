@@ -14,20 +14,20 @@ import {
   LoadingOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
-import { getProfile, signOutAllDevices } from "@/lib/api/auth";
-import { updateUser, type UserInfoResponse } from "@/lib/api/users";
-import { uploadFile } from "@/lib/api/file-upload";
+import { getProfile, signOutAllDevices } from "@/lib/services/auth";
+import { updateUser, type UserInfoResponse } from "@/lib/services/users";
+import { uploadFile } from "@/lib/services/file-upload";
 import { getMediaUrl } from "@/lib/utils/media";
 import { getCachedImageUrl } from "@/lib/utils/image-cache";
-import { useTheme } from "@/app/context/ThemeContext";
+import { useTheme } from "@/context/ThemeContext";
 import { saveUserDataToSession } from "@/lib/utils/cookies";
 
-import { useProfileQuery, profileKeys } from "@/app/hooks/queries/useProfileQuery";
+import { useProfileQuery, profileKeys } from "@/hooks/queries/useProfileQuery";
 import { useQueryClient } from "@tanstack/react-query";
 
-import ProfileSkeleton from "@/app/components/profile/ProfileSkeleton";
-import LearningActivityCalendar from "@/app/components/profile/LearningActivityCalendar";
-import ForgettingCurveChart from "@/app/components/profile/ForgettingCurveChart";
+import ProfileSkeleton from "@/components/profile/ProfileSkeleton";
+import LearningActivityCalendar from "@/components/profile/LearningActivityCalendar";
+import ForgettingCurveChart from "@/components/profile/ForgettingCurveChart";
 
 export default function Profile() {
   const queryClient = useQueryClient();

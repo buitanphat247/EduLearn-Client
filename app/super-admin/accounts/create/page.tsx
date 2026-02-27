@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, Upload, Table, App, Progress } from "antd";
 import { UploadOutlined, DownloadOutlined, InboxOutlined, CloudUploadOutlined, TableOutlined, CheckCircleOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd";
-import { createUser } from "@/lib/api/users";
+import { createUser } from "@/lib/services/users";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function CreateAccountPage() {

@@ -3,8 +3,8 @@
 import React, { memo } from "react";
 import { Typography } from "antd";
 import { CheckCircleFilled } from "@ant-design/icons";
-import { RagQuestion } from "@/lib/api/rag-exams";
-import CustomCard from "@/app/components/common/CustomCard";
+import { RagQuestion } from "@/lib/services/rag-exams";
+import CustomCard from "@/components/common/CustomCard";
 
 const { Text } = Typography;
 

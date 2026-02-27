@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
+import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
 import { Button, Skeleton, Alert } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useAttemptDetail } from "./hooks/useAttemptDetail";

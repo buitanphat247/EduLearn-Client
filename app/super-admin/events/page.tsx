@@ -14,11 +14,11 @@ import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnsType } from "antd/es/table";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { createEvent, getEvents, getEventById, deleteEvent, type EventResponse } from "@/lib/api/events";
-import { useUserId } from "@/app/hooks/useUserId";
-import { useDebounce } from "@/app/hooks/useDebounce";
-import EventDetailModal from "@/app/components/super-admin/EventDetailModal";
-import UpdateEventModal from "@/app/components/super-admin/UpdateEventModal";
+import { createEvent, getEvents, getEventById, deleteEvent, type EventResponse } from "@/lib/services/events";
+import { useUserId } from "@/hooks/useUserId";
+import { useDebounce } from "@/hooks/useDebounce";
+import EventDetailModal from "@/components/super-admin/EventDetailModal";
+import UpdateEventModal from "@/components/super-admin/UpdateEventModal";
 
 const { Option } = Select;
 

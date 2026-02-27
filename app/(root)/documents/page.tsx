@@ -3,14 +3,14 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Empty, message } from "antd";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useUserId } from "@/app/hooks/useUserId";
-import { useDocumentsQuery } from "@/app/hooks/queries";
-import { useDebounce } from "@/app/hooks/useDebounce";
-import FeaturesHeader from "@/app/components/features/FeaturesHeader";
-import DocumentCard from "@/app/components/documents/DocumentCard";
-import DarkPagination from "@/app/components/common/DarkPagination";
-import CustomInput from "@/app/components/common/CustomInput";
-import DocumentFeatureSkeleton from "@/app/components/features/documents/DocumentFeatureSkeleton";
+import { useUserId } from "@/hooks/useUserId";
+import { useDocumentsQuery } from "@/hooks/queries";
+import { useDebounce } from "@/hooks/useDebounce";
+import FeaturesHeader from "@/components/features/FeaturesHeader";
+import DocumentCard from "@/components/documents/DocumentCard";
+import DarkPagination from "@/components/common/DarkPagination";
+import CustomInput from "@/components/common/CustomInput";
+import DocumentFeatureSkeleton from "@/components/features/documents/DocumentFeatureSkeleton";
 
 const PAGE_SIZE = 20;
 

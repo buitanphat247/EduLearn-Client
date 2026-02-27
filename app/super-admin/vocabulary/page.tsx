@@ -7,8 +7,8 @@ import { useRouter } from "next/navigation";
 import type { ColumnsType } from "antd/es/table";
 import Papa from "papaparse";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { getFolders, createFolder, updateFolder, deleteFolder, bulkCreateVocabulary, getVocabularyGroups, type FolderResponse, type VocabularyGroupItem } from "@/lib/api/vocabulary";
-import { useDebounce } from "@/app/hooks/useDebounce";
+import { getFolders, createFolder, updateFolder, deleteFolder, bulkCreateVocabulary, getVocabularyGroups, type FolderResponse, type VocabularyGroupItem } from "@/lib/services/vocabulary";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const { Option } = Select;
 const { Title, Text } = Typography;

@@ -3,16 +3,16 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { App, Button, Tabs, Table, Skeleton } from "antd";
-import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
+import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
 import { ArrowLeftOutlined, BellOutlined, FileTextOutlined, CalendarOutlined, UserOutlined, ReloadOutlined } from "@ant-design/icons";
-import ClassInfoCard from "@/app/components/classes/ClassInfoCard";
-import ClassExercisesTab from "@/app/components/classes/ClassExercisesTab";
-import ClassNotificationsTab from "@/app/components/classes/ClassNotificationsTab";
-import ClassExamsTab from "@/app/components/classes/ClassExamsTab";
-import CustomCard from "@/app/components/common/CustomCard";
-import { getClassById, getClassStudentsByClass, type ClassStudentRecord } from "@/lib/api/classes";
+import ClassInfoCard from "@/components/classes/ClassInfoCard";
+import ClassExercisesTab from "@/components/classes/ClassExercisesTab";
+import ClassNotificationsTab from "@/components/classes/ClassNotificationsTab";
+import ClassExamsTab from "@/components/classes/ClassExamsTab";
+import CustomCard from "@/components/common/CustomCard";
+import { getClassById, getClassStudentsByClass, type ClassStudentRecord } from "@/lib/services/classes";
 import { CLASS_STATUS_MAP, formatStudentId } from "@/lib/utils/classUtils";
-import { useUserId } from "@/app/hooks/useUserId"; // Added import
+import { useUserId } from "@/hooks/useUserId"; // Added import
 import type { StudentItem } from "@/interface/students";
 import type { ColumnsType } from "antd/es/table";
 

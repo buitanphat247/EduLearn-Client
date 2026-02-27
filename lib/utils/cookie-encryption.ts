@@ -3,7 +3,7 @@
  * Sử dụng API endpoint để giải mã (vì Web Crypto API không hỗ trợ AES-CBC)
  */
 
-import { getApiBaseUrl } from "@/app/config/api-base-url";
+import { getApiBaseUrl } from "@/config/api-base-url";
 
 /**
  * Giải mã dữ liệu đã được mã hóa bằng cách gọi API endpoint

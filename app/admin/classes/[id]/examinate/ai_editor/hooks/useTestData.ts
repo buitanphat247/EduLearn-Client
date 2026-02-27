@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Form } from "antd";
 import dayjs from "dayjs";
-import { getRagTestDetail, RagTestDetail } from "@/lib/api/rag-exams";
+import { getRagTestDetail, RagTestDetail } from "@/lib/services/rag-exams";
 import { DEMO_TEST_DATA } from "../constants/demoData";
 
 export function useTestData(testId: string | null, metadataForm: ReturnType<typeof Form.useForm>[0]) {

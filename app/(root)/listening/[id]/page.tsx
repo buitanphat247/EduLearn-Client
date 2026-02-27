@@ -1,20 +1,20 @@
 "use client";
 
-import ListeningDetailSkeleton from "@/app/components/features/listening/ListeningDetailSkeleton";
-import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
-import AudioPlayer from "@/app/components/features/listening/AudioPlayer";
-import InputArea from "@/app/components/features/listening/InputArea";
-import { useListeningAudio } from "@/app/hooks/useListeningAudio";
-import { useListeningChallenge } from "@/app/hooks/useListeningChallenge";
-import { useListeningProgress } from "@/app/hooks/useListeningProgress";
-import { useListeningLessonDetailQuery } from "@/app/hooks/queries/useListeningQuery";
+import ListeningDetailSkeleton from "@/components/features/listening/ListeningDetailSkeleton";
+import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
+import AudioPlayer from "@/components/features/listening/AudioPlayer";
+import InputArea from "@/components/features/listening/InputArea";
+import { useListeningAudio } from "@/hooks/useListeningAudio";
+import { useListeningChallenge } from "@/hooks/useListeningChallenge";
+import { useListeningProgress } from "@/hooks/useListeningProgress";
+import { useListeningLessonDetailQuery } from "@/hooks/queries/useListeningQuery";
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { FaKeyboard } from "react-icons/fa";
 import { IoArrowBackOutline } from "react-icons/io5";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import apiClient from "@/app/config/api";
+import apiClient from "@/config/api";
 import { message } from "antd";
 
 // --- Types ---

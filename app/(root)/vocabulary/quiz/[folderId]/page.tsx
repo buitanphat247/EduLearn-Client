@@ -4,16 +4,16 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { App, Button, ConfigProvider, theme, Progress, Spin } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { getVocabulariesByFolder, getDueWords, getVocabularyDetail, getVocabularyBatch, type VocabularyResponse } from "@/lib/api/vocabulary";
-import { getSubscriptionStatus } from "@/lib/api/subscription";
-import { useTheme } from "@/app/context/ThemeContext";
-import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
-import { useUserId } from "@/app/hooks/useUserId";
-import { useVocabularyQuiz } from "@/app/hooks/useVocabularyQuiz";
-import { useVocabulariesByFolderQuery, useVocabularyReviewQuery } from "@/app/hooks/queries/useVocabularyQuery";
-import QuizHeader from "@/app/components/features/vocabulary/QuizHeader";
-import QuizQuestionCard from "@/app/components/features/vocabulary/QuizQuestionCard";
-import QuizResultCard from "@/app/components/features/vocabulary/QuizResultCard";
+import { getVocabulariesByFolder, getDueWords, getVocabularyDetail, getVocabularyBatch, type VocabularyResponse } from "@/lib/services/vocabulary";
+import { getSubscriptionStatus } from "@/lib/services/subscription";
+import { useTheme } from "@/context/ThemeContext";
+import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
+import { useUserId } from "@/hooks/useUserId";
+import { useVocabularyQuiz } from "@/hooks/useVocabularyQuiz";
+import { useVocabulariesByFolderQuery, useVocabularyReviewQuery } from "@/hooks/queries/useVocabularyQuery";
+import QuizHeader from "@/components/features/vocabulary/QuizHeader";
+import QuizQuestionCard from "@/components/features/vocabulary/QuizQuestionCard";
+import QuizResultCard from "@/components/features/vocabulary/QuizResultCard";
 
 export default function VocabularyQuiz() {
   const { message } = App.useApp();

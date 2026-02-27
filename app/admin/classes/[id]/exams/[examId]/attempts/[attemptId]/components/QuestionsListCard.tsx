@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Empty, Button, Modal, List, Badge, Space, Typography } from "antd";
 import { SafetyCertificateOutlined, WarningOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import type { AttemptDetailQuestion } from "@/lib/api/exam-attempts";
+import type { AttemptDetailQuestion } from "@/lib/services/exam-attempts";
 import QuestionCard from "./QuestionCard";
 
 interface SecurityLog {

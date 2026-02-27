@@ -3,16 +3,16 @@
 import { useReducer, useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { App, Button, ConfigProvider, theme } from "antd";
-import RouteErrorBoundary from "@/app/components/common/RouteErrorBoundary";
-import { useTheme } from "@/app/context/ThemeContext";
-import WritingPracticeSkeleton from "@/app/components/features/writing/WritingPracticeSkeleton";
+import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
+import { useTheme } from "@/context/ThemeContext";
+import WritingPracticeSkeleton from "@/components/features/writing/WritingPracticeSkeleton";
 import WritingPracticeHeader from "../components/WritingPracticeHeader";
 import WritingPracticeContent from "../components/WritingPracticeContent";
 import WritingPracticeControls from "../components/WritingPracticeControls";
 import WritingPracticeInput from "../components/WritingPracticeInput";
 import WritingPracticeInfo from "../components/WritingPracticeInfo";
-import { getWritingHint } from "@/lib/api/writing";
-import { getUsageStatusForFeature, type FeatureUsageStatus } from "@/lib/api/subscription";
+import { getWritingHint } from "@/lib/services/writing";
+import { getUsageStatusForFeature, type FeatureUsageStatus } from "@/lib/services/subscription";
 
 // Custom hooks
 import { useTimer, useWritingData, useWritingProgress } from "../hooks";

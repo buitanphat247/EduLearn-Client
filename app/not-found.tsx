@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button, Input, message } from "antd";
 import { HomeOutlined, SearchOutlined, ArrowLeftOutlined, RocketOutlined, FireOutlined } from "@ant-design/icons";
 import { useRouter, usePathname } from "next/navigation";
-import PrefetchLink from "@/app/components/common/PrefetchLink";
+import PrefetchLink from "@/components/common/PrefetchLink";
 import { track404, trackEvent } from "@/lib/utils/analytics";
 
 // Popular pages to suggest

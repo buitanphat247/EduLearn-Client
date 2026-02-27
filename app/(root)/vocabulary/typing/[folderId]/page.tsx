@@ -4,16 +4,16 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { App, Button, ConfigProvider, theme, Progress, Spin } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { getVocabulariesByFolder, getDueWords, getVocabularyDetail, getVocabularyBatch, type VocabularyResponse } from "@/lib/api/vocabulary";
-import { getSubscriptionStatus } from "@/lib/api/subscription";
-import { useTheme } from "@/app/context/ThemeContext";
-import { useUserId } from "@/app/hooks/useUserId";
-import { useVocabularyTyping } from "@/app/hooks/useVocabularyTyping";
-import { useVocabulariesByFolderQuery, useVocabularyReviewQuery } from "@/app/hooks/queries/useVocabularyQuery";
+import { getVocabulariesByFolder, getDueWords, getVocabularyDetail, getVocabularyBatch, type VocabularyResponse } from "@/lib/services/vocabulary";
+import { getSubscriptionStatus } from "@/lib/services/subscription";
+import { useTheme } from "@/context/ThemeContext";
+import { useUserId } from "@/hooks/useUserId";
+import { useVocabularyTyping } from "@/hooks/useVocabularyTyping";
+import { useVocabulariesByFolderQuery, useVocabularyReviewQuery } from "@/hooks/queries/useVocabularyQuery";
 
-import TypingHeader from "@/app/components/features/vocabulary/TypingHeader";
-import TypingQuestionCard from "@/app/components/features/vocabulary/TypingQuestionCard";
-import QuizResultCard from "@/app/components/features/vocabulary/QuizResultCard";
+import TypingHeader from "@/components/features/vocabulary/TypingHeader";
+import TypingQuestionCard from "@/components/features/vocabulary/TypingQuestionCard";
+import QuizResultCard from "@/components/features/vocabulary/QuizResultCard";
 
 export default function VocabularyTyping() {
   const { message } = App.useApp();

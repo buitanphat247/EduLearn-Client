@@ -4,7 +4,7 @@ import { FileTextOutlined, AppstoreOutlined, ArrowRightOutlined, SettingOutlined
 import { IoBookOutline } from "react-icons/io5";
 import { App } from "antd";
 import { useRouter } from "next/navigation";
-import UserWelcomeBanner from "@/app/components/user/dashboard/UserWelcomeBanner";
+import UserWelcomeBanner from "@/components/user/dashboard/UserWelcomeBanner";
 
 const userDashboardItems = [
   {

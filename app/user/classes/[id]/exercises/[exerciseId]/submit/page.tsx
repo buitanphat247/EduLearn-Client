@@ -18,19 +18,19 @@ import {
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import type { UploadFile } from "antd";
-import CustomCard from "@/app/components/common/CustomCard";
-import { getAssignmentById, getAssignmentStudents, type AssignmentDetailResponse } from "@/lib/api/assignments";
-import { getClassById } from "@/lib/api/classes";
+import CustomCard from "@/components/common/CustomCard";
+import { getAssignmentById, getAssignmentStudents, type AssignmentDetailResponse } from "@/lib/services/assignments";
+import { getClassById } from "@/lib/services/classes";
 import {
   createSubmission,
   getSubmissions,
   createSubmissionAttachment,
   deleteSubmissionAttachment,
   type StudentSubmission,
-} from "@/lib/api/submissions";
+} from "@/lib/services/submissions";
 import { getMediaUrl } from "@/lib/utils/media";
 import { sanitizeForDisplay } from "@/lib/utils/sanitize";
-import { useUserId } from "@/app/hooks/useUserId";
+import { useUserId } from "@/hooks/useUserId";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/vi";

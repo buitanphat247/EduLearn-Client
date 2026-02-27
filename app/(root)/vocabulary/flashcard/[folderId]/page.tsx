@@ -5,15 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { App, ConfigProvider, theme } from "antd";
 import { LeftOutlined, RightOutlined, SoundOutlined, SwapOutlined } from "@ant-design/icons";
-import { getVocabulariesByFolder, getDueWords, getVocabularyDetail, getVocabularyBatch, reviewWord, createUserVocabulary, type VocabularyResponse } from "@/lib/api/vocabulary";
-import { getSubscriptionStatus } from "@/lib/api/subscription";
+import { getVocabulariesByFolder, getDueWords, getVocabularyDetail, getVocabularyBatch, reviewWord, createUserVocabulary, type VocabularyResponse } from "@/lib/services/vocabulary";
+import { getSubscriptionStatus } from "@/lib/services/subscription";
 import { IoArrowBackOutline } from "react-icons/io5";
-import VocabularyFlashcardSkeleton from "@/app/components/features/vocabulary/VocabularyFlashcardSkeleton";
-import { useTheme } from "@/app/context/ThemeContext";
+import VocabularyFlashcardSkeleton from "@/components/features/vocabulary/VocabularyFlashcardSkeleton";
+import { useTheme } from "@/context/ThemeContext";
 import { sanitizeForDisplay } from "@/lib/utils/sanitize";
-import { useUserId } from "@/app/hooks/useUserId";
+import { useUserId } from "@/hooks/useUserId";
 import { useQueryClient } from "@tanstack/react-query";
-import { useVocabulariesByFolderQuery, useVocabularyReviewQuery, vocabularyKeys, reviewStatsKeys } from "@/app/hooks/queries/useVocabularyQuery";
+import { useVocabulariesByFolderQuery, useVocabularyReviewQuery, vocabularyKeys, reviewStatsKeys } from "@/hooks/queries/useVocabularyQuery";
 
 type ReviewLevel = "again" | "hard" | "good" | "easy";
 
@@ -69,7 +69,7 @@ export default function VocabularyFlashcard() {
     if (!userId || vocabularies.length === 0) return;
 
     const loadBatch = async () => {
-      const { getBatchUserVocabulary } = await import("@/lib/api/vocabulary");
+      const { getBatchUserVocabulary } = await import("@/lib/services/vocabulary");
       const batch = await getBatchUserVocabulary(
         userId,
         vocabularies.map((v) => v.sourceWordId),

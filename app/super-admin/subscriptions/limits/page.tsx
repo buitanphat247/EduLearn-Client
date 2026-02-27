@@ -28,7 +28,7 @@ import {
     getSubscriptionPlans,
     updatePlanLimit,
     SubscriptionPlan,
-} from "@/lib/api/subscription";
+} from "@/lib/services/subscription";
 
 const { Title, Text, Paragraph } = Typography;
 

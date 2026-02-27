@@ -2,7 +2,7 @@
 
 import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, WarningOutlined, WifiOutlined } from "@ant-design/icons";
 import { ConfigProvider, theme as antTheme, Tooltip } from "antd";
-import { useTheme } from "@/app/context/ThemeContext";
+import { useTheme } from "@/context/ThemeContext";
 import { useEffect, useState } from "react";
 
 interface UpdatingService {
