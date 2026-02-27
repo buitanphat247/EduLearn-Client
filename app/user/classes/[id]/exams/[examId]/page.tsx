@@ -3,9 +3,9 @@
 import { useParams, useRouter } from "next/navigation";
 import { Empty, Button } from "antd";
 import { useUserId } from "@/hooks/useUserId";
-import { useExamController } from "./hooks/useExamController";
-import { ExamMain } from "./components/ExamMain";
-import { ExamSidebar } from "./components/ExamSidebar";
+import { useExamController } from "@/hooks/useExamController";
+import { ExamMain } from "@/components/exams/session/ExamMain";
+import { ExamSidebar } from "@/components/exams/session/ExamSidebar";
 import DataLoadingSplash from "@/components/common/DataLoadingSplash";
 import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
 import { type RagTestDetail } from "@/lib/services/rag-exams";

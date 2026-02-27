@@ -4,9 +4,9 @@ import { useParams, useRouter } from "next/navigation";
 import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
 import { Button, Empty, Skeleton } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { useExamHistory } from "./hooks/useExamHistory";
-import ExamHistoryInfoCard from "./components/ExamHistoryInfoCard";
-import ExamHistoryTable from "./components/ExamHistoryTable";
+import { useExamHistory } from "@/hooks/useExamHistory";
+import ExamHistoryInfoCard from "@/components/exams/history/ExamHistoryInfoCard";
+import ExamHistoryTable from "@/components/exams/history/ExamHistoryTable";
 
 export default function ExamHistoryPage() {
   const params = useParams();
